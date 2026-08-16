@@ -1,0 +1,11 @@
+# local scratch
+*.zip
+verify.py
+shot*.py
+*.png
+!assets/**/*.png
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
