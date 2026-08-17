@@ -310,7 +310,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
    itself clips with overflow:hidden. */
 .hero-bg[data-parallax],
 .aurora[data-parallax],
-.shards[data-parallax] { top: -22%; bottom: -22%; }
+.shards[data-parallax] { top: -30%; bottom: -30%; }
 
 /* The engine writes inline transforms; when it is off (reduced motion or
    narrow screens) nothing is written and layers sit at their natural spot. */
@@ -1118,3 +1118,46 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
   .fab { width: 52px; height: 52px; right: 18px; bottom: 18px; }
   .fab svg { width: 21px; height: 21px; }
 }
+
+/* ============================================================
+   Scrollbar
+   Slim, brand-gradient thumb on a near-black track. The thumb's
+   3px border is the same colour as the track and clipped to the
+   padding box, which is what makes it read as slim while keeping
+   a comfortable grab target.
+   ============================================================ */
+:root { --scroll-track: #0c0d10; }
+
+html { scrollbar-gutter: stable; }
+
+/* Firefox — only accepts two flat colours */
+html { scrollbar-width: thin; scrollbar-color: #3f9cc0 var(--scroll-track); }
+
+/* WebKit / Chromium / Edge */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+  border-left: 1px solid var(--line);
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border-radius: 999px;
+  border: 3px solid var(--scroll-track);
+  background: linear-gradient(180deg, #55c98d 0%, #4bb0d8 55%, #4aa5e8 100%);
+  background-clip: padding-box;
+  transition: border-width .18s var(--ease);
+}
+::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  box-shadow: 0 0 12px -2px rgba(74, 165, 232, 0.75);
+}
+::-webkit-scrollbar-thumb:active { border-width: 2px; }
+
+::-webkit-scrollbar-corner { background: var(--scroll-track); }
+
+/* Nested scrollers (custom select menus) get a lighter-weight version */
+.select-menu::-webkit-scrollbar { width: 8px; }
+.select-menu::-webkit-scrollbar-track { background: transparent; border-left: 0; }
+.select-menu::-webkit-scrollbar-thumb { border-width: 2px; border-color: transparent; }
