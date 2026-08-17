@@ -19,7 +19,14 @@ header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
-const FIGURE_PATH = '/products/heloc/pre-qualify/v2';
+/**
+ * v1 takes a plain JSON body (HelocOfferRequest).
+ * v2 takes ONLY an encrypted body ({"encrypted": "<JWE>"}) — posting plain
+ * JSON to it returns 400 "Malformed input". Using v2 would mean implementing
+ * JWE with Figure's public key, which is not needed for pre-qualification:
+ * no SSN is collected here and the call is already over TLS.
+ */
+const FIGURE_PATH = '/products/heloc/pre-qualify/v1';
 
 function respond(int $code, array $body): void
 {
@@ -167,17 +174,24 @@ if (!empty($addr['street1']) || !empty($addr['zip'])) {
     ], static fn($v) => $v !== '');
 }
 
-$map = [
-    'propertyValue'           => 'propertyValue',
-    'currentMortgageBalances' => 'currentMortgageBalances',
-    'monthlyMortgagePayment'  => 'monthlyMortgagePayment',
-    'monthlyExpenses'         => 'monthlyExpenses',
-    'amountToBorrow'          => 'amountToBorrow',
-];
-foreach ($map as $from => $to) {
-    $v = $num($in[$from] ?? null);
+/**
+ * Types matter here. The spec declares currentMortgageBalances and
+ * amountToBorrow as integers; PHP floats serialise as 250000.0, which the
+ * API can reject. Cast them so the JSON matches the schema exactly.
+ */
+$intFields = ['currentMortgageBalances', 'amountToBorrow'];
+$numFields = ['propertyValue', 'monthlyMortgagePayment', 'monthlyExpenses'];
+
+foreach ($intFields as $f) {
+    $v = $num($in[$f] ?? null);
     if ($v !== null && $v >= 0) {
-        $payload[$to] = $v;
+        $payload[$f] = (int) round($v);
+    }
+}
+foreach ($numFields as $f) {
+    $v = $num($in[$f] ?? null);
+    if ($v !== null && $v >= 0) {
+        $payload[$f] = $v + 0;
     }
 }
 
@@ -240,7 +254,13 @@ if ($body === false) {
 if ($status < 200 || $status >= 300) {
     // Log the status but not the payload — it contains borrower details.
     logLine($cfg, 'FIGURE_HTTP_' . $status . ' ' . substr((string) $body, 0, 300));
-    fail(502, 'Figure could not return offers for these details.');
+    // Surface the upstream status so a failure can be diagnosed without
+    // reading the log file. A status code is not sensitive.
+    respond(502, [
+        'ok'             => false,
+        'error'          => 'Figure could not return offers for these details.',
+        'upstreamStatus' => $status,
+    ]);
 }
 
 $data = json_decode((string) $body, true);

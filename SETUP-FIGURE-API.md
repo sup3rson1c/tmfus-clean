@@ -84,6 +84,19 @@ can see conversion without logging into anything.
 
 ---
 
+## Which endpoint this uses
+
+`/products/heloc/pre-qualify/**v1**`, which takes a plain JSON body.
+
+There is also a **v2**, which accepts *only* an encrypted body —
+`{"encrypted": "<JWE>"}`. Posting plain JSON to v2 returns
+`400 Malformed input`. v2 would mean implementing JWE with Figure's public
+key, which pre-qualification does not need: no SSN is collected here and the
+call already travels over TLS. If Figure ever requires v2 of you, say so and
+it can be built.
+
+---
+
 ## Two things worth checking with Figure
 
 1. **Income period.** Your site asks for *monthly* income. Figure's
