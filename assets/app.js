@@ -124,6 +124,15 @@
      where the moving layers cost more than they add.
      --------------------------------------------------------- */
   const parallax = (() => {
+    // Master intensity dial. Every [data-parallax] speed is multiplied by this,
+    // so the whole effect can be tuned from one number. 1 = the original,
+    // subtle setting. Raise for more movement, lower for less.
+    //
+    // Can be overridden live for tuning:
+    //   ?px=2.5    set the strength for this page view
+    //   ?tune=1    show a slider to find the value you want
+    let STRENGTH = 1.45;
+
     const items = [];
     let ticking = false;
     let active = false;
@@ -150,7 +159,7 @@
         // -1 at the moment it enters, +1 as it leaves
         const p = ((mid - (it.top + it.h / 2)) / (vh + it.h)) * 2;
         // travel is viewport-relative so the effect reads the same on any screen
-        let shift = p * it.speed * vh * 0.5;
+        let shift = p * it.speed * vh * 0.5 * STRENGTH;
         if (it.max) shift = Math.max(-it.max, Math.min(it.max, shift));
         it.el.style.transform = `translate3d(0, ${shift.toFixed(2)}px, 0)`;
       }
@@ -219,6 +228,39 @@
         mqSmall.addEventListener('change', onPref);
       }
       evaluate();
+      initTuner();
+    }
+
+    /* Tuning aid. Inert unless ?px= or ?tune=1 is in the URL, so it costs
+       normal visitors nothing. Delete this function once the value is settled. */
+    function initTuner() {
+      const q = new URLSearchParams(location.search);
+
+      const px = parseFloat(q.get('px'));
+      if (!isNaN(px)) { STRENGTH = Math.max(0, Math.min(6, px)); request(); }
+
+      if (q.get('tune') !== '1') return;
+
+      const box = document.createElement('div');
+      box.style.cssText =
+        'position:fixed;left:18px;bottom:18px;z-index:9999;display:flex;align-items:center;' +
+        'gap:12px;padding:12px 16px;border-radius:12px;font:500 13px/1 system-ui,sans-serif;' +
+        'color:#fafafa;background:rgba(12,13,16,.94);border:1px solid rgba(255,255,255,.16);' +
+        'backdrop-filter:blur(10px);box-shadow:0 8px 30px -8px rgba(0,0,0,.8)';
+      box.innerHTML =
+        '<span style="opacity:.65">Parallax</span>' +
+        '<input type="range" min="0" max="4" step="0.05" value="' + STRENGTH + '" style="width:190px">' +
+        '<b style="min-width:34px;text-align:right;font-variant-numeric:tabular-nums">' +
+        STRENGTH.toFixed(2) + '</b>';
+
+      const slider = box.querySelector('input');
+      const label = box.querySelector('b');
+      slider.addEventListener('input', () => {
+        STRENGTH = parseFloat(slider.value);
+        label.textContent = STRENGTH.toFixed(2);
+        remeasure();
+      });
+      document.body.appendChild(box);
     }
 
     return { init, remeasure };

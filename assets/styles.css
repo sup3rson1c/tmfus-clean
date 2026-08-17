@@ -310,7 +310,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
    itself clips with overflow:hidden. */
 .hero-bg[data-parallax],
 .aurora[data-parallax],
-.shards[data-parallax] { top: -30%; bottom: -30%; }
+.shards[data-parallax] { top: -45%; bottom: -45%; }
 
 /* The engine writes inline transforms; when it is off (reduced motion or
    narrow screens) nothing is written and layers sit at their natural spot. */
