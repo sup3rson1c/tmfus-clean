@@ -13,6 +13,53 @@
     '$' + Number(Math.max(0, Math.round(n * 10 ** dp) / 10 ** dp))
       .toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
+  /* =========================================================
+     LEAD CAPTURE  —  ⚠ PASTE YOUR URL BELOW ⚠
+
+     Paste the Google Apps Script Web App URL between the quotes.
+     See SETUP-LEAD-CAPTURE.md for the five steps that produce it.
+
+     While this is empty nothing is transmitted, and the forms tell the
+     visitor plainly that they are not live rather than faking success.
+     ========================================================= */
+  const LEAD_ENDPOINT = '';
+
+  /* Harvests every [data-field] under `root`, so new fields are picked up
+     automatically without touching this function. */
+  function collectFields(root) {
+    const out = {};
+    $$('[data-field]', root).forEach((el) => {
+      const key = el.getAttribute('data-field');
+      if (!key) return;
+      let val;
+      if (el.dataset.value !== undefined && el.dataset.value !== '') val = el.dataset.value;
+      else if (el.type === 'checkbox') val = el.checked ? 'yes' : 'no';
+      else val = (el.value !== undefined ? el.value : el.textContent || '').trim();
+      if (val !== '' && val != null) out[key] = val;
+    });
+    return out;
+  }
+
+  function sendLead(kind, data) {
+    if (!LEAD_ENDPOINT) return Promise.reject(new Error('lead endpoint not configured'));
+    const payload = JSON.stringify({
+      kind: kind,
+      page: location.pathname,
+      submittedAt: new Date().toISOString(),
+      referrer: document.referrer || '',
+      data: data
+    });
+    // text/plain avoids the CORS preflight that Apps Script will not answer.
+    // no-cors means the response is opaque — we cannot read it, only that
+    // the request left the browser.
+    return fetch(LEAD_ENDPOINT, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload
+    });
+  }
+
   /* ---------------------------------------------------------
      1. Header: sticky state, scroll progress, mobile nav
      --------------------------------------------------------- */
@@ -155,7 +202,6 @@
       const vh = window.innerHeight;
       const mid = window.scrollY + vh / 2;
       for (const it of items) {
-        if (!it.visible) continue;
         // -1 at the moment it enters, +1 as it leaves
         const p = ((mid - (it.top + it.h / 2)) / (vh + it.h)) * 2;
         // travel is viewport-relative so the effect reads the same on any screen
@@ -180,20 +226,11 @@
       request();
     };
 
-    // Only elements in view get math done on them.
-    const io =
-      'IntersectionObserver' in window
-        ? new IntersectionObserver(
-            (entries) => {
-              for (const e of entries) {
-                const it = items.find((i) => i.el === e.target);
-                if (it) it.visible = e.isIntersecting;
-              }
-              request();
-            },
-            { rootMargin: '20% 0px' }
-          )
-        : null;
+    /* No IntersectionObserver gating here on purpose. It was an optimisation
+       for culling off-screen work, but with a dozen elements the maths is
+       free, and it added a silent failure mode: if the observer never
+       delivered a callback, every layer stayed marked invisible and nothing
+       ever moved. Simpler is more reliable. */
 
     const evaluate = () => {
       const on = !mqMotion.matches && !mqSmall.matches && items.length > 0;
@@ -211,10 +248,9 @@
         const speed = parseFloat(el.getAttribute('data-parallax'));
         if (!speed) return;
         const max = parseFloat(el.getAttribute('data-parallax-max')) || 0;
-        const it = { el, speed, max, top: 0, h: 0, visible: !io };
+        const it = { el, speed, max, top: 0, h: 0 };
         el.style.willChange = 'transform';
         items.push(it);
-        if (io) io.observe(el);
       });
       if (!items.length) return;
 
@@ -265,6 +301,95 @@
 
     return { init, remeasure };
   })();
+
+  /* ---------------------------------------------------------
+     3c. Momentum scrolling
+     Wheel input is captured and eased toward a target position, so the
+     page keeps gliding for a moment after the wheel stops. The native
+     scrollbar, keyboard scrolling and touch are all left alone — this
+     only changes how wheel input is applied.
+
+     Tunable live:  ?ease=0.05  floatier      ?ease=0.18  snappier
+                    ?nomo=1     turn it off
+     --------------------------------------------------------- */
+  function initMomentum() {
+    const q = new URLSearchParams(location.search);
+    if (q.get('nomo') === '1') return;
+
+    const isTouch = window.matchMedia('(hover: none)').matches || 'ontouchstart' in window;
+    if (reduced || isTouch || window.innerWidth <= 680) return;
+
+    // How much of the remaining distance is covered each frame.
+    // Lower = longer glide. 0.09 gives roughly a third of a second of drift.
+    let EASE = 0.09;
+    const fromUrl = parseFloat(q.get('ease'));
+    if (!isNaN(fromUrl)) EASE = Math.max(0.02, Math.min(0.5, fromUrl));
+
+    const docEl = document.documentElement;
+    const maxScroll = () => Math.max(0, docEl.scrollHeight - window.innerHeight);
+    const clamp = (v) => Math.max(0, Math.min(maxScroll(), v));
+
+    let target = window.scrollY;
+    let current = target;
+    let running = false;
+
+    // Our easing replaces CSS smooth scrolling, which would fight it.
+    docEl.style.scrollBehavior = 'auto';
+
+    function loop() {
+      const diff = target - current;
+      if (Math.abs(diff) < 0.5) {
+        current = target;
+        window.scrollTo(0, current);
+        running = false;
+        return;
+      }
+      current += diff * EASE;
+      window.scrollTo(0, current);
+      requestAnimationFrame(loop);
+    }
+
+    function start() {
+      if (!running) { running = true; requestAnimationFrame(loop); }
+    }
+
+    window.addEventListener(
+      'wheel',
+      (e) => {
+        if (e.ctrlKey || e.metaKey) return;                 // pinch/zoom
+        const el = e.target instanceof Element ? e.target : null;
+        if (el && el.closest('.select-menu')) return;        // inner scrollers keep native behaviour
+        e.preventDefault();
+        // deltaMode 1 = lines, 2 = pages
+        const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+        target = clamp(target + e.deltaY * unit);
+        start();
+      },
+      { passive: false }
+    );
+
+    // Scrollbar drags, keyboard, find-in-page: adopt whatever the browser did.
+    window.addEventListener('scroll', () => {
+      if (!running) { target = current = window.scrollY; }
+    }, { passive: true });
+
+    window.addEventListener('resize', () => { target = clamp(target); }, { passive: true });
+
+    // In-page anchors ride the same easing instead of jumping.
+    document.addEventListener('click', (e) => {
+      const a = e.target instanceof Element ? e.target.closest('a[href*="#"]') : null;
+      if (!a) return;
+      let url;
+      try { url = new URL(a.href, location.href); } catch (_) { return; }
+      if (url.pathname !== location.pathname || !url.hash || url.hash === '#') return;
+      const dest = document.getElementById(url.hash.slice(1));
+      if (!dest) return;
+      e.preventDefault();
+      const headerH = parseFloat(getComputedStyle(docEl).getPropertyValue('--header-h')) || 0;
+      target = clamp(dest.getBoundingClientRect().top + window.scrollY - headerH - 8);
+      start();
+    });
+  }
 
   function debounce(fn, ms) {
     let t;
@@ -642,7 +767,16 @@
       if (submit) {
         const msg = validate();
         if (msg) { if (errEl) errEl.textContent = msg; return; }
-        showAnswer(root, profile());
+        const p = profile();
+
+        // Fire the lead off before repainting — showAnswer() replaces the
+        // panel's markup, which would take the input values with it.
+        const lead = collectFields(root);
+        try { lead.estimate = JSON.stringify(estimateAdvance(p)); } catch (_) {}
+        try { lead.matched = matchProducts(p).map((x) => x.name || x.id).join(', '); } catch (_) {}
+        sendLead('funding-calculator', lead).catch(() => {});
+
+        showAnswer(root, p);
       }
     });
 
@@ -859,11 +993,28 @@
         if (err) err.textContent = 'Enter a valid email address.';
         return;
       }
-      form.innerHTML =
+      const panel = (title, body) =>
         '<div style="text-align:center;padding:26px 0">' +
-        '<h3 class="h3">Message ready to send.</h3>' +
-        '<p style="color:var(--muted-fg);margin:14px 0 0">This rebuild is front-end only — ' +
-        'connect this form to your CRM or mail endpoint to deliver it.</p></div>';
+        '<h3 class="h3">' + title + '</h3>' +
+        '<p style="color:var(--muted-fg);margin:14px 0 0">' + body + '</p></div>';
+
+      const data = collectFields(form);
+      sendLead('contact', data).then(
+        () => {
+          form.innerHTML = panel(
+            'Message sent.',
+            'Thanks — we\'ll come back to you within one business day.'
+          );
+        },
+        () => {
+          // Never claim delivery we cannot stand behind.
+          form.innerHTML = panel(
+            'This form isn\'t live yet.',
+            'Your message was not sent. Please reach us directly in the meantime — ' +
+            'we don\'t want your enquiry to go missing.'
+          );
+        }
+      );
     });
   }
 
@@ -940,6 +1091,7 @@
     initSpotlight();
     initShards();
     parallax.init();
+    initMomentum();
     initReveal();
     initCountUp();
     initCardGlow();

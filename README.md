@@ -77,8 +77,10 @@ repaid, total interest and payment count.
 
 ## Things to wire up
 
-1. **Form submissions.** The estimator and contact form are front-end only — they
-   validate and render a result but post nowhere. Point them at your CRM/webhook.
+1. **Form submissions.** Wired to a Google Sheet via Apps Script — paste the Web App
+   URL into `LEAD_ENDPOINT` at the top of `assets/app.js`. Until it is set, nothing
+   is transmitted and the forms say so rather than faking success.
+   See `SETUP-LEAD-CAPTURE.md` and `google-apps-script.gs`.
 2. **Hero imagery.** Backgrounds are CSS gradients + animated shards rather than the
    photographs on the live site. Drop your own images into `assets/` and set them as
    `background-image` on `.hero-bg` / `.page-hero .hero-bg` if you want the photos back.
