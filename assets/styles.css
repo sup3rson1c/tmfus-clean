@@ -1161,3 +1161,50 @@ html { scrollbar-width: thin; scrollbar-color: #3f9cc0 var(--scroll-track); }
 .select-menu::-webkit-scrollbar { width: 8px; }
 .select-menu::-webkit-scrollbar-track { background: transparent; border-left: 0; }
 .select-menu::-webkit-scrollbar-thumb { border-width: 2px; border-color: transparent; }
+
+/* ============================================================
+   Figure offers panel
+   ============================================================ */
+.figure-panel { border-color: rgba(90, 200, 190, 0.28); }
+
+.fg-check {
+  display: flex; align-items: flex-start; gap: 12px;
+  font-size: 0.9rem; color: var(--muted-fg); line-height: 1.5;
+  cursor: pointer; padding: 4px 0;
+}
+.fg-check input {
+  flex: none; width: 18px; height: 18px; margin-top: 2px;
+  accent-color: var(--accent); cursor: pointer;
+}
+.fg-check:hover span { color: rgba(255,255,255,.82); }
+
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239b9ba4' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+select.input option { background: #141417; color: var(--fg); }
+
+.fg-offers { display: grid; gap: 14px; margin-top: 26px; }
+.fg-offer {
+  border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px;
+  background: linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
+}
+.fg-offer-top {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.fg-rate { font-size: 1.75rem; font-weight: 800; letter-spacing: -.03em; }
+.fg-rate small { font-size: .82rem; font-weight: 600; color: var(--muted-fg); margin-left: 6px; }
+.fg-amount { font-family: var(--mono); font-size: .84rem; letter-spacing: .1em; color: var(--accent); }
+.fg-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line);
+}
+.fg-grid div span { display: block; font-family: var(--mono); font-size: .66rem;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--muted-fg); }
+.fg-grid div b { display: block; font-size: 1.02rem; margin-top: 5px; }
+.fg-note { color: var(--muted-fg); font-size: .82rem; margin-top: 18px; line-height: 1.6; }
+.fg-busy { color: var(--muted-fg); font-size: .92rem; margin-top: 22px; }

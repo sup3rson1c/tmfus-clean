@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#09090b">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/styles.css?v=9">
-<script src="assets/app.js?v=9" defer></script>
+<link rel="stylesheet" href="assets/styles.css?v=10">
+<script src="assets/app.js?v=10" defer></script>
 </head>
 <body>
 
@@ -112,6 +112,117 @@
       <a class="btn btn-primary btn-block" href="contact.html" style="margin-top:22px">Connect with our team <span class="icon">&rarr;</span></a>
     </div>
 
+  </div>
+
+  <!-- ================= REAL OFFERS FROM FIGURE ================= -->
+  <div class="panel figure-panel" data-figure data-reveal style="margin-top:26px">
+    <div class="calc-head">
+      <span class="calc-kicker eyebrow">Real offers</span>
+      <span class="calc-step">NO CREDIT IMPACT</span>
+    </div>
+    <h2 class="h3" style="margin-top:12px">See your actual rate from Figure</h2>
+    <p class="lede" style="margin-top:12px;font-size:.98rem">
+      The numbers above are our estimate. Add a few details and we'll pull real,
+      personalised offers from Figure — one of the largest HELOC lenders in the US.
+      Checking will not affect your credit score.
+    </p>
+
+    <div class="form-stack" style="margin-top:26px">
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fgFirst">First name *</label>
+          <input class="input" id="fgFirst" data-fg="firstName" placeholder="Jane" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="fgLast">Last name *</label>
+          <input class="input" id="fgLast" data-fg="lastName" placeholder="Doe" required>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fgEmail">Email *</label>
+          <input class="input" id="fgEmail" data-fg="email" type="email" placeholder="you@business.com" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="fgPhone">Phone</label>
+          <input class="input" id="fgPhone" data-fg="phone" inputmode="tel" placeholder="(555) 123-4567">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="fgStreet">Property address *</label>
+        <input class="input" id="fgStreet" data-fg="street1" placeholder="123 Main St" required>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fgCity">City *</label>
+          <input class="input" id="fgCity" data-fg="city" placeholder="Denver" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="fgState">State *</label>
+          <input class="input" id="fgState" data-fg="state" maxlength="2" placeholder="CO" required>
+        </div>
+        <div class="field">
+          <label class="field-label" for="fgZip">ZIP *</label>
+          <input class="input" id="fgZip" data-fg="zip" inputmode="numeric" maxlength="10" placeholder="80202" required>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label" for="fgPurpose">What's it for? *</label>
+          <select class="input" id="fgPurpose" data-fg="loanPurpose">
+            <option value="DEBT_CONSOLIDATION">Consolidating debt</option>
+            <option value="HOME_IMPROVEMENT">Home improvement</option>
+            <option value="MAJOR_PURCHASE">A major purchase</option>
+            <option value="EDUCATION">Education</option>
+            <option value="HEALTH_OR_MEDICAL">Health or medical</option>
+            <option value="CARING_FOR_FAMILY">Caring for family</option>
+            <option value="RETIREMENT">Retirement</option>
+            <option value="TRAVEL">Travel</option>
+            <option value="OTHER" selected>Something else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="fgEmployment">Employment</label>
+          <select class="input" id="fgEmployment" data-fg="employmentStatus">
+            <option value="">Prefer not to say</option>
+            <option value="EMPLOYED">Employed</option>
+            <option value="SELF_EMPLOYED">Self-employed</option>
+            <option value="MILITARY">Military</option>
+            <option value="RETIRED">Retired</option>
+            <option value="UNEMPLOYED">Not currently working</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="fg-check">
+        <input type="checkbox" data-fg-consent="privacy">
+        <span>I agree to Figure's privacy policy and to Figure using these details to
+        show me offers. Required.</span>
+      </label>
+
+      <label class="fg-check">
+        <input type="checkbox" data-fg-consent="marketing">
+        <span>Figure and TMF Team may contact me about this and other products.
+        Optional.</span>
+      </label>
+
+      <p class="err" data-fg-err></p>
+
+      <button class="btn btn-primary btn-block" type="button" data-fg-submit>
+        Get my real offers <span class="icon">&rarr;</span>
+      </button>
+
+      <p style="color:var(--muted-fg);font-size:.82rem;margin:4px 0 0">
+        Your property and income details from above are included. Offers come
+        directly from Figure and are not a commitment to lend.
+      </p>
+    </div>
+
+    <div data-fg-out style="margin-top:8px"></div>
   </div>
 </section>
 <section class="container-x section-y">

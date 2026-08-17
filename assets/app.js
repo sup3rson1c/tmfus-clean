@@ -1021,6 +1021,171 @@
   }
 
   /* ---------------------------------------------------------
+     14b. Figure HELOC — real offers
+     Posts to /api/figure-heloc.php, which holds the affiliate key and
+     talks to Figure. The key is never present in this file: Figure sends
+     it in the request body, so a browser call would publish it.
+     --------------------------------------------------------- */
+  function initFigureOffers() {
+    const panel = $('[data-figure]');
+    if (!panel) return;
+
+    const errEl = $('[data-fg-err]', panel);
+    const outEl = $('[data-fg-out]', panel);
+    const btn = $('[data-fg-submit]', panel);
+    const privacy = $('[data-fg-consent="privacy"]', panel);
+    const marketing = $('[data-fg-consent="marketing"]', panel);
+    if (!btn) return;
+
+    const val = (k) => {
+      const el = panel.querySelector('[data-fg="' + k + '"]');
+      return el ? el.value.trim() : '';
+    };
+
+    // Pull the property and income figures the visitor already entered above.
+    const calc = $('[data-calc="heloc"]');
+    const fromCalc = (field) => {
+      if (!calc) return null;
+      const el = calc.querySelector('[data-field="' + field + '"]');
+      if (!el) return null;
+      if (el.dataset && el.dataset.value) return Number(el.dataset.value);
+      const n = Number(String(el.value || '').replace(/[^0-9.]/g, ''));
+      return isFinite(n) ? n : null;
+    };
+
+    const validate = () => {
+      if (!val('firstName') || !val('lastName')) return 'Enter your first and last name.';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val('email'))) return 'Enter a valid email address.';
+      if (!val('street1')) return 'Enter the property address.';
+      if (!val('city')) return 'Enter the city.';
+      if (!/^[A-Za-z]{2}$/.test(val('state'))) return 'Enter the two-letter state code.';
+      if (!/^\d{5}(-\d{4})?$/.test(val('zip'))) return 'Enter a valid ZIP code.';
+      if (!privacy || !privacy.checked) return 'Please agree to the privacy policy to request offers.';
+      return null;
+    };
+
+    const money = (n) =>
+      n == null ? '—' : usd(Number(n));
+    const pct = (n) =>
+      n == null ? '—' : Number(n).toFixed(2) + '%';
+
+    const render = (res) => {
+      const offers = (res.offers || []).filter((o) => o && o.interestRate != null);
+
+      if (!offers.length) {
+        outEl.innerHTML =
+          '<p class="fg-note" style="margin-top:24px">Figure did not return an offer for these ' +
+          'details. That often means the property or credit profile falls outside their ' +
+          'current criteria — it does not affect your other options. ' +
+          '<a href="contact.html" style="color:var(--accent)">Talk to our team</a> and we\'ll ' +
+          'look at alternatives.</p>';
+        return;
+      }
+
+      const cards = offers.map((o) => {
+        const rows = [
+          ['Line amount', money(o.loanAmount)],
+          ['Monthly payment', money(o.monthlyPayment)],
+          ['Term', o.term ? o.term + ' months' : '—'],
+          ['Origination fee', o.originationFee != null ? Number(o.originationFee).toFixed(2) + '%' : '—']
+        ];
+        return (
+          '<div class="fg-offer">' +
+            '<div class="fg-offer-top">' +
+              '<div class="fg-rate">' + pct(o.interestRate) +
+                '<small>' + (o.rateType ? String(o.rateType).toLowerCase() + ' rate' : 'rate') + '</small>' +
+              '</div>' +
+              '<div class="fg-amount">' + pct(o.apr) + ' APR</div>' +
+            '</div>' +
+            '<div class="fg-grid">' +
+              rows.map((r) => '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('');
+
+      const cta = res.personalizedUrl
+        ? '<a class="btn btn-primary btn-block" style="margin-top:22px" target="_blank" rel="noopener" href="' +
+          res.personalizedUrl + '">Continue with Figure <span class="icon">&#8599;</span></a>'
+        : '';
+
+      const disclosure = res.disclosure
+        ? '<p class="fg-note">' + res.disclosure + '</p>'
+        : '<p class="fg-note">Offers are provided by Figure and are estimates based on the ' +
+          'details supplied. They are not a commitment to lend and remain subject to ' +
+          'underwriting.</p>';
+
+      outEl.innerHTML =
+        '<h3 class="h3" style="margin-top:30px">Your offers from Figure</h3>' +
+        '<div class="fg-offers">' + cards + '</div>' + cta + disclosure;
+    };
+
+    btn.addEventListener('click', () => {
+      const msg = validate();
+      if (errEl) errEl.textContent = msg || '';
+      if (msg) return;
+
+      btn.disabled = true;
+      const label = btn.innerHTML;
+      btn.textContent = 'Checking with Figure…';
+      outEl.innerHTML = '<p class="fg-busy">Requesting live offers…</p>';
+
+      const body = {
+        firstName: val('firstName'),
+        lastName: val('lastName'),
+        email: val('email'),
+        phone: val('phone'),
+        address: {
+          street1: val('street1'),
+          city: val('city'),
+          state: val('state').toUpperCase(),
+          zip: val('zip')
+        },
+        loanPurpose: val('loanPurpose') || 'OTHER',
+        employmentStatus: val('employmentStatus'),
+        propertyValue: fromCalc('home'),
+        currentMortgageBalances: fromCalc('mortgage'),
+        householdIncome: fromCalc('income'),
+        monthlyExpenses: fromCalc('debt'),
+        fico: fromCalc('credit'),
+        // Consent is passed through exactly as ticked — never assumed.
+        privacyPolicyOptIn: !!(privacy && privacy.checked),
+        remarketingAllowed: !!(marketing && marketing.checked)
+      };
+
+      fetch('/api/figure-heloc.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+        .then((r) => r.json().then((j) => ({ ok: r.ok, j: j })))
+        .then(({ ok, j }) => {
+          if (!ok || !j.ok) throw new Error(j && j.error ? j.error : 'Request failed.');
+          render(j);
+          // High-intent lead — record it alongside the others.
+          sendLead('figure-heloc', Object.assign({}, body, {
+            street1: body.address.street1, city: body.address.city,
+            state: body.address.state, zip: body.address.zip,
+            offerCount: (j.offers || []).length,
+            topRate: (j.offers && j.offers[0]) ? j.offers[0].interestRate : '',
+            personalizedUrl: j.personalizedUrl || ''
+          })).catch(() => {});
+        })
+        .catch((e) => {
+          outEl.innerHTML = '';
+          if (errEl) {
+            errEl.textContent = e.message ||
+              'We could not reach Figure just now. Please try again shortly.';
+          }
+        })
+        .then(() => {
+          btn.disabled = false;
+          btn.innerHTML = label;
+        });
+    });
+  }
+
+  /* ---------------------------------------------------------
      15. Hero v2 — headline reveal, ticker, cursor spotlight
      --------------------------------------------------------- */
   function initHeadline() {
@@ -1106,6 +1271,7 @@
     initHeloc();
     initTermLoan();
     initContactForm();
+    initFigureOffers();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

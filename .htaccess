@@ -95,3 +95,15 @@ ErrorDocument 404 /404.html
 <FilesMatch "^\.|\.(md|py|json|lock|yml|yaml|zip|log|bak)$">
   Require all denied
 </FilesMatch>
+
+# ------------------------------------------------------------
+#  Protect API config and logs
+#  figure-heloc.php must stay reachable; everything else in /api
+#  is either a credential or a log and must never be served.
+# ------------------------------------------------------------
+<FilesMatch "^(config\.php|config\.example\.php)$">
+  Require all denied
+</FilesMatch>
+<FilesMatch "\.log$">
+  Require all denied
+</FilesMatch>

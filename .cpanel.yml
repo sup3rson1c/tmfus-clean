@@ -16,3 +16,9 @@ deployment:
     - /bin/cp -f 404.html                $DEPLOYPATH/
     - /bin/cp -f .htaccess               $DEPLOYPATH/
     - /bin/cp -Rf assets/.               $DEPLOYPATH/assets/
+    # Server-side API. Files are copied individually on purpose: api/config.php
+    # holds the Figure credential, lives only on the server, and is not in this
+    # repo. Never add a command here that could overwrite or delete it.
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/cp -f api/figure-heloc.php    $DEPLOYPATH/api/
+    - /bin/cp -f api/config.example.php  $DEPLOYPATH/api/
