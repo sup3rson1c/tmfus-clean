@@ -1,5 +1,5 @@
 /* ============================================================
-   TMF Line — interactions, animations, calculators
+   TMF Team — interactions, animations, calculators
    Vanilla JS, no build step. Loaded with `defer` on every page.
    ============================================================ */
 (function () {
@@ -109,20 +109,127 @@
       host.appendChild(el);
     });
 
-    // subtle parallax on the whole shard layer
+    // depth is handled by the parallax engine below (see [data-parallax])
+  }
+
+  /* ---------------------------------------------------------
+     3b. Parallax engine
+     One rAF loop drives every [data-parallax] element.
+
+       data-parallax="0.18"     speed; negative moves against the scroll
+       data-parallax-max="90"   optional clamp in px
+
+     Elements are only computed while they intersect the viewport.
+     Fully disabled for prefers-reduced-motion and on narrow screens,
+     where the moving layers cost more than they add.
+     --------------------------------------------------------- */
+  const parallax = (() => {
+    const items = [];
     let ticking = false;
-    window.addEventListener(
-      'scroll',
-      () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-          host.style.transform = `translate3d(0, ${window.scrollY * 0.12}px, 0)`;
-          ticking = false;
-        });
-      },
-      { passive: true }
-    );
+    let active = false;
+
+    const mqSmall = window.matchMedia('(max-width: 680px)');
+    const mqMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const measure = (it) => {
+      const prev = it.el.style.transform;
+      it.el.style.transform = 'none';           // measure at rest
+      const r = it.el.getBoundingClientRect();
+      it.top = r.top + window.scrollY;
+      it.h = r.height;
+      it.el.style.transform = prev;
+    };
+
+    const render = () => {
+      ticking = false;
+      if (!active) return;
+      const vh = window.innerHeight;
+      const mid = window.scrollY + vh / 2;
+      for (const it of items) {
+        if (!it.visible) continue;
+        // -1 at the moment it enters, +1 as it leaves
+        const p = ((mid - (it.top + it.h / 2)) / (vh + it.h)) * 2;
+        // travel is viewport-relative so the effect reads the same on any screen
+        let shift = p * it.speed * vh * 0.5;
+        if (it.max) shift = Math.max(-it.max, Math.min(it.max, shift));
+        it.el.style.transform = `translate3d(0, ${shift.toFixed(2)}px, 0)`;
+      }
+    };
+
+    const request = () => {
+      if (ticking || !active) return;
+      ticking = true;
+      requestAnimationFrame(render);
+    };
+
+    const reset = () => {
+      for (const it of items) it.el.style.transform = '';
+    };
+
+    const remeasure = () => {
+      items.forEach(measure);
+      request();
+    };
+
+    // Only elements in view get math done on them.
+    const io =
+      'IntersectionObserver' in window
+        ? new IntersectionObserver(
+            (entries) => {
+              for (const e of entries) {
+                const it = items.find((i) => i.el === e.target);
+                if (it) it.visible = e.isIntersecting;
+              }
+              request();
+            },
+            { rootMargin: '20% 0px' }
+          )
+        : null;
+
+    const evaluate = () => {
+      const on = !mqMotion.matches && !mqSmall.matches && items.length > 0;
+      if (on === active) return;
+      active = on;
+      if (active) {
+        remeasure();
+      } else {
+        reset();
+      }
+    };
+
+    function init() {
+      $$('[data-parallax]').forEach((el) => {
+        const speed = parseFloat(el.getAttribute('data-parallax'));
+        if (!speed) return;
+        const max = parseFloat(el.getAttribute('data-parallax-max')) || 0;
+        const it = { el, speed, max, top: 0, h: 0, visible: !io };
+        el.style.willChange = 'transform';
+        items.push(it);
+        if (io) io.observe(el);
+      });
+      if (!items.length) return;
+
+      window.addEventListener('scroll', request, { passive: true });
+      window.addEventListener('resize', debounce(remeasure, 150), { passive: true });
+      window.addEventListener('load', remeasure);
+
+      const onPref = () => evaluate();
+      if (mqMotion.addEventListener) {
+        mqMotion.addEventListener('change', onPref);
+        mqSmall.addEventListener('change', onPref);
+      }
+      evaluate();
+    }
+
+    return { init, remeasure };
+  })();
+
+  function debounce(fn, ms) {
+    let t;
+    return function () {
+      clearTimeout(t);
+      t = setTimeout(fn, ms);
+    };
   }
 
   /* ---------------------------------------------------------
@@ -790,6 +897,7 @@
     initTicker();
     initSpotlight();
     initShards();
+    parallax.init();
     initReveal();
     initCountUp();
     initCardGlow();

@@ -1,4 +1,4 @@
-# TMF Line — static rebuild
+# TMF Team — static rebuild
 
 A dependency-free rebuild of tmfline.online. No build step, no framework — open
 `index.html` in a browser or drop the folder on any static host (Netlify, Vercel,
@@ -12,6 +12,9 @@ long-term-loans.html    Use cases, benefits, payment estimator, qualification, F
 mca.html                Process timeline, remittance mechanics, ideal-for, FAQ
 about.html              Mission, approach, stats
 contact.html            Contact form (front-end only)
+assets/logo-mark.svg    Ascent logo mark (48px, gradient)
+assets/logo-lockup.svg  Horizontal lockup — mark + "TMF Team / Capital Strategy"
+assets/favicon.svg      Simplified mark for tabs
 assets/styles.css       Whole design system — tokens at the top of the file
 assets/app.js           Every interaction and both calculators
 build_pages.py          Optional. Regenerates the 5 content pages from shared shells.
@@ -27,7 +30,8 @@ Change `--accent` / `--accent-2` / `--accent-grad` to reskin the whole site.
 | Where | What |
 |---|---|
 | Header | Transparent → blurred on scroll; gradient scroll-progress bar |
-| Hero | Seven floating glass shards (CSS keyframes) with scroll parallax |
+| Hero | Seven floating glass shards (CSS keyframes) |
+| Backdrops | Scroll parallax on every `[data-parallax]` layer — one shared rAF loop, IntersectionObserver-gated. Off for `prefers-reduced-motion` and under 680px |
 | Status pill | Pulsing glow dot |
 | Everything | `data-reveal` fade-up on scroll via IntersectionObserver, auto-staggered |
 | Stats | Count-up animation when scrolled into view |
