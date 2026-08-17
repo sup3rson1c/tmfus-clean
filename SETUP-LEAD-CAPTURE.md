@@ -71,10 +71,17 @@ says.
 
 ---
 
-## 6. I connect the site
+## 6. Connected — done
 
-I paste the URL into `assets/app.js` and send you an updated zip. You upload it
-the usual way, then submit a test lead and watch the row appear in your sheet.
+The URL is in `assets/app.js` as of v9, and both paths were tested live against
+the real endpoint (`{"ok":true}` returned for each). Two test rows were written:
+
+- **Contact messages** → TEST / DELETE-ME
+- **Calculator leads** → TEST / DELETE-ME
+
+Delete those two rows whenever you like.
+
+Once v9 is uploaded and deployed, real submissions start landing automatically.
 
 ---
 

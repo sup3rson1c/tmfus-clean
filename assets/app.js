@@ -14,15 +14,17 @@
       .toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
   /* =========================================================
-     LEAD CAPTURE  —  ⚠ PASTE YOUR URL BELOW ⚠
+     LEAD CAPTURE
 
-     Paste the Google Apps Script Web App URL between the quotes.
-     See SETUP-LEAD-CAPTURE.md for the five steps that produce it.
+     Google Apps Script Web App that appends each submission to the
+     leads spreadsheet. Verified live on 17 Aug 2026.
 
-     While this is empty nothing is transmitted, and the forms tell the
-     visitor plainly that they are not live rather than faking success.
+     To repoint it, replace the URL below and bump the ?v= on the asset
+     links in every HTML file. If this is ever set back to an empty
+     string, nothing transmits and the forms say so instead of faking
+     success — see SETUP-LEAD-CAPTURE.md.
      ========================================================= */
-  const LEAD_ENDPOINT = '';
+  const LEAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbze3tD_fvvy7of5o4BQwoY2TcEQ3zBADhJ2hERxTwYEvbgb0En_67rSBRMz1IKMP-YBGQ/exec';
 
   /* Harvests every [data-field] under `root`, so new fields are picked up
      automatically without touching this function. */
