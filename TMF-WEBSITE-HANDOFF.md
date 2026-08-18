@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=25`.**
+**Last updated: 18 August 2026 — assets at `?v=26`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -48,6 +48,7 @@ assets/app.js            Every interaction, both calculators, all integrations
 api/figure-heloc.php     Server-side proxy to Figure's HELOC API
 api/application.php      Application intake — encrypted at rest
 api/lead.php             Every submission, stored on our own server
+admin.php                Password-protected inbox for applications and leads
 api/config.example.php   Template. Real config.php lives ONLY on the server
 ```
 
@@ -91,10 +92,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=25/styles.css?v=26/g; s/app\.js?v=25/app.js?v=26/g' *.html
+sed -i 's/styles\.css?v=26/styles.css?v=27/g; s/app\.js?v=26/app.js?v=27/g' *.html
 ```
 
-Currently at **v25**. Forget this and John sees no change, reports the site is
+Currently at **v26**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -338,6 +339,39 @@ shows a visible notice saying what was carried over, and cannot hold anything
 sensitive. `INDUSTRY_LABEL` maps the calculators' short codes to the
 application's full labels — add an option to one list without adding the pairing
 and the industry silently stops carrying across.
+
+## 6B. The inbox — admin.php, added 18 Aug 2026
+
+John asked for somewhere he could read applications without cPanel. `admin.php`
+is a single self-contained page: password login, a searchable list of every
+application and lead, statement downloads, CSV export.
+
+**It never decrypts anything, and it cannot.** The private key is not on the
+server. The page serves the sealed envelope byte for byte and the browser opens
+it with the key John loads from his own machine. A stolen password, a stolen
+session or a stolen server still yields no SSN, DOB or signature. Say this
+plainly to anyone proposing to "simplify" it by decrypting server-side — that
+change would undo the entire design.
+
+**What the password does gate:** names, businesses, emails, phones and the
+bank statements, which are not encrypted. That was an explicit, stated trade.
+
+Refuses to run at all when: no `admin_password` / `admin_password_hash` is set,
+the connection is plain HTTP (except localhost), or `application_dir` is
+missing or relative.
+
+Defences, all tested on 18 Aug 2026 against a live server:
+
+- Every endpoint 401s without a session; traversal attempts on `folder` and
+  `name` return 404 — paths are rebuilt from a `scandir()` listing plus a
+  strict name pattern, never from browser input.
+- Login rate-limited to 10 attempts per IP per hour, constant-time compare,
+  400ms delay, session id regenerated on success, one-hour idle timeout.
+- Cookie is HttpOnly, SameSite=Strict, Secure over HTTPS.
+- `noindex, nofollow`, and `X-Frame-Options: DENY`.
+
+**`admin.php` is in `.cpanel.yml`.** Fourth new file this session that needed
+adding by hand.
 
 ## 7. Tunable knobs
 

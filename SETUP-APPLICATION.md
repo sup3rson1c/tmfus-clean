@@ -149,15 +149,41 @@ Fill in your own application on the live site with made-up numbers. You should
 get a reference back. Then do step 6 and open it. If anything fails the form
 tells you rather than pretending it worked.
 
-### 6. Reading an application
+### 6. Reading applications — the inbox
 
-1. The notification email gives you a reference and a folder path
-2. cPanel → File Manager → that folder → download `application.enc.json`
-3. Open `tmf-application-tool.html`, load your private key and that file
-4. Press **Open it**
+Add one more line to `api/config.php`:
 
-The whole application appears, signature included. There is a Print / Save as
-PDF button if you need a copy for a funder.
+```php
+'admin_password' => 'four or five unrelated words work well',
+```
+
+Then go to **https://tmfus.com/admin.php** and sign in. You get every
+application and every calculator or contact submission in one list, searchable,
+newest first. Click an application to read it in full.
+
+**Load your private key once per visit** — the button top right. The server
+hands your browser the sealed file and your browser opens it; the key never
+leaves your machine, and the server could not read an application if it wanted
+to. Without the key you can still see who applied, when, and download their bank
+statements — you just cannot see the encrypted half.
+
+There is a Print / PDF button for sending a file to a funder, and the leads tab
+has a one-click CSV download for the month.
+
+**What a stolen admin password would expose:** names, businesses, emails, phone
+numbers and bank statements. Not Social Security numbers, dates of birth or
+signatures — those stay sealed regardless. Use a long password. That trade is
+the price of not living in cPanel, and it was made deliberately.
+
+The page refuses to open at all if there is no password set, if it is reached
+over plain HTTP, or if `application_dir` is not configured properly.
+
+### 6b. The offline tool still works
+
+`tmf-application-tool.html` does the same job without the website being
+involved: download `application.enc.json` from cPanel, open it there. Keep it —
+it is the fallback if the site is ever down, and it is where you generate and
+regenerate your key pair.
 
 ---
 

@@ -1,0 +1,697 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * TMF Team — application inbox
+ * ---------------------------------------------------------------
+ * A password-protected page for reading applications and leads without
+ * going anywhere near cPanel.
+ *
+ * THE ONE THING THAT MAKES THIS SAFE
+ * This script never decrypts anything, and it could not if it wanted to
+ * — the private key is not on this server. It hands the browser the
+ * sealed envelope exactly as it sits on disk; John's browser unlocks it
+ * with the key file on his own machine. So a stolen password, a stolen
+ * session, or a stolen server still yields no Social Security numbers.
+ *
+ * WHAT A STOLEN PASSWORD *DOES* YIELD
+ * Names, businesses, emails, phone numbers, and the bank statements.
+ * Those are not encrypted. Use a long password, and change it if you
+ * ever suspect it has leaked. That trade is the price of not using
+ * cPanel, and it was made knowingly.
+ *
+ * SETUP — add to api/config.php:
+ *     'admin_password' => 'a long random passphrase',
+ * or, if you would rather not keep it in plain text:
+ *     'admin_password_hash' => '<output of PHP password_hash()>',
+ * Without one of those this page refuses to run at all.
+ */
+
+const SESSION_NAME     = 'tmfadmin';
+const SESSION_IDLE     = 3600;   // seconds before an idle session is dropped
+const LOGIN_PER_HOUR   = 10;     // attempts per IP
+const FOLDER_PATTERN   = '/^\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]+_[A-F0-9]{6}$/';
+const STATEMENT_PATTERN = '/^\d{2}_[A-Za-z0-9._-]+\.(pdf|jpg|png)$/';
+
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
+header('Cache-Control: no-store, private');
+
+$cfg = is_readable(__DIR__ . '/api/config.php') ? (require __DIR__ . '/api/config.php') : [];
+$storeDir = rtrim((string) ($cfg['application_dir'] ?? ''), '/');
+$passPlain = (string) ($cfg['admin_password'] ?? '');
+$passHash  = (string) ($cfg['admin_password_hash'] ?? '');
+
+/* ---------------------------------------------------------------
+   Refuse to run in states where running would be worse than not.
+   --------------------------------------------------------------- */
+function bail(string $title, string $detail): void
+{
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><meta charset="utf-8"><title>' . htmlspecialchars($title) . '</title>'
+       . '<body style="font:16px/1.6 system-ui,sans-serif;background:#0a0a0b;color:#fafafa;padding:60px 24px">'
+       . '<div style="max-width:640px;margin:0 auto">'
+       . '<h1 style="font-size:1.4rem">' . htmlspecialchars($title) . '</h1>'
+       . '<p style="color:#a1a1aa">' . $detail . '</p></div>';
+    exit;
+}
+
+$https = (($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off')
+      || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+$localhost = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+
+if (!$https && !$localhost) {
+    bail('This page needs HTTPS', 'A password typed over an unencrypted connection can be read in transit. '
+        . 'Open this page as <code>https://</code> instead.');
+}
+if ($passPlain === '' && $passHash === '') {
+    bail('No password set', 'Add <code>\'admin_password\' =&gt; \'a long random passphrase\',</code> to '
+        . '<code>api/config.php</code>, then reload. Until then this page will not open — '
+        . 'an inbox of customer applications with no password is worse than no inbox.');
+}
+if ($storeDir === '' || $storeDir[0] !== '/') {
+    bail('Storage is not configured', 'Set <code>application_dir</code> in <code>api/config.php</code> to an '
+        . 'absolute path such as <code>/home/yourusername/tmf-applications</code>.');
+}
+
+/* ---------------------------------------------------------------
+   Session
+   --------------------------------------------------------------- */
+session_name(SESSION_NAME);
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => $https,
+    'httponly' => true,
+    'samesite' => 'Strict',
+]);
+session_start();
+
+$action = (string) ($_GET['action'] ?? $_POST['action'] ?? '');
+
+if ($action === 'logout') {
+    $_SESSION = [];
+    session_destroy();
+    header('Location: admin.php');
+    exit;
+}
+
+/* Idle timeout. */
+if (!empty($_SESSION['ok']) && (time() - (int) ($_SESSION['seen'] ?? 0)) > SESSION_IDLE) {
+    $_SESSION = [];
+    session_destroy();
+    session_start();
+}
+
+$loginError = '';
+
+if ($action === 'login') {
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $rateFile = sys_get_temp_dir() . '/tmf_admin_' . sha1($ip) . '.txt';
+    $hits = [];
+    if (is_readable($rateFile)) {
+        $hits = array_filter(
+            (array) json_decode((string) @file_get_contents($rateFile), true),
+            static fn($t) => is_int($t) && $t > time() - 3600
+        );
+    }
+
+    if (count($hits) >= LOGIN_PER_HOUR) {
+        $loginError = 'Too many attempts from this connection. Try again in an hour.';
+    } else {
+        $hits[] = time();
+        @file_put_contents($rateFile, json_encode(array_values($hits)), LOCK_EX);
+
+        $given = (string) ($_POST['password'] ?? '');
+        $good = $passHash !== ''
+            ? password_verify($given, $passHash)
+            : hash_equals($passPlain, $given);
+
+        // Cheap brute-force tax; also hides timing differences.
+        usleep(400000);
+
+        if ($good) {
+            session_regenerate_id(true);
+            $_SESSION['ok'] = true;
+            $_SESSION['seen'] = time();
+            header('Location: admin.php');
+            exit;
+        }
+        $loginError = 'That password is not right.';
+    }
+}
+
+$authed = !empty($_SESSION['ok']);
+if ($authed) {
+    $_SESSION['seen'] = time();
+}
+
+/* ---------------------------------------------------------------
+   Data helpers. Every path is rebuilt from a directory listing and a
+   strict name pattern — nothing the browser sends is ever used to
+   build a path, so there is no traversal to find.
+   --------------------------------------------------------------- */
+function applicationFolders(string $storeDir): array
+{
+    $out = [];
+    foreach ((array) @scandir($storeDir) as $name) {
+        if (!is_string($name) || !preg_match(FOLDER_PATTERN, $name)) {
+            continue;
+        }
+        $path = $storeDir . '/' . $name;
+        if (!is_dir($path)) {
+            continue;
+        }
+
+        $summary = [];
+        if (is_readable($path . '/summary.json')) {
+            $summary = (array) json_decode((string) @file_get_contents($path . '/summary.json'), true);
+        }
+        $app = (array) ($summary['application'] ?? []);
+
+        $statements = [];
+        foreach ((array) @scandir($path) as $f) {
+            if (is_string($f) && preg_match(STATEMENT_PATTERN, $f)) {
+                $statements[] = $f;
+            }
+        }
+
+        $out[] = [
+            'folder'     => $name,
+            'reference'  => (string) ($summary['reference'] ?? substr($name, -6)),
+            'received'   => (string) ($summary['received'] ?? ''),
+            'business'   => (string) ($app['business_legal_name'] ?? ''),
+            'owner'      => (string) ($app['owner_name'] ?? ''),
+            'email'      => (string) ($app['email'] ?? ''),
+            'phone'      => (string) ($app['phone'] ?? ''),
+            'state'      => (string) ($app['business_state'] ?? ''),
+            'amount'     => (string) ($app['amount_requested'] ?? ''),
+            'statements' => $statements,
+            'sealed'     => is_readable($path . '/application.enc.json'),
+        ];
+    }
+
+    usort($out, static fn($a, $b) => strcmp($b['folder'], $a['folder']));
+    return $out;
+}
+
+function leadRecords(string $storeDir, int $limit = 400): array
+{
+    $base = $storeDir . '/leads';
+    $out = [];
+    foreach (array_reverse((array) @scandir($base)) as $month) {
+        if (!is_string($month) || !preg_match('/^\d{4}-\d{2}$/', $month)) {
+            continue;
+        }
+        $dir = $base . '/' . $month;
+        $files = array_reverse((array) @scandir($dir));
+        foreach ($files as $f) {
+            if (!is_string($f) || !preg_match('/^\d{2}_\d{6}_[a-z0-9-]+_[A-F0-9]{6}\.json$/', $f)) {
+                continue;
+            }
+            $rec = (array) json_decode((string) @file_get_contents($dir . '/' . $f), true);
+            if ($rec === []) {
+                continue;
+            }
+            $d = (array) ($rec['data'] ?? []);
+            $name = trim(($d['first'] ?? $d['firstName'] ?? '') . ' ' . ($d['last'] ?? $d['lastName'] ?? ''));
+            if ($name === '') {
+                $name = (string) ($d['owner_name'] ?? '');
+            }
+            $out[] = [
+                'month'    => $month,
+                'id'       => (string) ($rec['id'] ?? ''),
+                'kind'     => (string) ($rec['kind'] ?? ''),
+                'received' => (string) ($rec['received'] ?? ''),
+                'name'     => $name,
+                'business' => (string) ($d['business'] ?? $d['business_legal_name'] ?? ''),
+                'email'    => (string) ($d['email'] ?? ''),
+                'phone'    => (string) ($d['phone'] ?? ''),
+                'data'     => $d,
+            ];
+            if (count($out) >= $limit) {
+                return $out;
+            }
+        }
+    }
+    return $out;
+}
+
+/** Resolve a browser-supplied folder name to a real folder, or null. */
+function safeFolder(string $storeDir, string $wanted): ?string
+{
+    if (!preg_match(FOLDER_PATTERN, $wanted)) {
+        return null;
+    }
+    $path = $storeDir . '/' . $wanted;
+    return is_dir($path) ? $path : null;
+}
+
+/* ---------------------------------------------------------------
+   Authenticated endpoints
+   --------------------------------------------------------------- */
+if ($authed && $action !== '') {
+    if ($action === 'applications') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(applicationFolders($storeDir));
+        exit;
+    }
+
+    if ($action === 'leads') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(leadRecords($storeDir));
+        exit;
+    }
+
+    if ($action === 'envelope') {
+        $dir = safeFolder($storeDir, (string) ($_GET['folder'] ?? ''));
+        if ($dir === null || !is_readable($dir . '/application.enc.json')) {
+            http_response_code(404);
+            exit;
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        readfile($dir . '/application.enc.json');
+        exit;
+    }
+
+    if ($action === 'statement') {
+        $dir = safeFolder($storeDir, (string) ($_GET['folder'] ?? ''));
+        $name = (string) ($_GET['name'] ?? '');
+        if ($dir === null || !preg_match(STATEMENT_PATTERN, $name) || !is_readable($dir . '/' . $name)) {
+            http_response_code(404);
+            exit;
+        }
+        $mime = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'png' => 'image/png'];
+        $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+        header('Content-Type: ' . ($mime[$ext] ?? 'application/octet-stream'));
+        header('Content-Disposition: attachment; filename="' . $name . '"');
+        header('Content-Length: ' . (string) filesize($dir . '/' . $name));
+        readfile($dir . '/' . $name);
+        exit;
+    }
+
+    if ($action === 'csv') {
+        $month = (string) ($_GET['month'] ?? '');
+        if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+            http_response_code(400);
+            exit;
+        }
+        $path = $storeDir . '/leads/' . $month . '/leads.csv';
+        if (!is_readable($path)) {
+            http_response_code(404);
+            exit;
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="leads-' . $month . '.csv"');
+        readfile($path);
+        exit;
+    }
+}
+
+if (!$authed && $action !== '' && $action !== 'login') {
+    http_response_code(401);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'not signed in']);
+    exit;
+}
+
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Application inbox | TMF Team</title>
+<style>
+  :root{
+    --bg:#0a0a0b; --panel:#131316; --panel-2:#1a1a1f; --line:#2a2a31;
+    --fg:#fafafa; --muted:#a1a1aa; --accent:#34d399; --accent-2:#4aa5e8;
+    --danger:#f87171; --radius:.75rem;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 20px 90px}
+  h1{font-size:1.45rem;margin:0;letter-spacing:-.02em}
+  h1 b{background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-top:20px}
+  button,.btn{font:inherit;font-weight:600;cursor:pointer;border-radius:var(--radius);
+    padding:10px 18px;border:1px solid transparent;text-decoration:none;display:inline-block}
+  .primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04120e}
+  .ghost{background:transparent;border-color:var(--line);color:var(--fg)}
+  .ghost:hover{border-color:var(--accent)}
+  input[type=password],input[type=search]{font:inherit;width:100%;background:#08080a;color:var(--fg);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+  label.file{display:inline-flex;align-items:center;gap:9px;background:var(--panel-2);
+    border:1px dashed var(--line);border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-size:.93rem}
+  label.file:hover{border-color:var(--accent)}
+  label.file input{display:none}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{text-align:left;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line);font-size:.93rem;vertical-align:top}
+  tr.row{cursor:pointer}
+  tr.row:hover td{background:var(--panel-2)}
+  .ref{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;color:var(--accent)}
+  .tabs{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+  .tab{padding:9px 17px;border-radius:999px;border:1px solid var(--line);cursor:pointer;font-size:.92rem}
+  .tab.on{background:var(--panel-2);border-color:var(--accent);color:var(--fg)}
+  .bad{color:var(--danger);white-space:pre-wrap}
+  .ok{color:var(--accent)}
+  .hide{display:none!important}
+  .mono-label{font-family:ui-monospace,Menlo,monospace;font-size:.7rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--muted)}
+  .warn{border-left:3px solid var(--accent);background:rgba(52,211,153,.07);
+    padding:12px 15px;border-radius:0 var(--radius) var(--radius) 0;font-size:.9rem;margin-top:14px}
+  .sig{background:#fff;border-radius:8px;padding:8px;max-width:400px;margin-top:8px}
+  .sig img{display:block;width:100%}
+  .group{margin-top:24px}
+  .group h3{font-size:.95rem;margin:0 0 4px}
+  td.k{color:var(--muted);width:230px}
+  dialog{border:none;background:transparent;padding:0;max-width:920px;width:94%;color:var(--fg)}
+  dialog::backdrop{background:rgba(0,0,0,.72)}
+  /* The dialog sits over a dimmed page, so it needs to be visibly lighter
+     than the panels behind it or the whole thing reads as greyed-out. */
+  dialog .card{background:#17171c;border-color:#33333c}
+  dialog td{color:var(--fg)}
+  dialog td.k{color:var(--muted)}
+  @media print{ body{background:#fff;color:#000} .noprint{display:none!important} .card{border:none;background:#fff} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<?php if (!$authed): ?>
+
+  <h1>Application <b>inbox</b></h1>
+  <p class="muted" style="margin-top:6px">TMF Team</p>
+
+  <div class="card" style="max-width:440px">
+    <form method="post">
+      <input type="hidden" name="action" value="login">
+      <label class="mono-label" for="pw">Password</label>
+      <div style="margin-top:8px"><input type="password" id="pw" name="password" autocomplete="current-password" autofocus></div>
+      <?php if ($loginError !== ''): ?>
+        <p class="bad" style="font-size:.92rem"><?= htmlspecialchars($loginError) ?></p>
+      <?php endif; ?>
+      <button class="primary" style="width:100%;margin-top:14px" type="submit">Sign in</button>
+    </form>
+  </div>
+
+<?php else: ?>
+
+  <div class="top">
+    <div>
+      <h1>Application <b>inbox</b></h1>
+      <p class="muted" style="margin:2px 0 0;font-size:.92rem">TMF Team</p>
+    </div>
+    <div class="noprint">
+      <label class="file">
+        <input type="file" id="privFile" accept=".pem,.txt">
+        <span id="privLabel">Load your private key</span>
+      </label>
+      <a class="btn ghost" href="admin.php?action=logout">Sign out</a>
+    </div>
+  </div>
+
+  <div class="warn noprint">
+    Your private key is read in this browser and never sent anywhere. Without it
+    you can still see who applied — you just cannot open the encrypted half.
+  </div>
+
+  <div class="tabs noprint">
+    <div class="tab on" data-tab="applications">Applications</div>
+    <div class="tab" data-tab="leads">Calculators &amp; contact</div>
+  </div>
+
+  <div class="card" id="paneApplications">
+    <div class="noprint"><input type="search" id="searchApps" placeholder="Search by business, name, email or reference"></div>
+    <p class="muted" id="appsEmpty" style="margin-top:16px">Loading…</p>
+    <table class="hide" id="appsTable">
+      <thead><tr><th>Received</th><th>Business</th><th>Owner</th><th>State</th><th>Wanted</th><th>Statements</th><th>Ref</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="card hide" id="paneLeads">
+    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input type="search" id="searchLeads" placeholder="Search leads" style="flex:1;min-width:220px">
+      <a class="btn ghost" id="csvLink" href="#">Download this month as CSV</a>
+    </div>
+    <p class="muted" id="leadsEmpty" style="margin-top:16px">Loading…</p>
+    <table class="hide" id="leadsTable">
+      <thead><tr><th>Received</th><th>Type</th><th>Name</th><th>Business</th><th>Email</th><th>Phone</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <dialog id="viewer">
+    <div class="card" style="margin:0;max-height:88vh;overflow:auto">
+      <div class="top noprint">
+        <span class="mono-label">Application</span>
+        <div>
+          <button class="ghost" onclick="window.print()">Print / PDF</button>
+          <button class="ghost" id="closeViewer">Close</button>
+        </div>
+      </div>
+      <p class="bad hide" id="viewErr"></p>
+      <div id="viewBody"></div>
+    </div>
+  </dialog>
+
+<?php endif; ?>
+
+</div>
+
+<?php if ($authed): ?>
+<script>
+(function () {
+  'use strict';
+  var $ = function (i) { return document.getElementById(i); };
+  var subtle = window.crypto && window.crypto.subtle;
+  var privKey = null;          // CryptoKey, memory only
+  var apps = [], leads = [];
+
+  /* ---------- key handling ---------- */
+  function fromPem(pem) {
+    var b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+    var bin = atob(b64), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+  function b64ToBuf(s) {
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  $('privFile').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      var text = String(r.result);
+      if (text.indexOf('PRIVATE KEY') === -1) {
+        $('privLabel').textContent = 'That is not a private key';
+        return;
+      }
+      subtle.importKey('pkcs8', fromPem(text), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
+        .then(function (k) { privKey = k; $('privLabel').textContent = 'Key loaded ✓'; })
+        .catch(function (e) { $('privLabel').textContent = 'Key could not be read'; console.error(e); });
+    };
+    r.readAsText(f);
+  });
+
+  /* ---------- tabs ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
+    t.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (x) { x.classList.remove('on'); });
+      t.classList.add('on');
+      var which = t.getAttribute('data-tab');
+      $('paneApplications').classList.toggle('hide', which !== 'applications');
+      $('paneLeads').classList.toggle('hide', which !== 'leads');
+    });
+  });
+
+  /* ---------- loading ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function when(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleString();
+  }
+
+  fetch('admin.php?action=applications', { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (rows) { apps = rows; renderApps(''); })
+    .catch(function () { $('appsEmpty').textContent = 'Could not load applications.'; });
+
+  fetch('admin.php?action=leads', { credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (rows) { leads = rows; renderLeads(''); })
+    .catch(function () { $('leadsEmpty').textContent = 'Could not load submissions.'; });
+
+  function renderApps(q) {
+    var body = $('appsTable').querySelector('tbody');
+    var list = apps.filter(function (a) {
+      if (!q) return true;
+      return (a.business + ' ' + a.owner + ' ' + a.email + ' ' + a.reference).toLowerCase().indexOf(q) !== -1;
+    });
+    if (!apps.length) {
+      $('appsEmpty').textContent = 'No applications yet. When one arrives it will appear here.';
+      $('appsTable').classList.add('hide');
+      return;
+    }
+    $('appsEmpty').classList.add('hide');
+    $('appsTable').classList.remove('hide');
+    body.innerHTML = list.map(function (a) {
+      var stmts = a.statements.map(function (n) {
+        return '<a class="ref" href="admin.php?action=statement&folder=' + encodeURIComponent(a.folder) +
+               '&name=' + encodeURIComponent(n) + '">' + esc(n.slice(0, 2)) + '</a>';
+      }).join(' ');
+      return '<tr class="row" data-folder="' + esc(a.folder) + '">' +
+        '<td>' + esc(when(a.received)) + '</td>' +
+        '<td><b>' + esc(a.business) + '</b></td>' +
+        '<td>' + esc(a.owner) + '<br><span class="muted" style="font-size:.85rem">' + esc(a.email) + '</span></td>' +
+        '<td>' + esc(a.state) + '</td>' +
+        '<td>' + (a.amount ? '$' + esc(a.amount) : '') + '</td>' +
+        '<td class="noprint">' + (stmts || '<span class="muted">none</span>') + '</td>' +
+        '<td class="ref">' + esc(a.reference) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    Array.prototype.forEach.call(body.querySelectorAll('tr.row'), function (tr) {
+      tr.addEventListener('click', function (e) {
+        if (e.target.tagName === 'A') return;      // statement download
+        openApplication(tr.getAttribute('data-folder'));
+      });
+    });
+  }
+
+  function renderLeads(q) {
+    var body = $('leadsTable').querySelector('tbody');
+    var list = leads.filter(function (l) {
+      if (!q) return true;
+      return (l.name + ' ' + l.business + ' ' + l.email + ' ' + l.kind).toLowerCase().indexOf(q) !== -1;
+    });
+    if (!leads.length) {
+      $('leadsEmpty').textContent = 'Nothing yet.';
+      $('leadsTable').classList.add('hide');
+      return;
+    }
+    $('leadsEmpty').classList.add('hide');
+    $('leadsTable').classList.remove('hide');
+    $('csvLink').href = 'admin.php?action=csv&month=' + encodeURIComponent(leads[0].month);
+    body.innerHTML = list.map(function (l) {
+      return '<tr>' +
+        '<td>' + esc(when(l.received)) + '</td>' +
+        '<td>' + esc(l.kind) + '</td>' +
+        '<td>' + esc(l.name) + '</td>' +
+        '<td>' + esc(l.business) + '</td>' +
+        '<td>' + esc(l.email) + '</td>' +
+        '<td>' + esc(l.phone) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  $('searchApps').addEventListener('input', function () { renderApps(this.value.toLowerCase()); });
+  $('searchLeads').addEventListener('input', function () { renderLeads(this.value.toLowerCase()); });
+
+  /* ---------- open one, decrypting here in the browser ---------- */
+  var SENSITIVE = /ssn|dob|birth|social|signature/i;
+  var GROUPS = [
+    { title: 'Business', keys: ['business_legal_name','business_dba_name','ein','industry','business_start_date','business_address','business_city','business_state','business_zip'] },
+    { title: 'Owner', keys: ['owner_name','owner_dob','owner_ssn','owner_ownership_pct','email','phone','owner_address','owner_city','owner_state','owner_zip'] },
+    { title: 'Co-owner', keys: ['co_owner','co_owner_name','co_owner_dob','co_owner_ssn','co_owner_ownership_pct','co_owner_address','co_owner_city','co_owner_state','co_owner_zip'] },
+    { title: 'Request', keys: ['amount_requested','statements_attached'] },
+    { title: 'Consent and signing', keys: ['consent_credit','consent_contact','consent_text_id','signed_at'] }
+  ];
+  function pretty(k) {
+    return k.replace(/_/g, ' ').replace(/\bssn\b/i, 'SSN').replace(/\bdob\b/i, 'date of birth')
+            .replace(/\bein\b/i, 'EIN').replace(/\bpct\b/i, '%')
+            .replace(/^./, function (c) { return c.toUpperCase(); });
+  }
+  function rows(obj, keys) {
+    var html = '';
+    keys.forEach(function (k) {
+      if (!(k in obj) || obj[k] === '' || k === 'owner_signature') return;
+      html += '<tr><td class="k">' + pretty(k) + '</td><td' +
+              (SENSITIVE.test(k) ? ' class="ok"' : '') + '>' + esc(obj[k]) + '</td></tr>';
+    });
+    return html ? '<table>' + html + '</table>' : '';
+  }
+
+  function openApplication(folder) {
+    var dlg = $('viewer');
+    $('viewErr').classList.add('hide');
+    $('viewErr').textContent = '';        // do not leave a stale message behind
+    $('viewBody').innerHTML = '<p class="muted">Opening…</p>';
+    if (dlg.showModal) dlg.showModal();
+
+    if (!privKey) {
+      $('viewBody').innerHTML = '';
+      $('viewErr').textContent = 'Load your private key first — the button at the top right. ' +
+        'The server cannot open this for you; it does not have the key, on purpose.';
+      $('viewErr').classList.remove('hide');
+      return;
+    }
+
+    fetch('admin.php?action=envelope&folder=' + encodeURIComponent(folder), { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw new Error('could not fetch it'); return r.json(); })
+      .then(function (env) {
+        return subtle.decrypt({ name: 'RSA-OAEP' }, privKey, b64ToBuf(env.sealed_key))
+          .then(function (raw) { return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['decrypt']); })
+          .then(function (aes) {
+            var data = b64ToBuf(env.data), tag = b64ToBuf(env.tag);
+            var joined = new Uint8Array(data.length + tag.length);
+            joined.set(data, 0); joined.set(tag, data.length);
+            return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(env.iv), tagLength: 128 }, aes, joined);
+          });
+      })
+      .then(function (plain) { render(JSON.parse(new TextDecoder().decode(plain))); })
+      .catch(function (e) {
+        $('viewBody').innerHTML = '';
+        $('viewErr').textContent = 'Could not open this application.\n\n' +
+          'The usual cause is that this private key does not match the public key that was on the ' +
+          'server when this application came in.\n\nTechnical detail: ' + (e.message || e);
+        $('viewErr').classList.remove('hide');
+      });
+  }
+
+  function render(rec) {
+    var app = rec.application || {}, out = '';
+    out += '<p class="mono-label">Reference</p><p style="font-size:1.3rem;letter-spacing:.08em;margin:2px 0 0">' +
+           esc(rec.reference || '') + '</p>';
+    GROUPS.forEach(function (g) {
+      var t = rows(app, g.keys);
+      if (t) out += '<div class="group"><h3>' + g.title + '</h3>' + t + '</div>';
+    });
+    var known = {};
+    GROUPS.forEach(function (g) { g.keys.forEach(function (k) { known[k] = 1; }); });
+    var extras = Object.keys(app).filter(function (k) { return !known[k] && k !== 'owner_signature'; });
+    if (extras.length) out += '<div class="group"><h3>Other fields</h3>' + rows(app, extras) + '</div>';
+    if (app.owner_signature) {
+      out += '<div class="group"><h3>Signature</h3><div class="sig"><img alt="Applicant signature" src="' +
+             esc(app.owner_signature) + '"></div></div>';
+    }
+    if (rec.audit) out += '<div class="group"><h3>Audit trail</h3>' + rows(rec.audit, Object.keys(rec.audit)) + '</div>';
+    $('viewBody').innerHTML = out;
+  }
+
+  $('closeViewer').addEventListener('click', function () { $('viewer').close(); });
+})();
+</script>
+<?php endif; ?>
+</body>
+</html>

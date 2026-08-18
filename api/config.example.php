@@ -77,4 +77,24 @@ return [
     // and put its path here instead. Both forms work.
     // ---------------------------------------------------------------
     'application_pubkey' => '',
+
+    // ---------------------------------------------------------------
+    // APPLICATION INBOX  (admin.php)
+    //
+    // The password for https://tmfus.com/admin.php, where you read
+    // applications without going through cPanel. Without it that page
+    // refuses to open at all.
+    //
+    // Make it LONG — four or five unrelated words beats a short scramble.
+    // Anyone with this password can see applicant names, emails, phone
+    // numbers and bank statements. They still cannot see Social Security
+    // numbers, dates of birth or signatures: those stay encrypted, and
+    // the key that opens them is not on this server.
+    // ---------------------------------------------------------------
+    'admin_password' => '',
+
+    // Optional. If you would rather not keep the password in plain text,
+    // put a password_hash() output here instead and leave the line above
+    // empty. This one wins if both are set.
+    'admin_password_hash' => '',
 ];
