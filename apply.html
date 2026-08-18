@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#09090b">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/styles.css?v=22">
-<script src="assets/app.js?v=22" defer></script>
+<link rel="stylesheet" href="assets/styles.css?v=23">
+<script src="assets/app.js?v=23" defer></script>
 </head>
 <body>
 
@@ -454,19 +454,19 @@
         <div class="form-stack" style="margin-top:26px">
 
           <div class="field">
-            <label class="field-label">Business bank statements</label>
+            <label class="field-label">Business bank statements *</label>
             <div class="dropzone" data-dropzone tabindex="0" role="button" aria-label="Add bank statements">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
               </svg>
-              <b>Add your last 3–4 months</b>
+              <b data-statements-headline>Add your last 3 months</b>
               <span>PDF, JPG or PNG &middot; up to 10&nbsp;MB each</span>
               <input type="file" data-files multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
             </div>
             <ul class="file-list" data-file-list></ul>
-            <span class="field-hint">
-              Optional here — if it is easier to send them later, an advisor will
-              email you a secure upload link.
+            <span class="field-hint" data-statements-hint>
+              Required — we cannot review an application without them. One file
+              per month, or a single PDF covering all of them.
             </span>
           </div>
 

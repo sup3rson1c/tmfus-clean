@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=22`, 22 commits, none pushed.**
+**Last updated: 18 August 2026 — assets at `?v=23`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -90,10 +90,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=22/styles.css?v=23/g; s/app\.js?v=22/app.js?v=23/g' *.html
+sed -i 's/styles\.css?v=23/styles.css?v=24/g; s/app\.js?v=23/app.js?v=24/g' *.html
 ```
 
-Currently at **v22**. Forget this and John sees no change, reports the site is
+Currently at **v23**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -112,7 +112,7 @@ broken, and you will waste a round trip proving the server is fine.
 | HELOC calculator | Working. Figure API integration **blocked**, see §6.1 |
 | SBA page | Done, facts web-verified against SOP 50 10 8 |
 | Branded application | **Rebuilt 18 Aug 2026.** TMF collects all 29 fields; encrypted at rest, §5.3 |
-| Bank statement upload | Working, hardened |
+| Bank statement upload | Working, hardened. **Now required**, 3 months, 4 in listed states |
 
 ---
 
@@ -225,20 +225,50 @@ applications, so retention is a decision he has to make.
 
 ## 6. Open items
 
-### 6.1 Figure API returns HTTP 500 — blocked, not our bug
+### 6.1 Figure 500s — DIAGNOSED 18 Aug 2026. It was never Figure's bug.
 
-`api/figure-heloc.php` proxies Figure's HELOC pre-qualification API. The
-affiliate ID travels in the request **body**, so it must stay server-side.
+**The previous conclusion in this file was wrong, and it was repeated to John at
+the start of another session before anyone checked.** Recorded here in full so
+nobody re-derives it.
 
-Current state: **every production request returns HTTP 500**, including the bare
-minimum payload, isolated across nine payload variations. 500 is Figure's server
-erroring, not a bad request from us.
+`api/config.php` on the server had:
 
-Two false diagnoses already burned on this — read them in §8 before retrying.
+```php
+'affiliate_id' => 'e5c722ec-eaf1-4cb1-8fcb-f2c16b31fade',
+'environment'  => 'production',
+```
 
-**What John needs to do:** ask Figure support whether the account is provisioned
-for the `OFFERS` request type. Also worth confirming whether `householdIncome`
-should be annual or monthly (we send annual, `income_is_annual` in config).
+That affiliate ID is one of **Figure's published sandbox IDs** — it is printed in
+their documentation as a test credential, and the comment directly above it in
+`config.example.php` says so. John confirmed he never had a real affiliate ID and
+had been testing with the example value. Sent to `api.figure.com` it is simply
+unknown, and Figure answers **HTTP 500**, which reads like their server falling
+over rather than a credential problem. That is what sent two sessions down the
+wrong path: nine payload variations tested against production, on a credential
+that only exists in the sandbox.
+
+**Lesson worth keeping:** "isolated across nine payload variations" felt like
+thorough elimination, but every one of those nine shared the same unexamined
+assumption. When a whole class of attempts fails identically, suspect the thing
+they have in common rather than varying them further.
+
+**Two ways forward:**
+
+- To test: `'environment' => 'test'` in `config.php` sends the sandbox ID to
+  `api.test.figure.com`, which is what it is for. One word, no deploy needed —
+  `config.php` is not in the repo.
+- To go live: a real affiliate ID from Figure. Note the existing Figure Lead
+  Portal account belongs to Signet, not TMF — see §6.4.
+
+`api/figure-heloc.php` now **refuses** the sandbox-ID-plus-production
+combination outright and writes the explanation to the log, rather than letting
+it fail as an opaque 500. Verified: the combination is blocked, the same ID
+against `test` passes through to normal validation, and a real-looking ID on
+production is unaffected.
+
+Still open and worth confirming with Figure once a real ID exists: whether
+`householdIncome` should be annual or monthly (we send annual,
+`income_is_annual` in config).
 
 ### 6.2 No phone number or email anywhere on the site
 

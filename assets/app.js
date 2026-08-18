@@ -1345,6 +1345,24 @@
   const MAX_FILE_MB = 10;
   const MAX_FILES = 12;
 
+  /* ---------------------------------------------------------
+     Bank statements — John's rule, 18 Aug 2026.
+
+     Statements are REQUIRED. An application cannot be submitted
+     without them. Most states need three months; some need four.
+
+     TO ADD A STATE: put its two-letter code in the list below with
+     the number of months it needs. Nothing else has to change — the
+     dropzone text, the hint and the error message all read from here.
+     --------------------------------------------------------- */
+  const STATEMENTS_MIN = 3;
+  const STATEMENTS_MIN_BY_STATE = {
+    // 'NY': 4,
+    // 'CA': 4,
+  };
+  const statementsRequiredFor = (state) =>
+    STATEMENTS_MIN_BY_STATE[String(state || '').toUpperCase()] || STATEMENTS_MIN;
+
   /* Substrings that mark a field as sensitive. Used to keep those values
      out of the Google Sheets lead summary. Never remove an entry. */
   const SENSITIVE_KEY_PARTS = ['ssn', 'dob', 'birth', 'social', 'sig', 'signature'];
@@ -1588,15 +1606,47 @@
       if (n === 4) {
         const bad = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
         if (bad) { if (err) err.textContent = '"' + bad.name + '" is over ' + MAX_FILE_MB + ' MB. Remove it and an advisor will send a secure upload link.'; return false; }
+
+        const need = statementsRequiredFor(businessState());
+        if (files.length < need) {
+          if (err) {
+            err.textContent = files.length === 0
+              ? 'Please attach your last ' + need + ' months of business bank statements — we cannot review an application without them.'
+              : 'That is ' + files.length + ' of the ' + need + ' months we need. Please add ' + (need - files.length) + ' more.';
+          }
+          return false;
+        }
+
         if (!sigDrawn) { if (err) err.textContent = 'Please sign in the box above.'; return false; }
       }
       return true;
+    }
+
+    /* ---- how many months this applicant's state needs ---- */
+    function businessState() {
+      const el = $('[data-field="business_state"]', form);
+      return el ? el.value : '';
+    }
+
+    /* Keep the dropzone honest about what is actually required, so the
+       applicant is not surprised by the error after uploading three. */
+    function syncStatementsCopy() {
+      const need = statementsRequiredFor(businessState());
+      const headline = $('[data-statements-headline]', form);
+      const hint = $('[data-statements-hint]', form);
+      if (headline) headline.textContent = 'Add your last ' + need + ' months';
+      if (hint) {
+        hint.textContent = need > STATEMENTS_MIN
+          ? 'Required — ' + businessState() + ' needs ' + need + ' months. One file per month, or a single PDF covering all of them.'
+          : 'Required — we cannot review an application without them. One file per month, or a single PDF covering all of them.';
+      }
     }
 
     /* ---- step navigation ---- */
     function show(n) {
       panes.forEach((p) => p.classList.toggle('active', p.dataset.pane === String(n)));
       bars.forEach((b, i) => b.classList.toggle('done', n === 'done' || i < n));
+      if (n === 4) syncStatementsCopy();
       if (stepLabel) stepLabel.textContent = n === 'done' ? 'Complete' : 'Step ' + n + ' of ' + TOTAL;
       const top = form.getBoundingClientRect().top + window.scrollY - 110;
       window.scrollTo({ top: top, behavior: reduced ? 'auto' : 'smooth' });

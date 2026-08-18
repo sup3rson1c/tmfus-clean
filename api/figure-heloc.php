@@ -78,6 +78,37 @@ if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 }
 
 /* ---------------------------------------------------------------
+   Sandbox credential pointed at production.
+
+   This cost several sessions. Figure publishes two sandbox affiliate
+   IDs in their docs. Sent to api.figure.com they are simply unknown, and
+   Figure answers HTTP 500 — which reads like their server falling over
+   rather than a credential problem, so the hunt goes off in the wrong
+   direction and stays there. Nine payload variations were tested against
+   production on a sandbox ID before anyone checked the ID itself.
+
+   Refuse the combination outright and say exactly what is wrong.
+   --------------------------------------------------------------- */
+const FIGURE_SANDBOX_IDS = [
+    'd02bc4e9-35af-4c31-970e-e1273079ba41',  // self-attested model
+    'e5c722ec-eaf1-4cb1-8fcb-f2c16b31fade',  // licensed partners
+];
+
+$isSandboxId = in_array(strtolower($affiliateId), FIGURE_SANDBOX_IDS, true);
+$isProduction = ($cfg['environment'] ?? 'test') === 'production';
+
+if ($isSandboxId && $isProduction) {
+    logLine(
+        $cfg,
+        'ERROR refusing to call production with a published sandbox affiliate_id. '
+        . "Set 'environment' => 'test' in config.php to use this ID, or put your real "
+        . 'affiliate ID from Figure in affiliate_id to go live. Production returns HTTP '
+        . '500 for sandbox IDs, which looks like a Figure outage and is not one.'
+    );
+    fail(503, 'The HELOC offers service is not configured for live use yet.');
+}
+
+/* ---------------------------------------------------------------
    Rate limit — cheap, per IP, per hour
    --------------------------------------------------------------- */
 

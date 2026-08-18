@@ -131,8 +131,81 @@ function sealEnvelope(string $plaintext, string $publicKeyPem): ?array
     ];
 }
 
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    fail(405, 'POST only.');
+/**
+ * Take whatever shape the key arrived in and produce a valid PEM.
+ *
+ * Pasting a key into a web-based file editor mangles it in predictable
+ * ways: the line breaks get eaten, or turn into literal "\n", or the
+ * whole thing arrives as one long line. All of those are still a
+ * perfectly good key — they just are not valid PEM, and OpenSSL will
+ * refuse them. Rather than make John diagnose that, rebuild the PEM from
+ * the base64 body: strip the headers and every scrap of whitespace, then
+ * re-wrap at 64 characters with proper header and footer.
+ *
+ * Returns '' if there is no plausible key material at all.
+ */
+function normalizePublicKey(string $raw): string
+{
+    $raw = trim($raw);
+    if ($raw === '') {
+        return '';
+    }
+
+    // Literal backslash-n, which is what a mis-escaped paste produces.
+    $raw = str_replace(['\\r\\n', '\\n', '\\r'], "\n", $raw);
+
+    // If it already parses, leave it alone.
+    if (openssl_pkey_get_public($raw) !== false) {
+        return $raw;
+    }
+
+    $body = preg_replace('/-----(BEGIN|END)[^-]*-----/', '', $raw) ?? '';
+    $body = preg_replace('/[^A-Za-z0-9+\/=]/', '', $body) ?? '';
+    if (strlen($body) < 50) {
+        return '';
+    }
+
+    $pem = "-----BEGIN PUBLIC KEY-----\n"
+         . chunk_split($body, 64, "\n")
+         . "-----END PUBLIC KEY-----\n";
+
+    return openssl_pkey_get_public($pem) !== false ? $pem : '';
+}
+
+/**
+ * Resolve the configured key, whether it is inline or a path to a file.
+ * Returns [pem, diagnostic] — the diagnostic is for the self-check and
+ * the error log only, never for the applicant.
+ */
+function resolvePublicKey(array $cfg): array
+{
+    $raw = (string) ($cfg['application_pubkey'] ?? '');
+
+    if ($raw === '') {
+        return ['', 'application_pubkey is empty in config.php'];
+    }
+    if (str_contains($raw, 'PASTE-PUBLIC-KEY-HERE') || str_contains($raw, 'PUT-YOUR')) {
+        return ['', 'application_pubkey is still the placeholder text, not a real key'];
+    }
+
+    // A path rather than a key.
+    if (!str_contains($raw, 'BEGIN') && !preg_match('/^[A-Za-z0-9+\/=\s]+$/', $raw)) {
+        if (!is_readable($raw)) {
+            return ['', 'application_pubkey looks like a file path, but that file cannot be read'];
+        }
+        $raw = (string) file_get_contents($raw);
+    }
+
+    if (str_contains($raw, 'PRIVATE KEY')) {
+        return ['', 'that is the PRIVATE key — config.php must hold the PUBLIC key, and the private key must never be on the server'];
+    }
+
+    $pem = normalizePublicKey($raw);
+    if ($pem === '') {
+        return ['', 'application_pubkey could not be read as a public key even after repairing the line breaks'];
+    }
+
+    return [$pem, 'ok'];
 }
 
 // ---------------------------------------------------------------
@@ -143,15 +216,39 @@ $cfg = is_readable(__DIR__ . '/config.php') ? (require __DIR__ . '/config.php') 
 $storeDir = $cfg['application_dir']    ?? (__DIR__ . '/uploads');
 $notifyTo = $cfg['application_notify'] ?? '';
 
-$publicKeyPem = (string) ($cfg['application_pubkey'] ?? '');
-if ($publicKeyPem !== '' && !str_contains($publicKeyPem, 'BEGIN PUBLIC KEY')) {
-    // Not an inline key, so treat it as a path to a .pem file.
-    $publicKeyPem = is_readable($publicKeyPem)
-        ? (string) file_get_contents($publicKeyPem)
-        : '';
+[$publicKeyPem, $keyStatus] = resolvePublicKey($cfg);
+
+// ---------------------------------------------------------------
+// Self-check:  GET /api/application.php?selftest=1
+//
+// Reports whether the setup is correct and nothing else. It never
+// returns the key, the storage path, or any applicant data — only
+// whether each piece works, so it is safe to leave enabled.
+// ---------------------------------------------------------------
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['selftest'])) {
+    $dirProbe = rtrim((string) $storeDir, '/');
+    $dirOk = is_dir($dirProbe)
+        ? is_writable($dirProbe)
+        : (@mkdir($dirProbe, 0700, true) || is_dir($dirProbe));
+
+    $ok = ($publicKeyPem !== '') && $dirOk;
+    respond(200, [
+        'ok'      => $ok,
+        'config'  => is_readable(__DIR__ . '/config.php') ? 'found' : 'MISSING — create api/config.php',
+        'key'     => $publicKeyPem !== '' ? 'loaded and usable' : $keyStatus,
+        'storage' => $dirOk ? 'writable' : 'NOT writable — check application_dir in config.php',
+        'verdict' => $ok
+            ? 'Ready. The application form will accept submissions.'
+            : 'Not ready. Fix whatever is reported above, then reload this page.',
+    ]);
 }
-if ($publicKeyPem === '' || openssl_pkey_get_public($publicKeyPem) === false) {
-    error_log('application.php: no usable application_pubkey in config.php — refusing submission');
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    fail(405, 'POST only.');
+}
+
+if ($publicKeyPem === '') {
+    error_log('application.php: refusing submission — ' . $keyStatus);
     fail(503, 'Applications cannot be accepted right now. Please call us and an advisor will take this over the phone.');
 }
 

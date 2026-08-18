@@ -7,7 +7,7 @@ nothing from the old conversation.
 
 ## Step 1 — upload the folder
 
-Unzip `tmfus-tmf-team-v22.zip` and give Claude the whole folder. Not just one
+Unzip `tmfus-tmf-team-v23.zip` and give Claude the whole folder. Not just one
 file — the handoff depends on Claude being able to read the code beside the docs.
 
 - **Claude desktop app (Cowork):** connect the folder, or drag the zip in.
@@ -47,9 +47,9 @@ file — the handoff depends on Claude being able to read the code beside the do
 A session that has actually read the handoff should be able to tell you, without
 being asked:
 
-- assets are at `?v=22` and the version must be bumped on every CSS/JS change
+- assets are at `?v=23` and the version must be bumped on every CSS/JS change
 - the commits have never been pushed
-- the Figure API is returning 500 and that is Figure's problem, not the code's
+- the Figure 500s were a sandbox affiliate ID pointed at the production API, not a Figure outage — see §6.1
 - TMF now collects the whole application itself, encrypted at rest, and the
   application form **accepts nothing until John installs the encryption key**
 

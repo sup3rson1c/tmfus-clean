@@ -112,13 +112,35 @@ but that is a second line of defence rather than a first.
 `application_notify` is where the "new application" email goes. That email
 contains a reference number and the business name only, on purpose.
 
-### 4. Test it yourself before you advertise it
+### 4. Check the setup from your browser
+
+Go to:
+
+```
+https://tmfus.com/api/application.php?selftest=1
+```
+
+You get a short plain-English report. `"verdict": "Ready. The application form
+will accept submissions."` means you are done. Anything else names the exact
+problem — a missing `config.php`, a key still set to the placeholder, the
+private key pasted in by mistake, or a storage folder that cannot be written to.
+
+It never shows the key, the storage path or any applicant data, so it is safe to
+leave enabled and safe to open on your phone.
+
+**Key formatting is handled for you.** Web-based file editors routinely eat the
+line breaks in a pasted key. The server now repairs that automatically — headers
+missing, all on one line, literal backslash-n, Windows line endings, indented by
+the editor. Nine mangled forms were tested and all nine are rebuilt into a valid
+key. You do not need to get the paste perfect; you only need the right key.
+
+### 5. Test it yourself before you advertise it
 
 Fill in your own application on the live site with made-up numbers. You should
-get a reference back. Then do step 5 and open it. If anything fails the form
+get a reference back. Then do step 6 and open it. If anything fails the form
 tells you rather than pretending it worked.
 
-### 5. Reading an application
+### 6. Reading an application
 
 1. The notification email gives you a reference and a folder path
 2. cPanel → File Manager → that folder → download `application.enc.json`
@@ -129,6 +151,31 @@ The whole application appears, signature included. There is a Print / Save as
 PDF button if you need a copy for a funder.
 
 ---
+
+## Bank statements are required
+
+John's rule, 18 Aug 2026: an application cannot be submitted without bank
+statements. Most states need **3** months. States that need **4** are listed in
+one place, at the top of the application section of `assets/app.js`:
+
+```js
+const STATEMENTS_MIN = 3;
+const STATEMENTS_MIN_BY_STATE = {
+  'NY': 4,
+};
+```
+
+Add a two-letter state code with the number of months it needs and everything
+else follows — the dropzone headline, the hint under it and the error message
+all read from that list. The count is chosen by the **business** state, and the
+wording updates the moment the applicant reaches step 4, so nobody uploads three
+and is then told they need four.
+
+Worth watching: statements used to be optional, with an advisor emailing a
+secure upload link later. Requiring them up front is stricter and will lose some
+applicants who do not have the files to hand at that moment. That is a
+deliberate trade — better-qualified applications, fewer of them. If drop-off at
+step 4 looks bad, this is the first thing to revisit.
 
 ## Things worth knowing
 
