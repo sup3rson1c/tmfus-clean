@@ -57,6 +57,60 @@ function logLine(?array $cfg, string $message): void
    Preconditions
    --------------------------------------------------------------- */
 
+/* ---------------------------------------------------------------
+   Self-check:  GET /api/figure-heloc.php?selftest=1
+
+   Reports whether the Figure side is configured coherently, in plain
+   English. It never returns the affiliate ID — only whether it is
+   present, well formed, and pointed at an endpoint that will accept it.
+   Safe to leave enabled.
+   --------------------------------------------------------------- */
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['selftest'])) {
+    $cfgPath = __DIR__ . '/config.php';
+    $c = is_file($cfgPath) ? (require $cfgPath) : [];
+    $id = strtolower((string) ($c['affiliate_id'] ?? ''));
+    $env = (string) ($c['environment'] ?? 'test');
+    $prod = $env === 'production';
+
+    $sandboxIds = [
+        'd02bc4e9-35af-4c31-970e-e1273079ba41',
+        'e5c722ec-eaf1-4cb1-8fcb-f2c16b31fade',
+    ];
+    $isSandbox = in_array($id, $sandboxIds, true);
+    $wellFormed = (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $id);
+
+    if (!is_file($cfgPath)) {
+        $verdict = 'No api/config.php on the server. Create it before anything else.';
+    } elseif ($id === '') {
+        $verdict = 'No affiliate_id set in config.php.';
+    } elseif (!$wellFormed) {
+        $verdict = 'affiliate_id is not a valid 36-character UUID. Check for a stray space or a truncated paste.';
+    } elseif ($isSandbox && $prod) {
+        $verdict = 'BLOCKED: this is one of Figure\'s published sandbox IDs, pointed at the production API. '
+                 . 'Production answers HTTP 500 for sandbox IDs, which looks like a Figure outage and is not one. '
+                 . 'Either set environment to test, or put your real affiliate ID from Figure in affiliate_id.';
+    } elseif ($isSandbox) {
+        $verdict = 'Ready for testing. Sandbox ID against the sandbox API — offers you see are not real quotes.';
+    } elseif ($prod) {
+        $verdict = 'Ready for live use. A real-looking affiliate ID against the production API.';
+    } else {
+        $verdict = 'A real-looking affiliate ID pointed at the sandbox API. Set environment to production when you want live offers.';
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'ok'          => !(($isSandbox && $prod) || $id === '' || !$wellFormed || !is_file($cfgPath)),
+        'config'      => is_file($cfgPath) ? 'found' : 'MISSING',
+        'affiliate_id' => $id === '' ? 'not set' : ($wellFormed ? 'valid format' : 'MALFORMED'),
+        'credential'  => $id === '' ? 'none' : ($isSandbox ? 'Figure sandbox (test only)' : 'looks like a real one'),
+        'environment' => $env,
+        'calling'     => $prod ? 'https://api.figure.com' : 'https://api.test.figure.com',
+        'verdict'     => $verdict,
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     fail(405, 'Method not allowed.');
 }

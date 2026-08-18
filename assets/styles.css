@@ -1452,3 +1452,18 @@ select.input option { background: #131316; color: var(--fg); }
   .steps-bar { gap: 7px; }
   .consent-box { max-height: 150px; }
 }
+
+/* ------------------------------------------------------------------
+   Pre-fill notice on the application. Shown only when answers were
+   carried over from a calculator or the contact form.
+   ------------------------------------------------------------------ */
+.prefill-note {
+  margin: 18px 0 0;
+  padding: 12px 15px;
+  border-left: 3px solid var(--accent);
+  background: rgba(52, 211, 153, .07);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: .92rem;
+  color: var(--fg);
+}
+.prefill-note[hidden] { display: none !important; }

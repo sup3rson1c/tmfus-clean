@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=23`.**
+**Last updated: 18 August 2026 — assets at `?v=24`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -46,7 +46,8 @@ contact.html             Contact form
 assets/styles.css        Entire design system. Tokens in :root at the top
 assets/app.js            Every interaction, both calculators, all integrations
 api/figure-heloc.php     Server-side proxy to Figure's HELOC API
-api/application.php      Application intake — bank statements, notification
+api/application.php      Application intake — encrypted at rest
+api/lead.php             Every submission, stored on our own server
 api/config.example.php   Template. Real config.php lives ONLY on the server
 ```
 
@@ -90,10 +91,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=23/styles.css?v=24/g; s/app\.js?v=23/app.js?v=24/g' *.html
+sed -i 's/styles\.css?v=24/styles.css?v=25/g; s/app\.js?v=24/app.js?v=25/g' *.html
 ```
 
-Currently at **v23**. Forget this and John sees no change, reports the site is
+Currently at **v24**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -107,7 +108,7 @@ broken, and you will waste a round trip proving the server is fine.
 | Parallax scrolling | Working. Took several escalations, see §8 |
 | Custom branded scrollbar | Done |
 | Momentum scrolling | Done |
-| Lead capture → Google Sheets | **Working, verified live** |
+| Lead capture | Google Sheet **plus** `api/lead.php` on our own server, since v24 |
 | Cash injection calculator | Working, formula per John's spec |
 | HELOC calculator | Working. Figure API integration **blocked**, see §6.1 |
 | SBA page | Done, facts web-verified against SOP 50 10 8 |
@@ -304,6 +305,30 @@ but it is the same question and it is still open.
 
 ---
 
+## 6A. Submission storage and visitor memory — added 18 Aug 2026
+
+**Every submission is stored twice.** `sendLead()` posts to the Google Apps
+Script as before *and* to `api/lead.php`, which writes
+`<application_dir>/leads/YYYY-MM/` — one JSON per submission plus a monthly
+`leads.csv` that opens in Excel. The Sheet is posted `no-cors` and its response
+is unreadable, so it can never confirm anything; `lead.php` answers properly and
+is now what the contact form's success message is based on.
+
+`lead.php` drops any field whose name looks like an SSN, date of birth or
+signature, and logs the drop. Those belong only in the encrypted application.
+
+**`api/lead.php` is in `.cpanel.yml`.** It had to be added by hand — the deploy
+lists files individually, and this is the third time that has nearly bitten.
+Miss it and every form on the site reports failure to the visitor, because the
+contact form now believes the endpoint that actually answers.
+
+**Visitor memory.** What someone types in any form is kept in their own browser
+under `tmf_visitor_v1` and pre-fills the application. It fills only empty fields,
+shows a visible notice saying what was carried over, and cannot hold anything
+sensitive. `INDUSTRY_LABEL` maps the calculators' short codes to the
+application's full labels — add an option to one list without adding the pairing
+and the industry silently stops carrying across.
+
 ## 7. Tunable knobs
 
 All at the top of their sections in `assets/app.js`:
@@ -315,6 +340,10 @@ All at the top of their sections in `assets/app.js`:
 | `APPLICATION_MODE` | 1366 | `'prefill'` or `'api'` |
 | `PREFILL_FIELDS` | 1373 | What goes in the Signet URL. **Never add SSN/DOB** |
 | `MAX_FILE_MB` / `MAX_FILES` | 1368 | Upload limits |
+| `STATEMENTS_MIN` | ~1385 | Months of statements required. **4**, all states |
+| `STATEMENTS_MIN_BY_STATE` | ~1386 | Per-state exceptions to that |
+| `INDUSTRY_LABEL` | ~60 | Calculator industry code → application label |
+| `LEAD_STORE_ENDPOINT` | ~45 | Our own submission store |
 | `INDUSTRY_MULT` | 664 | John's real multipliers, set 18 Aug 2026 |
 | `BALANCE_DEDUCTION_RATE` | 678 | Currently 1.0 |
 | `RANGE_SPREAD` | 688 | Currently 0.15 |

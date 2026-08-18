@@ -42,8 +42,11 @@
     return out;
   }
 
+  /* Our own copy, on our own server. Unlike the Sheet this one answers,
+     so we can actually tell whether a submission was stored. */
+  const LEAD_STORE_ENDPOINT = '/api/lead.php';
+
   function sendLead(kind, data) {
-    if (!LEAD_ENDPOINT) return Promise.reject(new Error('lead endpoint not configured'));
     const payload = JSON.stringify({
       kind: kind,
       page: location.pathname,
@@ -51,15 +54,103 @@
       referrer: document.referrer || '',
       data: data
     });
-    // text/plain avoids the CORS preflight that Apps Script will not answer.
-    // no-cors means the response is opaque — we cannot read it, only that
-    // the request left the browser.
-    return fetch(LEAD_ENDPOINT, {
+
+    // Remember what we can, so the applicant does not retype it later.
+    try { rememberVisitor(data); } catch (_) {}
+
+    // Our own store first. This is the copy that matters, and it is the
+    // only one whose success we can actually observe.
+    const mine = fetch(LEAD_STORE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: payload
+    }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('lead store returned ' + r.status))));
+
+    if (!LEAD_ENDPOINT) return mine;
+
+    // The Google Sheet as well. text/plain avoids the CORS preflight that
+    // Apps Script will not answer; no-cors means the response is opaque,
+    // so a failure here is invisible by design. That is exactly why the
+    // store above exists — never treat this one as confirmation.
+    const sheet = fetch(LEAD_ENDPOINT, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: payload
+    }).catch(() => {});
+
+    return Promise.all([mine, sheet]).then((r) => r[0]);
+  }
+
+  /* =========================================================
+     VISITOR MEMORY
+
+     Someone who runs a calculator and then applies should not type
+     their name and email twice. What they enter anywhere on the site
+     is kept in this browser and used to pre-fill the application.
+
+     It stays on their own device — this is localStorage, not a
+     server-side profile, and it is not a tracking cookie. Nothing
+     sensitive is eligible: SENSITIVE_KEY_PARTS below is checked on
+     the way in, so an SSN can never land here even if some future
+     form starts collecting one.
+     ========================================================= */
+  /* The calculators use short industry codes; the application uses full
+     labels. Without this the industry silently fails to carry across.
+     If you add an option to either list, add the pairing here too. */
+  const INDUSTRY_LABEL = {
+    restaurant:   'Restaurant / Food service',
+    retail:       'Retail',
+    construction: 'Construction',
+    trucking:     'Trucking / Transportation',
+    healthcare:   'Healthcare / Medical',
+    wholesale:    'Wholesale / Distribution',
+    salon:        'Beauty / Salon / Spa',
+    other:        'Other'
+  };
+
+  const VISITOR_KEY = 'tmf_visitor_v1';
+  const VISITOR_FIELDS = [
+    'first', 'last', 'business', 'email', 'phone', 'industry',
+    'city', 'state', 'zip', 'revenue', 'credit', 'tib',
+    'firstName', 'lastName'
+  ];
+
+  function readVisitor() {
+    try { return JSON.parse(localStorage.getItem(VISITOR_KEY)) || {}; } catch (_) { return {}; }
+  }
+
+  function rememberVisitor(patch) {
+    if (!patch) return;
+    const store = readVisitor();
+    let changed = false;
+    Object.keys(patch).forEach((k) => {
+      const v = patch[k];
+      if (typeof v !== 'string' || v === '') return;
+      if (VISITOR_FIELDS.indexOf(k) === -1) return;
+      if (isSensitiveKey(k)) return;
+      if (store[k] === v) return;
+      store[k] = v.slice(0, 200);
+      changed = true;
     });
+    if (!changed) return;
+    store.updated = new Date().toISOString();
+    try { localStorage.setItem(VISITOR_KEY, JSON.stringify(store)); } catch (_) {}
+  }
+
+  /* Capture as they type, not only on submit — someone who fills in the
+     calculator and leaves without pressing the button has still told us
+     who they are, and should not have to say it again. */
+  function initVisitorCapture() {
+    document.addEventListener('change', (e) => {
+      const el = e.target;
+      if (!el || !el.getAttribute) return;
+      const key = el.getAttribute('data-field') || el.getAttribute('data-fg');
+      if (!key || typeof el.value !== 'string') return;
+      const patch = {};
+      patch[key] = el.value;
+      try { rememberVisitor(patch); } catch (_) {}
+    }, true);
   }
 
   /* ---------------------------------------------------------
@@ -1349,16 +1440,17 @@
      Bank statements — John's rule, 18 Aug 2026.
 
      Statements are REQUIRED. An application cannot be submitted
-     without them. Most states need three months; some need four.
+     without them. John set the requirement to four months for every
+     state on 18 Aug 2026.
 
-     TO ADD A STATE: put its two-letter code in the list below with
-     the number of months it needs. Nothing else has to change — the
-     dropzone text, the hint and the error message all read from here.
+     TO CHANGE ONE STATE: put its two-letter code in the exceptions
+     list with the number of months it needs. Nothing else has to
+     change — the dropzone text, the hint and the error message all
+     read from here.
      --------------------------------------------------------- */
-  const STATEMENTS_MIN = 3;
+  const STATEMENTS_MIN = 4;
   const STATEMENTS_MIN_BY_STATE = {
-    // 'NY': 4,
-    // 'CA': 4,
+    // 'FL': 3,
   };
   const statementsRequiredFor = (state) =>
     STATEMENTS_MIN_BY_STATE[String(state || '').toUpperCase()] || STATEMENTS_MIN;
@@ -1408,6 +1500,47 @@
     /* The identity fields are always collected now. Left visible in the
        markup rather than un-hidden here, so that a JS error cannot end up
        silently dropping required fields from the form. */
+
+    /* ---- carry over what they already told us ----
+       Only fills fields that are still empty, so it can never overwrite
+       something the applicant typed on this page. Sensitive fields are
+       not eligible — nothing here was ever stored. */
+    (function prefillFromVisitor() {
+      const v = readVisitor();
+      if (!v || !Object.keys(v).length) return;
+
+      const name = [v.first || v.firstName || '', v.last || v.lastName || ''].join(' ').trim();
+      const map = {
+        business_legal_name: v.business,
+        owner_name: name,
+        email: v.email,
+        phone: v.phone,
+        industry: INDUSTRY_LABEL[String(v.industry || '').toLowerCase()] || '',
+        business_city: v.city,
+        business_state: v.state,
+        business_zip: v.zip
+      };
+
+      let filled = 0;
+      Object.keys(map).forEach((field) => {
+        const val = map[field];
+        if (!val) return;
+        const el = $('[data-field="' + field + '"]', form);
+        if (!el || el.value) return;                 // never overwrite
+        if (el.tagName === 'SELECT' &&
+            !Array.prototype.some.call(el.options, (o) => o.value === val)) return;
+        el.value = val;
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        filled++;
+      });
+
+      const note = $('[data-prefill-note]', form);
+      if (note && filled) {
+        note.textContent = 'We have filled in ' + filled + ' answer' + (filled === 1 ? '' : 's') +
+          ' from what you told us earlier. Please check them before continuing.';
+        note.removeAttribute('hidden');
+      }
+    })();
 
     /* ---- input masks ---- */
     $$('[data-mask]', form).forEach((input) => {
@@ -1848,6 +1981,7 @@
     initTermLoan();
     initContactForm();
     initFigureOffers();
+    initVisitorCapture();
     initApplication();
   }
 

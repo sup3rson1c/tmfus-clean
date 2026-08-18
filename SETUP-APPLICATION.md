@@ -155,27 +155,81 @@ PDF button if you need a copy for a funder.
 ## Bank statements are required
 
 John's rule, 18 Aug 2026: an application cannot be submitted without bank
-statements. Most states need **3** months. States that need **4** are listed in
-one place, at the top of the application section of `assets/app.js`:
+statements, and the requirement is **four months in every state**. It lives at
+the top of the application section of `assets/app.js`:
 
 ```js
-const STATEMENTS_MIN = 3;
+const STATEMENTS_MIN = 4;
 const STATEMENTS_MIN_BY_STATE = {
-  'NY': 4,
+  // 'FL': 3,
 };
 ```
 
-Add a two-letter state code with the number of months it needs and everything
-else follows — the dropzone headline, the hint under it and the error message
-all read from that list. The count is chosen by the **business** state, and the
-wording updates the moment the applicant reaches step 4, so nobody uploads three
-and is then told they need four.
+To make one state different, add its two-letter code to the exceptions list with
+the number of months it needs. Everything else follows — the dropzone headline,
+the hint under it and the error message all read from those two values. The
+count is chosen by the **business** state, and the wording updates the moment
+the applicant reaches step 4, so nobody uploads three and is then told they need
+four.
 
 Worth watching: statements used to be optional, with an advisor emailing a
 secure upload link later. Requiring them up front is stricter and will lose some
 applicants who do not have the files to hand at that moment. That is a
 deliberate trade — better-qualified applications, fewer of them. If drop-off at
 step 4 looks bad, this is the first thing to revisit.
+
+---
+
+## Where every submission is stored
+
+Since 18 Aug 2026 nothing relies on the Google Sheet alone. Every form on the
+site — both calculators, the contact form and the application — also posts to
+`api/lead.php`, which writes to disk you control:
+
+```
+<application_dir>/leads/YYYY-MM/leads.csv                  every submission, one row
+<application_dir>/leads/YYYY-MM/<time>_<kind>_<id>.json    the full record
+```
+
+**To see them:** cPanel → File Manager → your `tmf-applications` folder →
+`leads` → this month → download `leads.csv` and open it in Excel. It has a
+column each for the name, business, email, phone and state, plus a `details`
+column holding whatever else that particular form collected.
+
+The Sheet still gets a copy. The difference is that the Sheet is posted
+`no-cors`, so the browser can never see whether it arrived, while `lead.php`
+answers properly — which is why the contact form can now honestly say whether a
+message was stored.
+
+`lead.php` refuses to write anything whose field name looks like an SSN, date of
+birth or signature, and logs it loudly if such a thing ever arrives. Those exist
+only inside the encrypted application envelope. Verified by posting an SSN to it
+deliberately and grepping the whole lead store for it afterwards.
+
+**Applications are not in the CSV.** Only their non-sensitive summary is. The
+full application is the encrypted file, read with the tool.
+
+---
+
+## Answers carry across the site
+
+Someone who runs a calculator and then applies should not type their name twice.
+What a visitor enters in any form is kept **in their own browser**
+(`localStorage`, key `tmf_visitor_v1`) and used to pre-fill the application:
+business name, owner name, email, phone, industry, city, state, zip.
+
+- It only ever fills fields that are **empty** — it cannot overwrite something
+  the applicant typed.
+- A notice at the top of step 1 tells them what was carried over and asks them
+  to check it, rather than silently putting words in their mouth.
+- Sensitive fields are not eligible and were never stored there in the first
+  place.
+- The calculators use short industry codes (`restaurant`) and the application
+  uses full labels (`Restaurant / Food service`). `INDUSTRY_LABEL` in `app.js`
+  maps between them. **Add an option to either list and you must add the pairing
+  there**, or the industry silently fails to carry across.
+
+---
 
 ## Things worth knowing
 

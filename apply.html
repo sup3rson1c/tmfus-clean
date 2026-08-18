@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#09090b">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/styles.css?v=23">
-<script src="assets/app.js?v=23" defer></script>
+<link rel="stylesheet" href="assets/styles.css?v=24">
+<script src="assets/app.js?v=24" defer></script>
 </head>
 <body>
 
@@ -38,9 +38,9 @@
     <span class="eyebrow" data-reveal>Application</span>
     <h1 class="display" style="margin-top:22px;max-width:16ch" data-reveal>Start your<br><span class="grad">application.</span></h1>
     <p class="lede" style="margin-top:26px" data-reveal>
-      About ten minutes. Have your EIN, business address and three to four months
-      of business bank statements to hand. Your answers are kept on this page as
-      you go, so a mistyped field never costs you the whole form.
+      About ten minutes. Have your EIN, business address and four months
+      of business bank statements to hand. Your answers are kept as you go, so a
+      mistyped field never costs you the whole form.
     </p>
   </div>
 </section>
@@ -63,6 +63,11 @@
       <!-- ============ STEP 1 — BUSINESS ============ -->
       <div class="step-pane active" data-pane="1">
         <h2 class="calc-title">Tell us about <b>the business.</b></h2>
+
+        <!-- Filled in by prefillFromVisitor() when this visitor has used a
+             calculator or the contact form earlier. Hidden otherwise. -->
+        <p class="prefill-note" data-prefill-note hidden></p>
+
         <div class="form-stack" style="margin-top:26px">
 
           <div class="field">
@@ -459,7 +464,7 @@
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
               </svg>
-              <b data-statements-headline>Add your last 3 months</b>
+              <b data-statements-headline>Add your last 4 months</b>
               <span>PDF, JPG or PNG &middot; up to 10&nbsp;MB each</span>
               <input type="file" data-files multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
             </div>
@@ -556,7 +561,7 @@
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Business legal name, EIN and start date</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Owner name, home address and ownership split</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Date of birth and Social Security number for each owner</span></li>
-        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Three to four months of business bank statements</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Four months of business bank statements — required</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>About ten minutes, start to finish</span></li>
       </ul>
 
