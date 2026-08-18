@@ -52,21 +52,29 @@ return [
     // which is a second line of defence, not the first.
     'application_dir' => __DIR__ . '/uploads',
 
-    // Emailed when an application with statements arrives. Leave empty
-    // to switch notifications off.
+    // Emailed when an application arrives. The email contains a reference
+    // number and the business name only — never the applicant's details.
+    // Leave empty to switch notifications off.
     'application_notify' => '',
 
     // ---------------------------------------------------------------
-    // altaFlow / Signet  — NOT YET ISSUED
+    // APPLICATION ENCRYPTION KEY  —  REQUIRED
     //
-    // Needed only to push SSN, date of birth and signature into Signet
-    // automatically. Until a token exists, apply.html runs in 'prefill'
-    // mode: everything else is passed to Signet in the link and the
-    // applicant enters those three there.
+    // Applications carry Social Security numbers, dates of birth and a
+    // signature. They are encrypted the moment they arrive, using this
+    // PUBLIC key. Without it api/application.php refuses submissions
+    // rather than storing that data in the clear — that refusal is
+    // deliberate, so do not "fix" it by removing the check.
     //
-    // Ask a Signet altaFlow admin for a bearer token, then set
-    // APPLICATION_MODE = 'api' at the top of assets/app.js.
+    // This is the PUBLIC half of the pair. It is safe on the server and
+    // safe in a backup: it can lock, it cannot unlock. The PRIVATE half
+    // belongs on John's machine and NOWHERE ELSE — not in this file, not
+    // in the repo, not in an email. Anyone holding it can read every
+    // application ever submitted.
+    //
+    // Generate the pair in tmf-application-tool.html, then either paste
+    // the public key here between the quotes, or save it as a .pem file
+    // and put its path here instead. Both forms work.
     // ---------------------------------------------------------------
-    'altaflow_token' => '',
-    'altaflow_flow_id' => '5CCBCD60-9A00-0000-0000BA29',
+    'application_pubkey' => '',
 ];

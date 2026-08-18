@@ -113,6 +113,19 @@ ErrorDocument 404 /404.html
   Require all denied
 </FilesMatch>
 
+# Key material. The public key is not a secret, but this is the safety net
+# for the day someone saves the PRIVATE key here by mistake. Applications
+# are only as private as that file — it belongs on John's own machine.
+<FilesMatch "\.(pem|key|crt|p12|pfx)$">
+  Require all denied
+</FilesMatch>
+
+# Encrypted applications, if application_dir was ever left inside the web
+# root. Ciphertext is not readable, but it should not be downloadable either.
+<FilesMatch "\.enc\.json$">
+  Require all denied
+</FilesMatch>
+
 # ------------------------------------------------------------------
 # Applicant bank statements.
 #

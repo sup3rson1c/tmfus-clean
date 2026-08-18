@@ -8,17 +8,24 @@ Cloudflare Pages, S3, nginx).
 index.html              Home — hero, funding calculator, products, why-us, stages, CTA
 funding-estimator.html  3-step cash-injection calculator + live product matching
 heloc-calculator.html   Live HELOC estimator + FAQ accordion
-long-term-loans.html    Use cases, benefits, payment estimator, qualification, FAQ
+sba-loans.html          SBA 7(a) and 504 — standards, eligibility, FAQ. No calculator
 mca.html                Process timeline, remittance mechanics, ideal-for, FAQ
+apply.html              Branded 4-step application, all 29 fields, encrypted
 about.html              Mission, approach, stats
-contact.html            Contact form (front-end only)
+contact.html            Contact form
+404.html                Not found
 assets/logo-mark.svg    Ascent logo mark (48px, gradient)
 assets/logo-lockup.svg  Horizontal lockup — mark + "TMF Team / Capital Strategy"
 assets/favicon.svg      Simplified mark for tabs
 assets/styles.css       Whole design system — tokens at the top of the file
-assets/app.js           Every interaction and both calculators
-build_pages.py          Optional. Regenerates the 5 content pages from shared shells.
+assets/app.js           Every interaction, both calculators, all integrations
+api/figure-heloc.php    Server-side proxy to Figure's HELOC API
+api/application.php     Application intake — bank statements, notification
+api/config.example.php  Template. The real config.php lives ONLY on the server
 ```
+
+**New here?** Read `TMF-WEBSITE-HANDOFF.md` first — it assumes no prior context
+and covers deployment, open items and the traps that have already cost time.
 
 ## Design tokens
 
@@ -71,9 +78,20 @@ estimated line, interest-only draw payment, rate, total equity, projected DTI, a
 > see estimates" even with valid inputs. This rebuild fixes that — it computes on load
 > and on every keystroke.
 
-### Term-loan estimator (`long-term-loans.html`)
-Standard amortisation: `pmt = P·i / (1 − (1+i)^−n)`. Shows monthly payment, total
-repaid, total interest and payment count.
+### SBA page (`sba-loans.html`)
+No calculator, by request. Explains 7(a) vs 504, the 50/40/10 split with its
+15%/20% exceptions, eligibility standards and document expectations. Carries a
+prominent notice that SBA 7(a) cannot be used to buy out MCA positions, citing
+SOP 50 10 8 effective 1 June 2025.
+
+This page replaced `long-term-loans.html`. A 301 in `.htaccess` maps the old
+URL, placed **before** the clean-URL rewrite — order matters.
+
+### Application (`apply.html`)
+Four steps collecting all 29 fields, TMF's own — no handoff to anyone. SSN,
+date of birth and the signature are encrypted on arrival with an RSA public
+key; the private key lives on John's machine, never the server. The endpoint
+refuses submissions if no key is configured. See SETUP-APPLICATION.md.
 
 ## Things to wire up
 

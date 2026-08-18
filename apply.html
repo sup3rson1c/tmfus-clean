@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#09090b">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/styles.css?v=20">
-<script src="assets/app.js?v=20" defer></script>
+<link rel="stylesheet" href="assets/styles.css?v=22">
+<script src="assets/app.js?v=22" defer></script>
 </head>
 <body>
 
@@ -303,9 +303,9 @@
             </div>
           </div>
 
-          <!-- Identity block. Hidden unless the Signet API path is configured —
-               see initApplication() in app.js and SETUP-APPLICATION.md. -->
-          <div data-identity-block hidden>
+          <!-- Identity block. Collected by TMF and encrypted on submit — these
+               values never travel in a URL. See api/application.php. -->
+          <div data-identity-block>
             <div class="field-row">
               <div class="field">
                 <label class="field-label" for="ap-odob">Date of birth *</label>
@@ -427,13 +427,13 @@
                   <label class="field-label" for="ap-czip">Zip code *</label>
                   <input class="input" id="ap-czip" data-field="co_owner_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33139">
                 </div>
-                <div class="field" data-identity-block hidden>
+                <div class="field" data-identity-block>
                   <label class="field-label" for="ap-cdob">Date of birth *</label>
                   <input class="input" id="ap-cdob" data-field="co_owner_dob" data-sensitive data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" autocomplete="off">
                 </div>
               </div>
 
-              <div class="field" data-identity-block hidden>
+              <div class="field" data-identity-block>
                 <label class="field-label" for="ap-cssn">Social Security number *</label>
                 <input class="input" id="ap-cssn" data-field="co_owner_ssn" data-sensitive data-mask="ssn" inputmode="numeric" maxlength="11" placeholder="•••-••-••••" autocomplete="off">
               </div>
@@ -470,14 +470,17 @@
             </span>
           </div>
 
-          <div class="consent-box">
+          <!-- Authorization text. If you change a word of this, bump the id in
+               data-consent-text-id below — the id is stored with every signed
+               application so you can prove which wording was agreed to. -->
+          <div class="consent-box" data-consent-text-id="tmf-auth-2026-08">
             <p>
-              By signing below, the applicant authorizes Signet Capital Group, its
-              assigned agents, and affiliates to obtain a consumer report from a
-              Credit Bureau or Credit Agency and to investigate the references given
-              on any other statement or data obtained by the applicant. The applicant
-              also authorizes Signet Capital Group to send relevant marketing
-              information and carry out market research about our products and services.
+              By signing below, the applicant authorizes TMF Team, its assigned
+              agents, and affiliates to obtain a consumer report from a Credit
+              Bureau or Credit Agency and to investigate the references given on
+              any other statement or data obtained by the applicant. The applicant
+              also authorizes TMF Team to send relevant marketing information and
+              carry out market research about our products and services.
             </p>
           </div>
 
@@ -493,8 +496,10 @@
             <span>TMF Team may contact me about this application by phone, email and text. *</span>
           </label>
 
-          <!-- Signature. Hidden unless the Signet API path is configured. -->
-          <div class="field" data-identity-block hidden>
+          <!-- Signature. Captured as a PNG and sealed into the encrypted
+               application alongside the IP, timestamp and the id of the
+               authorization wording above. -->
+          <div class="field" data-identity-block>
             <label class="field-label">E-signature *</label>
             <div class="sig-wrap">
               <canvas data-sig-pad height="150" aria-label="Sign here"></canvas>
@@ -506,11 +511,10 @@
           <div class="handoff-note" data-handoff-note>
             <span class="mono-label">Last step</span>
             <p>
-              When you press submit we take you to the secure Signet application
-              with everything above already filled in. All that is left there is
-              your date of birth, Social Security number and signature — the three
-              things that have to be entered on the signing platform itself so the
-              signature is legally recorded.
+              Press submit and your application comes straight to TMF Team — there
+              is no second form to fill in. Your date of birth, Social Security
+              number and signature are encrypted the moment they reach us and are
+              never sent by email or stored in plain text.
             </p>
           </div>
 
@@ -527,16 +531,20 @@
         <h2 class="calc-title">Application <b>received.</b></h2>
         <div class="form-stack" style="margin-top:22px">
           <p style="color:var(--muted-fg)">
-            We have your details. The secure signing page should have opened in a
-            new tab — finish there and you are done.
+            That is everything — nothing else is needed from you right now. An
+            advisor reviews the file and comes back to you, usually within
+            3&ndash;24 hours.
           </p>
-          <a class="btn btn-primary btn-block" href="#" data-continue-link target="_blank" rel="noopener">
-            Open the signing page <span class="icon">&#8599;</span>
-          </a>
+          <div class="consent-box">
+            <span class="mono-label">Your reference</span>
+            <p style="font-size:1.4rem;letter-spacing:.08em;margin-top:6px" data-reference>&mdash;</p>
+            <p style="font-size:.9rem;color:var(--muted-fg);margin-top:6px">
+              Quote this if you call or email us about your application.
+            </p>
+          </div>
           <p style="color:var(--muted-fg);font-size:.9rem">
-            Nothing opened? Your browser may have blocked the pop-up — the button
-            above works either way. Trouble at any point:
-            <a href="contact.html" style="color:var(--accent)">talk to an advisor</a>.
+            Need to add bank statements or change something?
+            <a href="contact.html" style="color:var(--accent)">Talk to an advisor</a>.
           </p>
         </div>
       </div>
@@ -547,6 +555,7 @@
       <ul class="bullets" style="margin-top:18px">
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Business legal name, EIN and start date</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Owner name, home address and ownership split</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Date of birth and Social Security number for each owner</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Three to four months of business bank statements</span></li>
         <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>About ten minutes, start to finish</span></li>
       </ul>

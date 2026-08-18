@@ -26,22 +26,6 @@
      ========================================================= */
   const LEAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbze3tD_fvvy7of5o4BQwoY2TcEQ3zBADhJ2hERxTwYEvbgb0En_67rSBRMz1IKMP-YBGQ/exec';
 
-  /* =========================================================
-     APPLICATION HANDOFF
-
-     Signet's altaFlow application. Opening this URL makes altaFlow mint a
-     fresh per-applicant session, which is what lets someone stop halfway
-     and resume later — so it must be opened directly, never cached or
-     rewritten with a stored session id.
-
-     NOTE ON AUTO-FILL: pushing answers from this site straight into
-     altaFlow needs the altaFlow/airSlate REST API — an API credential for
-     the Signet account plus the field slugs of that flow. Neither exists
-     here yet, so this is a clean handoff, not a pre-filled application.
-     See SETUP-APPLICATION.md.
-     ========================================================= */
-  const APPLICATION_URL = 'https://alfw.at/m7l8kpNQ6';
-
   /* Harvests every [data-field] under `root`, so new fields are picked up
      automatically without touching this function. */
   function collectFields(root) {
@@ -656,20 +640,19 @@
   /* ---------------------------------------------------------
      Industry multipliers
 
-     ⚠ THESE ARE PLACEHOLDER VALUES, NOT TMF UNDERWRITING POLICY.
-     They are centred on 1.0 so quotes stay close to previous levels
-     until John supplies the real figures. Edit this table only —
-     nothing else needs to change.
+     Supplied by John on 18 Aug 2026 — TMF's real figures, no longer
+     placeholders. Any industry he did not name sits at 1.00 on his
+     instruction. Edit this table only — nothing else needs to change.
      --------------------------------------------------------- */
   const INDUSTRY_MULT = {
-    healthcare:   1.10,
-    retail:       1.05,
-    restaurant:   1.00,
+    restaurant:   1.20,
+    healthcare:   1.20,
+    retail:       1.10,
+    construction: 0.80,
+    trucking:     0.75,
+    wholesale:    1.00,
     salon:        1.00,
-    wholesale:    0.95,
-    other:        0.90,
-    construction: 0.85,
-    trucking:     0.80
+    other:        1.00
   };
   const DEFAULT_INDUSTRY_MULT = 1.00;
 
@@ -1340,45 +1323,32 @@
   /* ---------------------------------------------------------
      14c. Branded application — apply.html
 
-     A four-step application in the site's own theme that mirrors the
-     Signet document field for field, then hands the applicant to Signet
-     with everything already filled in.
+     A four-step application in the site's own theme. TMF collects the
+     whole thing — all 29 fields, the signature included. There is no
+     handoff to a third party and no second form for the applicant.
 
-     HOW THE HANDOFF WORKS
-     altaFlow forwards any query string on the public link into the
-     document session as proxy_params[name]=value — verified live on
-     18 Aug 2026 against this flow. What it does NOT do out of the box is
-     map those params onto fields: the flow showed 0/29 filled. A Signet
-     admin has to add a pre-fill bot on the flow once, mapping each
-     proxy_param name below to its field. No API token needed for that.
-     Until they do, the params ride along harmlessly and the applicant
-     fills the Signet page as before — nothing breaks either way.
+     HOW THE SENSITIVE FIELDS TRAVEL
+     SSN, date of birth and the signature POST to api/application.php as
+     part of the form body, over HTTPS. They are never put in a query
+     string, never sent to the leads spreadsheet, and never written to
+     the server in plain text — application.php seals the whole record
+     with an RSA public key on arrival. See api/application.php.
 
-     WHY SSN / DOB / SIGNATURE ARE NOT COLLECTED HERE
-     Query strings are logged by proxies, browser history and analytics,
-     so those three can never travel by URL. They need the altaFlow REST
-     API and a server-side POST. That path is written and waiting on a
-     credential — flip APPLICATION_MODE to 'api' once api/config.php has
-     ALTAFLOW_TOKEN and the fields un-hide themselves. See
-     SETUP-APPLICATION.md.
+     RULES THAT MUST NOT BE WEAKENED
+     - Nothing tagged [data-sensitive] may ever enter a URL or the lead
+       summary. The summary builder below strips them by name.
+     - If the POST fails, the applicant is told. Never show the success
+       pane for an application the server did not confirm it stored.
      --------------------------------------------------------- */
 
-  const APPLICATION_MODE = 'prefill';           // 'prefill' | 'api'
-  const APPLICATION_UPLOAD_ENDPOINT = 'api/application.php';
+  const APPLICATION_ENDPOINT = 'api/application.php';
   const MAX_FILE_MB = 10;
   const MAX_FILES = 12;
 
-  /* Fields safe to put in a URL. Deliberately excludes anything tagged
-     [data-sensitive] — do not add SSN, date of birth or signature here. */
-  const PREFILL_FIELDS = [
-    'business_legal_name', 'business_dba_name', 'ein', 'business_address',
-    'business_city', 'business_state', 'business_zip', 'business_start_date',
-    'industry',
-    'owner_name', 'owner_ownership_pct', 'owner_address', 'owner_city',
-    'owner_state', 'owner_zip',
-    'co_owner_name', 'co_owner_ownership_pct', 'co_owner_address',
-    'co_owner_city', 'co_owner_state', 'co_owner_zip'
-  ];
+  /* Substrings that mark a field as sensitive. Used to keep those values
+     out of the Google Sheets lead summary. Never remove an entry. */
+  const SENSITIVE_KEY_PARTS = ['ssn', 'dob', 'birth', 'social', 'sig', 'signature'];
+  const isSensitiveKey = (k) => SENSITIVE_KEY_PARTS.some((p) => k.toLowerCase().indexOf(p) !== -1);
 
   const MASKS = {
     ein:   (v) => { const d = v.replace(/\D/g, '').slice(0, 9); return d.length > 2 ? d.slice(0, 2) + '-' + d.slice(2) : d; },
@@ -1413,18 +1383,13 @@
     const panes = $$('[data-pane]', form);
     const bars = $$('.steps-bar i', form);
     const stepLabel = $('[data-step-label]', form);
-    const apiMode = APPLICATION_MODE === 'api';
     let step = 1;
     const TOTAL = 4;
     const files = [];
 
-    /* ---- identity fields only exist in API mode ---- */
-    $$('[data-identity-block]', form).forEach((b) => {
-      if (apiMode) b.removeAttribute('hidden');
-      else $$('[data-sensitive]', b).forEach((el) => { el.value = ''; el.disabled = true; });
-    });
-    const note = $('[data-handoff-note]', form);
-    if (apiMode && note) note.remove();
+    /* The identity fields are always collected now. Left visible in the
+       markup rather than un-hidden here, so that a JS error cannot end up
+       silently dropping required fields from the form. */
 
     /* ---- input masks ---- */
     $$('[data-mask]', form).forEach((input) => {
@@ -1623,7 +1588,7 @@
       if (n === 4) {
         const bad = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
         if (bad) { if (err) err.textContent = '"' + bad.name + '" is over ' + MAX_FILE_MB + ' MB. Remove it and an advisor will send a secure upload link.'; return false; }
-        if (apiMode && !sigDrawn) { if (err) err.textContent = 'Please sign in the box above.'; return false; }
+        if (!sigDrawn) { if (err) err.textContent = 'Please sign in the box above.'; return false; }
       }
       return true;
     }
@@ -1647,15 +1612,44 @@
       show(step);
     }));
 
-    /* ---- build the Signet URL ---- */
-    function prefillUrl(data) {
-      const params = new URLSearchParams();
-      PREFILL_FIELDS.forEach((k) => { if (data[k]) params.set(k, data[k]); });
-      const qs = params.toString();
-      return qs ? APPLICATION_URL + '?' + qs : APPLICATION_URL;
+    /* ---- signature as a PNG ----
+       The pad draws in white on the dark theme. Exported straight out
+       that gives a white-on-transparent PNG, which is invisible in any
+       viewer with a light background — i.e. every one John will use. So
+       the strokes are recoloured black and flattened onto white first.
+       Same-origin canvas, so getImageData does not taint anything. */
+    function signatureDataUrl() {
+      if (!pad || !sigDrawn) return '';
+      try {
+        const strokes = document.createElement('canvas');
+        strokes.width = pad.width;
+        strokes.height = pad.height;
+        const sctx = strokes.getContext('2d');
+        sctx.drawImage(pad, 0, 0);
+
+        const img = sctx.getImageData(0, 0, strokes.width, strokes.height);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) { d[i] = 0; d[i + 1] = 0; d[i + 2] = 0; }
+        sctx.putImageData(img, 0, 0);
+
+        const out = document.createElement('canvas');
+        out.width = pad.width;
+        out.height = pad.height;
+        const octx = out.getContext('2d');
+        octx.fillStyle = '#ffffff';
+        octx.fillRect(0, 0, out.width, out.height);
+        octx.drawImage(strokes, 0, 0);
+        return out.toDataURL('image/png');
+      } catch (_) {
+        return '';
+      }
     }
 
-    /* ---- submit ---- */
+    /* ---- submit ----
+       Everything goes to our own endpoint. The success pane is shown only
+       after the server confirms it sealed and stored the application; if
+       that confirmation does not arrive the applicant is told plainly
+       rather than shown a receipt for something that may not exist. */
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!validate(4)) return;
@@ -1664,6 +1658,7 @@
       const err = $('[data-err]', $('[data-pane="4"]', form));
       const label = btn ? btn.innerHTML : '';
       if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+      if (err) err.textContent = '';
 
       const data = collectFields(form);
       if (!hasCoOwner) {
@@ -1671,39 +1666,46 @@
       }
       data.co_owner = hasCoOwner ? 'yes' : 'no';
       data.statements_attached = String(files.length);
+      data.owner_signature = signatureDataUrl();
+      data.signed_at = new Date().toISOString();
 
-      // The Signet tab has to open from inside the click, or the browser
-      // treats it as an unsolicited pop-up and blocks it.
-      // window.open with 'noopener' returns null by design, so its return
-      // value tells us nothing about whether the tab actually opened. The
-      // done pane always carries the same link, which covers both cases.
-      const target = prefillUrl(data);
-      const cont = $('[data-continue-link]', form);
-      if (cont) cont.href = target;
-      window.open(target, '_blank', 'noopener');
+      // Which wording the applicant actually agreed to. Stored with the
+      // signature so a later change to the text cannot be mistaken for
+      // what this person signed.
+      const consentBox = $('[data-consent-text-id]', form);
+      data.consent_text_id = consentBox ? (consentBox.getAttribute('data-consent-text-id') || '') : '';
 
-      // Never let a summary carrying an SSN reach the leads sheet.
-      const summary = {};
-      Object.keys(data).forEach((k) => {
-        if (k.indexOf('ssn') === -1 && k.indexOf('dob') === -1) summary[k] = data[k];
-      });
+      const fd = new FormData();
+      fd.append('application', JSON.stringify(data));
+      files.forEach((f) => fd.append('statements[]', f, f.name));
 
+      let result = null;
       try {
-        if (files.length) {
-          const fd = new FormData();
-          fd.append('meta', JSON.stringify(summary));
-          files.forEach((f) => fd.append('statements[]', f, f.name));
-          await fetch(APPLICATION_UPLOAD_ENDPOINT, { method: 'POST', body: fd });
+        const res = await fetch(APPLICATION_ENDPOINT, { method: 'POST', body: fd });
+        result = await res.json().catch(() => null);
+        if (!res.ok || !result || !result.ok) {
+          throw new Error((result && result.error) || 'The server did not confirm your application.');
         }
-      } catch (_) {
-        // An upload that fails must not cost the applicant the application —
-        // an advisor emails a secure link instead. Logged, not surfaced.
+      } catch (ex) {
+        if (btn) { btn.disabled = false; btn.innerHTML = label; }
+        if (err) {
+          err.textContent = ex.message +
+            ' Please call us rather than pressing submit again, so you do not end up applying twice.';
+        }
+        return;
       }
 
+      const refEl = $('[data-reference]', form);
+      if (refEl) refEl.textContent = result.reference || '—';
+
+      // The leads sheet gets the ordinary fields only. Anything sensitive
+      // exists solely inside the encrypted envelope on the server.
+      const summary = {};
+      Object.keys(data).forEach((k) => { if (!isSensitiveKey(k)) summary[k] = data[k]; });
+      summary.reference = result.reference || '';
       try { await sendLead('application', summary); } catch (_) {}
 
       if (btn) { btn.disabled = false; btn.innerHTML = label; }
-      if (err) err.textContent = '';
       step = 'done';
       show('done');
     });

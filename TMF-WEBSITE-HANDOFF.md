@@ -1,310 +1,424 @@
 # TMF Team website — full handoff
 
-Written for whoever picks this up next, human or AI. Assumes no prior context.
-Everything needed to continue is here.
+Written for whoever picks this up next, human or AI, with **no prior context**.
+Everything needed to continue is in this file and the repository beside it.
 
-Last updated: 17 August 2026.
+**Last updated: 18 August 2026 — assets at `?v=22`, 22 commits, none pushed.**
+**v22 is a big one: TMF now collects the whole application itself, encrypted.
+Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
+real industry multipliers (§4). Neither is committed — this work arrived as a
+zip with no `.git` directory, so it needs committing on John's machine.**
+
+If you are an AI reading this at the start of a session: read sections 1, 2 and
+3, then skim section 9 before touching anything. Section 8 lists the traps that
+have already cost real time — they will cost you the same time again.
 
 ---
 
 ## 1. What this is
 
-A marketing and lead-generation website for **TMF Team** (formerly "TMF Line"),
-a US business-funding brokerage. Live at **https://tmfus.com**.
+A marketing and lead-generation site for **TMF Team** (formerly "TMF Line"), a
+US business-funding brokerage. Live at **https://tmfus.com**.
 
-**Stack: deliberately plain.** No framework, no build step, no npm. Eight
-static HTML pages, one CSS file, one JS file, and one PHP endpoint. Open
-`index.html` in a browser and it works.
+The owner is **John** (jonathanorel141103@gmail.com). He is not a developer. He
+deploys by clicking buttons in cPanel and judges the site by looking at it.
 
-Do not "modernise" this into React or add a bundler. The owner is not a
-developer and deploys by copying files. Every dependency added is a thing that
-can break with nobody able to fix it.
+### Stack: deliberately plain
+
+No framework. No build step. No npm. No TypeScript. Nine static HTML pages, one
+CSS file, one JS file, two PHP endpoints. Open `index.html` in a browser and it
+works.
+
+**Do not "modernise" this into React or add a bundler.** Every dependency added
+is a thing that can break with nobody able to fix it. This constraint is not
+laziness — it is the correct architecture for this owner.
 
 ```
-index.html               Home — hero, funding calculator, products, stages, CTA
-funding-estimator.html   3-step cash-injection calculator + live product matching
+index.html               Home — hero, products, stages, CTA
+funding-estimator.html   3-step cash-injection calculator + product matching
 heloc-calculator.html    HELOC estimator + Figure API offers panel + FAQ
-long-term-loans.html     Use cases, payment estimator, qualification, FAQ
+sba-loans.html           SBA 7(a) and 504 explainer. No calculator by request
 mca.html                 Merchant cash advance explainer
+apply.html               Branded 4-step application, hands off to Signet
 about.html               Mission, approach, stats
 contact.html             Contact form
 404.html                 Not found
 assets/styles.css        Entire design system. Tokens in :root at the top
 assets/app.js            Every interaction, both calculators, all integrations
 api/figure-heloc.php     Server-side proxy to Figure's HELOC API
+api/application.php      Application intake — bank statements, notification
 api/config.example.php   Template. Real config.php lives ONLY on the server
 ```
 
 **Design tokens** (top of `styles.css`): background `#0a0a0b`, text `#fafafa`,
-accents `#34d399` emerald → `#4aa5e8` blue, font Geist, radius `0.75rem`.
-Changing `--accent` / `--accent-2` reskins the whole site.
+accents `#34d399` emerald → `#4aa5e8` blue, font Geist, radius `0.75rem`,
+`--ease: cubic-bezier(0.22, 1, 0.36, 1)`. Changing `--accent` / `--accent-2`
+reskins the whole site.
 
 ---
 
 ## 2. Repository and deployment
 
-**Repo:** `https://github.com/sup3rson1c/tmfus-clean` — branch `master`.
-**It is public.** Never commit credentials.
+**Repo:** `https://github.com/sup3rson1c/tmfus-clean`
+**Current working branch: `tmf-team-rebrand`. It is PUBLIC. Never commit credentials.**
 
-**Deploy pipeline:**
+### 22 commits are unpushed
+
+No session so far has had push access — the GitHub App is not installed on that
+repo, and pushes return 403. John pushes them himself via GitHub Desktop. If you
+finish work, commit it and **tell him it still needs pushing**; do not assume it
+reached GitHub.
+
+### Deploy pipeline
 
 1. Push to GitHub
 2. cPanel → **Git Version Control** → **Manage** → **Pull or Deploy**
-3. Click **Update from Remote**, then **Deploy HEAD Commit**
+3. **Update from Remote**, then **Deploy HEAD Commit**
 
-`.cpanel.yml` controls what gets copied to `public_html`. It lists files
-**individually**. If you add a new top-level file or folder, you must add it
-there or it will silently never deploy. This bit us once already — the `api/`
-folder was missing from it.
+`.cpanel.yml` controls what gets copied into `public_html`, and it lists files
+**individually**. Add a new top-level file and you must add it there or it
+silently never deploys. This has already bitten twice — once for the whole `api/`
+folder, once for `apply.html` and `sba-loans.html`.
 
 `.cpanel.yml` deliberately does **not** recursively copy `api/`, because
-`api/config.php` holds the Figure credential, exists only on the server, and
-must never be overwritten.
-
-### The constraint that shapes everything
-
-**Claude Code sessions could not push to this repo** (403 — no GitHub App
-installed on the account). The workflow became: assistant produces a zip →
-owner unzips over his local clone → commits and pushes with **GitHub Desktop**
-→ deploys via cPanel.
-
-If your platform *can* push, that removes several steps and a lot of friction.
-Check before assuming.
+`api/config.php` holds the Figure credential, lives only on the server, and is
+not in the repo. A recursive copy would delete it. Never add one.
 
 ### Cache busting — do not skip this
 
-`.htaccess` sets caching. CSS and JS are `max-age=3600, must-revalidate`;
-images and fonts are pinned for a year.
+Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
+**Bump N on every CSS or JS change, in every HTML file:**
 
-**Every HTML file references assets with a version string:**
-`styles.css?v=12`, `app.js?v=12`.
+```bash
+sed -i 's/styles\.css?v=22/styles.css?v=23/g; s/app\.js?v=22/app.js?v=23/g' *.html
+```
 
-**When you change CSS or JS, increment that number in all 8 HTML files.**
-If you forget, returning visitors keep the old files and your change appears to
-do nothing. Originally these were served `immutable` for a year, which made
-edits invisible and cost hours of confusion before it was found.
-
----
-
-## 3. Current state
-
-Live and working:
-
-- **Brand:** TMF Team, with "Capital Strategy" beneath it
-- **Logo:** "Ascent" — three rising bars, inline SVG in header and footer, plus
-  `logo-mark.svg`, `logo-lockup.svg`, `favicon.svg`, `apple-touch-icon.png`
-- **Parallax:** 12 layers on the home page, backdrops on the others
-- **Momentum scrolling:** wheel input eased toward a target
-- **Custom scrollbar:** slim gradient thumb
-- **Home page products:** revenue-based estimator and equipment financing cards
-  removed; grid reflowed to one four-up row
-- **Lead capture:** calculator and contact form post to a Google Sheet
-
-Built but **blocked on a third party**:
-
-- **Figure HELOC API** — see section 5
+Currently at **v22**. Forget this and John sees no change, reports the site is
+broken, and you will waste a round trip proving the server is fine.
 
 ---
 
-## 4. Integrations
+## 3. Current state — what works
 
-### 4.1 Lead capture → Google Sheets
-
-`LEAD_ENDPOINT` at the top of `assets/app.js` holds a Google Apps Script Web App
-URL. Submissions are appended as spreadsheet rows.
-
-- Server code: `google-apps-script.gs` (paste into Apps Script, deploy as Web
-  App, "Anyone" access)
-- Setup guide: `SETUP-LEAD-CAPTURE.md`
-- Sends: `kind` (`funding-calculator` / `contact` / `figure-heloc`), page,
-  timestamp, referrer, and every `[data-field]` under the form
-- `collectFields()` harvests fields generically, so new inputs are captured
-  automatically as long as they carry `data-field="name"`
-
-**Known tradeoff:** the endpoint URL sits in client-side JS, so it is public.
-Anyone could post junk rows. Acceptable for a Sheet; if it becomes a problem,
-move it behind a PHP proxy like the Figure one.
-
-**Rule that must not be broken:** if `LEAD_ENDPOINT` is ever empty, the forms
-say plainly that nothing was sent. Do not "improve" this by showing a success
-message regardless. Telling someone their enquiry was delivered when it was
-discarded is worse than an ugly message.
-
-### 4.2 Figure HELOC API
-
-Real HELOC offers on `heloc-calculator.html`.
-
-- Endpoint: `POST https://api.figure.com/products/heloc/pre-qualify/v1`
-- Docs: https://docs.figure.com/heloc-pre-qualification/api
-- Proxy: `api/figure-heloc.php`
-- Credential: `affiliate_id` in `api/config.php` — **server only**, gitignored
-- Guide: `SETUP-FIGURE-API.md`
-
-**Why a PHP proxy exists:** Figure sends the affiliate ID in the request
-**body**. Calling their API from browser JS would publish the credential to
-every visitor. It cannot be done client-side. Do not "simplify" this away.
-
-**Endpoint versions:** `v1` takes plain JSON. `v2` accepts *only* a JWE-encrypted
-body (`{"encrypted": "..."}`) and returns 400 on plain JSON. We use v1;
-pre-qualification collects no SSN and the call is already over TLS.
-
-**Response codes on this endpoint are unusual:** a **400 means "Incorrect
-credentials"**, per Figure's own OpenAPI spec — not a malformed request. Their
-error text says "Malformed input", which is misleading. Do not spend time
-debugging your payload on a 400; check the credential and environment first.
-
-The proxy: whitelists fields, validates enums, clamps FICO to 300–900,
-uppercases the state code, casts integer-typed fields to int (floats serialise
-as `250000.0` and get rejected), converts monthly income to annual, rate-limits
-per IP, and logs failures without ever logging the credential.
+| Area | State |
+|------|-------|
+| Rebrand TMF Line → TMF Team | Done everywhere, "Capital Strategy" retained underneath |
+| Logo ("Ascent" — three rising bars) | Done, animates on hover |
+| Parallax scrolling | Working. Took several escalations, see §8 |
+| Custom branded scrollbar | Done |
+| Momentum scrolling | Done |
+| Lead capture → Google Sheets | **Working, verified live** |
+| Cash injection calculator | Working, formula per John's spec |
+| HELOC calculator | Working. Figure API integration **blocked**, see §6.1 |
+| SBA page | Done, facts web-verified against SOP 50 10 8 |
+| Branded application | **Rebuilt 18 Aug 2026.** TMF collects all 29 fields; encrypted at rest, §5.3 |
+| Bank statement upload | Working, hardened |
 
 ---
 
-## 5. Open items
+## 4. The calculator formula
 
-### 5.1 Figure returns HTTP 500 — blocked on Figure
+John specified this directly. Do not change it without asking him.
 
-**Status:** everything on our side verified working; Figure's server is erroring.
+```
+projection = monthly_revenue × industry_multiplier × credit_multiplier
+             − outstanding_balance
+range      = projection ± 15%
+```
 
-Evidence gathered:
+In `assets/app.js`, `estimateAdvance()` around line 700.
 
-- `api/` deploys, PHP executes, `config.php` is read, the ID passes format
-  validation
-- On `api.test.figure.com` → **400 "Incorrect credentials"** → the ID is a
-  production-only key
-- On `api.figure.com` → **500**, on every request
-- Isolated across nine payload variations, from bare minimum (affiliateId,
-  requestType, loanPurpose, two consent flags) to fully populated — always 500
-- A malformed request would return 400, not 500. Their server is failing
+```js
+const BALANCE_DEDUCTION_RATE = 1.0;   // John chose 1.0 over 0.8
+const RANGE_SPREAD = 0.15;            // was much wider, he said 4K–92K was absurd
+const CREDIT_MULT = [
+  { min: 740, mult: 1.40 }, { min: 660, mult: 1.15 },
+  { min: 600, mult: 0.925 }, { min: 0, mult: 0.75 }
+];
+```
 
-**Next step is Figure's support, not code.** Ask whether the account is
-provisioned for the `OFFERS` request type on this endpoint.
+**`INDUSTRY_MULT` now holds John's real figures**, supplied by him on 18 Aug
+2026 and no longer placeholders:
 
-**Likely underlying cause, unconfirmed:** the Figure Lead Portal account
-associated with this work belongs to **Signet Capital Group** (signed in as
-Michael Gold, `michael@signetcapitalgroup.com`), not TMF Team. If the
-production affiliate ID is Signet's, their account may be enabled for the Lead
-Portal but never provisioned for affiliate API offers — which would produce
-exactly this.
+```js
+restaurant 1.20   healthcare 1.20   retail 1.10
+construction 0.80   trucking 0.75
+wholesale / salon / other 1.00     // "everything else stays at 1"
+```
 
-**This also raises a question nobody has answered:** whether TMF Team is
-entitled to use that partnership's credential on tmfus.com. Leads submitted
-through it are attributed to whoever owns the affiliate ID. The owner was told
-this twice and has not confirmed the arrangement. **Do not treat it as settled.**
-Confirm whose partnership this runs under before production traffic hits it.
+Do not change these without asking him. Note this raised quotes for wholesale
+(0.95 → 1.00), salon (1.00) and other (0.90 → 1.00), and lowered construction
+(0.85 → 0.80) and trucking (0.80 → 0.75).
 
-### 5.2 Rate limit may be exhausted
+A "positions factor" used to also apply on top of the balance deduction. That
+double-penalised merchants and was removed on John's instruction. Do not
+reintroduce it.
 
-`api/config.php` has `rate_limit_per_hour` (default 20, per IP). Diagnostic
-testing consumed it. If the form returns "Too many requests", either wait an
-hour or raise the value.
-
-### 5.3 No contact details anywhere on the site
-
-There is **no phone number or email address** on any page. The only ones present
-are placeholder text inside form fields (`you@business.com`,
-`(555) 123-4567`). A visitor who wants to make contact outside the forms
-cannot. The owner has been asked twice for real details and has not supplied
-them. **Chase this — it is the cheapest conversion fix available.**
-
-### 5.4 Deliberately left alone
-
-- The home page meta description still lists equipment financing. It is still
-  offered elsewhere (term-loans page, estimator matching logic); only the home
-  page *card* was removed
-- Nav still links "Cash injection calculator" → `funding-estimator.html`. Only
-  the home page card was removed, not the page
+Cash injection range is **$5K – $2M**. HELOC caps at **$750K**.
 
 ---
 
-## 6. Tunable knobs
+## 5. Integrations
 
-Both effects can be adjusted live in the browser without a deploy, which is how
-the owner prefers to choose values.
+### 5.1 Lead capture → Google Sheets — WORKING
 
-| What | Where | Live override |
-|---|---|---|
-| Parallax strength | `STRENGTH` in `app.js` (currently `1.45`) | `?px=2.5`, or `?tune=1` for a slider |
-| Momentum easing | `EASE` in `app.js` (currently `0.09`) | `?ease=0.05` floatier, `?ease=0.18` snappier, `?nomo=1` off |
+`LEAD_ENDPOINT` at the top of `app.js` is a Google Apps Script Web App that
+appends each submission to John's spreadsheet. Verified live; two TEST rows were
+written. `google-apps-script.gs` in the repo is the script behind it.
 
-`?tune=1` renders a slider panel. It does **not** appear for normal visitors —
-verified. Once a value is settled, bake it in and delete `initTuner()`.
+`sendLead(kind, data)` posts `no-cors`, so **the browser cannot read the
+response**. You cannot tell success from failure client-side. If the endpoint is
+ever set to an empty string, the forms say so rather than faking success. Keep
+that behaviour — never let a form claim a message was sent when nothing was
+transmitted.
 
-**Accessibility, non-negotiable:** parallax and momentum both disable under
-`prefers-reduced-motion` and at ≤680px width. Verified in both states. Do not
-remove these guards to make an effect "work everywhere" — motion sickness is
-real and phones stutter.
+### 5.2 Figure HELOC API — BLOCKED ON FIGURE
+
+See `SETUP-FIGURE-API.md`. Summary in §6.1.
+
+### 5.3 The application — TMF's own, encrypted — REBUILT 18 Aug 2026
+
+Read `SETUP-APPLICATION.md` before touching any of this.
+
+John asked for the Signet name off the site and for all 29 fields collected in
+his own form. That was done. `apply.html` now collects everything, SSN, date of
+birth and signature included, and posts it to `api/application.php`. There is no
+redirect, no altaFlow, no `alfw.at` link, no pre-fill parameters. `grep -ri
+signet` over the site returns nothing.
+
+**How the sensitive half is protected.** Each application is sealed with a fresh
+AES-256-GCM key, and that key is sealed with an RSA public key on the server.
+The private key is not on the server and must never be put on it — it lives on
+John's machine inside `tmf-application-tool.html`, which also generates the pair
+and decrypts applications entirely offline. A stolen hosting account yields
+ciphertext and nothing else.
+
+**Verified end to end on 18 Aug 2026**, not assumed: a real multipart POST to
+`api/application.php` in a live PHP server, encrypted on disk, then decrypted in
+Chromium through the actual tool. The stored directory was searched for the test
+SSN and it does not appear in plaintext anywhere. Wrong-key decryption fails
+with a clear message and leaks nothing. A `.exe` renamed `statement.pdf` is
+still rejected on its bytes.
+
+**Rules that must not be weakened:**
+
+- `api/application.php` **fails closed**: no usable `application_pubkey` in
+  config means it refuses the submission with a 503. It does not store an SSN in
+  the clear and does not pretend it saved anything. Do not "fix" this check.
+- The success pane appears only after the server confirms storage. If the POST
+  fails the applicant is told to call rather than shown a receipt.
+- Nothing matching `ssn`, `dob`, `birth`, `social`, `sig` or `signature` reaches
+  the notification email, `summary.json`, or the Google Sheets lead summary.
+  Both sides enforce this independently.
+- The OAEP label hash is **SHA-1 on both sides on purpose** — PHP's
+  `OPENSSL_PKCS1_OAEP_PADDING` gives no way to change it. Change one side and
+  every future application becomes permanently unreadable.
+
+**The authorization text now names TMF Team**, not Signet, because the applicant
+is authorizing TMF to pull their credit. It carries the id `tmf-auth-2026-08`,
+stored with every signature. Change the wording, change the id.
+
+**Two things John should be told again if he has not acted on them:** he is now
+holding Social Security numbers, which brings FTC Safeguards Rule obligations
+that did not apply when Signet held the data; and nothing prunes old
+applications, so retention is a decision he has to make.
+
+## 6. Open items
+
+### 6.1 Figure API returns HTTP 500 — blocked, not our bug
+
+`api/figure-heloc.php` proxies Figure's HELOC pre-qualification API. The
+affiliate ID travels in the request **body**, so it must stay server-side.
+
+Current state: **every production request returns HTTP 500**, including the bare
+minimum payload, isolated across nine payload variations. 500 is Figure's server
+erroring, not a bad request from us.
+
+Two false diagnoses already burned on this — read them in §8 before retrying.
+
+**What John needs to do:** ask Figure support whether the account is provisioned
+for the `OFFERS` request type. Also worth confirming whether `householdIncome`
+should be annual or monthly (we send annual, `income_is_annual` in config).
+
+### 6.2 No phone number or email anywhere on the site
+
+**Flagged at least four times across sessions. Never supplied.** The contact page
+has opening hours and response times but no way to reach a human. A
+business-funding site without a phone number costs conversions. Ask again.
+
+### 6.3 Real industry multipliers — RESOLVED 18 Aug 2026
+
+John supplied them. See §4. No longer placeholders.
+
+### 6.4 Whose partnership is this? — HALF RESOLVED
+
+The application half is settled: as of 18 Aug 2026 TMF collects its own
+applications and Signet is out of the site entirely.
+
+**The Figure half is not.** The Figure Lead Portal account still belongs to
+Signet Capital Group (Michael Gold, michael@signetcapitalgroup.com,
+LOAN_ORIGINATOR, orgs "Figure NY Wholesale SMB" / "Figure Wholesale SMB"), so
+HELOC leads from tmfus.com still land in Signet's account. Given John has just
+taken applications in-house, ask him whether he wants his own Figure affiliate
+account too. It is currently moot — Figure returns 500 on everything, §6.1 —
+but it is the same question and it is still open.
+
+### 6.5 Deliberately left alone
+
+- Revenue-based estimator and equipment financing cards — **John had these
+  removed** from the home page. Do not restore them.
+- The "Do you like the numbers?" CTA appears **only after an estimate**, never
+  on the home page. He asked for this specifically.
+- `long-term-loans.html` was **replaced** by `sba-loans.html`. A 301 sits in
+  `.htaccess` **before** the clean-URL rewrite. Order matters, see §8.
 
 ---
 
-## 7. Traps that cost real time
+## 7. Tunable knobs
 
-Read this section before debugging anything.
+All at the top of their sections in `assets/app.js`:
 
-1. **Testing a live site through browser automation gives false negatives.**
-   Background tabs freeze `requestAnimationFrame`, so scroll animation appears
-   completely dead when it is fine. Several rounds were wasted concluding
-   parallax was broken when the measurement was at fault. Ship a standalone
-   test file the user opens themselves, or have them check.
+| Constant | Line ~ | Does |
+|----------|--------|------|
+| `LEAD_ENDPOINT` | 27 | Google Sheets destination |
+| `APPLICATION_URL` | 43 | Signet application link |
+| `APPLICATION_MODE` | 1366 | `'prefill'` or `'api'` |
+| `PREFILL_FIELDS` | 1373 | What goes in the Signet URL. **Never add SSN/DOB** |
+| `MAX_FILE_MB` / `MAX_FILES` | 1368 | Upload limits |
+| `INDUSTRY_MULT` | 664 | John's real multipliers, set 18 Aug 2026 |
+| `BALANCE_DEDUCTION_RATE` | 678 | Currently 1.0 |
+| `RANGE_SPREAD` | 688 | Currently 0.15 |
+| `CREDIT_MULT` | 692 | Credit band multipliers |
+| `HELOC_MAX` | 970 | 750000 |
+| `HELOC_RATES` | 972 | Rate by credit band |
 
-2. **`immutable` cache headers hide deploys.** If a change "doesn't appear",
-   check the deployed asset version *before* touching code.
-
-3. **An `IntersectionObserver` gate was removed from the parallax engine.** If a
-   callback was never delivered, every layer stayed flagged invisible and
-   nothing moved — with no error. Do not reintroduce that optimisation; twelve
-   elements cost nothing to compute.
-
-4. **`.cpanel.yml` lists files individually.** New file or folder → add it there
-   or it never deploys.
-
-5. **A 400 from Figure means bad credentials, not bad data.** Their error text
-   lies.
-
-6. **The owner does not read code.** Explain in plain language, give numbered
-   steps naming the exact button, and say what should appear on screen. He
-   works in cPanel File Manager and GitHub Desktop, not a terminal.
+Parallax accepts `?px=` / `?tune=1` overrides in the URL. Momentum accepts
+`?ease=` / `?nomo=1`. Both are disabled under `prefers-reduced-motion` and at
+≤680px, on purpose.
 
 ---
 
-## 8. Working style that suited this owner
+## 8. Traps that have already cost real time
 
-- He asks for outcomes ("make it more aggressive"), not implementations
-- He deploys manually, so **batch changes into one upload** rather than sending
-  several. Each round trip is real effort for him
-- **Verify before claiming something works.** He was told the parallax worked
-  three times before it actually reached his browser. That damaged trust more
-  than the bug did
-- When something cannot be done, say so immediately and give the alternative.
-  Do not keep retrying a blocked action
-- He is cost-conscious about tokens. Be efficient; do not re-explain
+**Testing in a background browser tab.** Chrome freezes `requestAnimationFrame`
+in hidden tabs. I concluded parallax was broken three times in a row while
+`visibilityState` was `"hidden"` and rAF had never fired. I was measuring my own
+blind spot, told John the site was broken, and was wrong. **If you are checking
+animation, confirm the tab is actually foregrounded.**
+
+**Immutable cache headers.** `.htaccess` once served CSS/JS with
+`max-age=31536000, immutable`, so returning visitors kept old files for up to a
+year. Now `max-age=3600, must-revalidate` plus `?v=N`. Do not "optimise" it back.
+
+**Figure's 400 does not mean malformed data.** Figure's own OpenAPI spec declares
+`"400": Incorrect credentials` on that endpoint. I assumed a bad payload and
+burned two rounds. Separately, `/pre-qualify/v2` accepts **only** JWE-encrypted
+bodies and returns 400 on plain JSON — we use **v1** for that reason.
+
+**Float serialization.** Figure rejects `250000.0`. Cast money fields to int.
+
+**`>` vs `>=` on dropdown bands.** John said "above 650". The dropdown's
+650–699 band reports `650`, so `credit > 650` silently excluded the whole band.
+He found it, not me. Check what a control actually reports.
+
+**The `hidden` attribute loses specificity fights.** `.field { display: grid }`
+overrode `[hidden]`, so the signature pad rendered when it should not have. A DOM
+test said hidden; the screenshot said otherwise. `[hidden] { display: none
+!important; }` is now in the CSS. **Screenshot your work.**
+
+**Per-scope validation misses cross-scope rules.** Ownership % was summed within
+each step, so 100% owner + 50% co-owner passed. Validate against the whole form.
+
+**301 redirect ordering.** The `/long-term-loans` → `/sba-loans` redirect must
+sit **before** the clean-URL rewrite, or rule 4 rewrites to a deleted file and
+404s.
+
+**`.bullets li` is a two-column grid.** A `<b>` plus a bare text node become
+separate grid items and the layout breaks. Wrap everything after the tick in one
+`<span>`.
 
 ---
 
-## 9. Credentials — where they live
+## 9. Credentials and security posture
 
-Nothing sensitive is in the repository.
+**The repo is public.** This shapes everything.
 
-| Secret | Location | Notes |
-|---|---|---|
-| Figure affiliate ID | `api/config.php`, server only | gitignored; never in chat or commits |
-| Apps Script URL | `LEAD_ENDPOINT` in `app.js` | Public by nature; see 4.1 |
-| GitHub | Owner's GitHub Desktop | Assistant sessions had no push access |
-| cPanel | Owner's hosting login | LiteSpeed, PHP available |
+| Secret | Where it lives |
+|--------|----------------|
+| Figure affiliate ID | `api/config.php` on the server only. Gitignored |
+| altaFlow token | Not yet issued. Same file when it is |
+| Google Apps Script URL | In `app.js` — it is a write-only endpoint, acceptable |
 
-If a credential is ever committed, rotate it with the issuer. Do not simply
-delete the commit — the history remains public.
+`.htaccess` denies `config.php`, `config.example.php`, `*.log`, and
+`api/uploads/`. `api/uploads/` is also gitignored.
+
+**Rules that must not be weakened:**
+
+- Consent booleans (`privacyPolicyOptIn`, `remarketingAllowed`) pass through
+  exactly as ticked, never defaulted to true. `api/figure-heloc.php` rejects any
+  request lacking privacy consent.
+- `api/application.php` strips any key containing `ssn`, `dob`, `birth`,
+  `social`, `sig` or `signature` before writing anything to disk. Verified by
+  posting an SSN to it deliberately.
+- File type is decided by `finfo` on the actual bytes, never the filename. A
+  `.exe` renamed `.pdf` is rejected — tested.
+- Never put personal data in a query string.
+- Never let a form claim a message was sent when nothing was transmitted.
+
+**Do not accept credentials pasted into chat.** John offered a GitHub token once
+and I declined; the affiliate ID was kept out of chat the same way. Anything
+typed into a conversation is stored in that conversation. Point him at the config
+file on the server instead.
 
 ---
 
-## 10. Immediate priorities
+## 10. Working style that suits this owner
 
-1. **Get contact details on the site** (5.3). Cheapest win available
-2. **Resolve the Figure 500 with Figure support**, and settle whose partnership
-   the credential belongs to (5.1)
-3. **Push the outstanding commits** so the repo matches the server. At handoff
-   the owner was applying a single-file fix directly to the server, so
-   `api/figure-heloc.php` on the server may be ahead of GitHub
-4. Confirm with Figure whether `householdIncome` should be annual or monthly
-   (`income_is_annual` in config). Currently annual. Wrong either way skews
-   every offer shown to a borrower
+- **He is not a developer.** When he asks how to do something in cPanel or
+  GitHub Desktop, give numbered steps at a level a beginner can follow. He has
+  asked more than once to be spoken to "like I am 10" — that is a real request,
+  not a joke, and following it worked.
+- **He judges by looking.** Ship something visible, then refine. He reported
+  parallax "not working", then "not noticeable", then asked for it "more
+  aggressive". Screenshots and a live test page settled it.
+- **He finds real bugs.** The 650 threshold and the absurd 4K–92K range were both
+  his catches. Take his reports seriously even when the code looks right.
+- **Own mistakes plainly.** Saying "my last few checks were nonsense, I was
+  measuring my own blind spot" landed better than hedging. He kept working with
+  me after it.
+- **Push back when it matters.** He asked for SSN collection on his own server; I
+  built everything else and explained why not. State the reason once, clearly,
+  and offer the path that gets him what he wants safely.
+
+---
+
+## 11. Immediate priorities
+
+1. **Switch on the application encryption key.** `SETUP-APPLICATION.md`, step
+   1 to 3. **Until John does this the application form accepts nothing** — it
+   fails closed by design. This is now the highest-priority item by a distance.
+2. **Push the commits** via GitHub Desktop, then deploy from cPanel.
+3. **Get a phone number and email onto the site.** §6.2.
+4. **Chase Figure** about `OFFERS` provisioning. §6.1.
+5. **Settle the Signet ownership question.** §6.4.
+6. **Identity collection — built 18 Aug 2026.** Superseded by John's decision
+   to take the whole application in-house. See §5.3.
+
+**Copy note:** `apply.html`'s handoff note used to promise the Signet page would
+arrive "with everything above already filled in". That is false until the
+pre-fill bot exists, so it was reworded on 18 Aug to be true in both states.
+**Once Signet enables the bot, it is worth putting the "already filled in"
+promise back** — that is the moment it becomes true and it is a real reassurance
+at the handoff.
+
+---
+
+## 12. Companion documents in this repo
+
+| File | Covers |
+|------|--------|
+| `README.md` | Quick orientation |
+| `SETUP-LEAD-CAPTURE.md` | Google Sheets step by step |
+| `SETUP-FIGURE-API.md` | Figure integration and the 500 |
+| `SETUP-APPLICATION.md` | The application, and the exact ask for Signet |
+| `google-apps-script.gs` | The script behind the leads sheet |
