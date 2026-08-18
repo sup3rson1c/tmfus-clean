@@ -103,8 +103,17 @@ In the same file:
 'application_notify' => 'you@tmfus.com',
 ```
 
-Replace `YOURUSER` with your cPanel username. Putting this **outside**
-`public_html` matters — these are Social Security numbers and bank statements,
+Replace `YOURUSER` with your cPanel username — your real one, which is on the
+cPanel home page in the right-hand panel next to "Username".
+
+**Keep the leading slash.** `/home/you/tmf-applications` is an absolute path;
+`home/you/tmf-applications` is a relative one, and the server would resolve it
+against `public_html/api/` — putting customer bank statements inside your
+website while appearing to work perfectly. The endpoint now refuses to run with
+a relative path and the self-check names the problem, but it is worth knowing
+why that one character matters.
+
+Putting this **outside** `public_html` matters — these are Social Security numbers and bank statements,
 and the web server should not be able to serve them at all. If you leave the
 default it falls back to `api/uploads/`, which is blocked three separate ways,
 but that is a second line of defence rather than a first.

@@ -227,20 +227,58 @@ $notifyTo = $cfg['application_notify'] ?? '';
 // ---------------------------------------------------------------
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['selftest'])) {
     $dirProbe = rtrim((string) $storeDir, '/');
-    $dirOk = is_dir($dirProbe)
-        ? is_writable($dirProbe)
-        : (@mkdir($dirProbe, 0700, true) || is_dir($dirProbe));
 
-    $ok = ($publicKeyPem !== '') && $dirOk;
+    /* A relative application_dir is the single easiest thing to get wrong
+       in this config, and it fails in the worst possible way: PHP resolves
+       it against the script's own directory, so 'home/user/tmf-applications'
+       quietly becomes public_html/api/home/user/tmf-applications — customer
+       bank statements inside the web root. It looks like it worked.
+       Caught here by name rather than left to be discovered later. */
+    $isRelative = $dirProbe !== '' && $dirProbe[0] !== '/';
+
+    $docRoot = rtrim((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+    $resolved = $isRelative ? (__DIR__ . '/' . $dirProbe) : $dirProbe;
+    $insideWebRoot = $docRoot !== '' && str_starts_with($resolved, $docRoot . '/');
+
+    $dirOk = false;
+    if (!$isRelative) {
+        $dirOk = is_dir($dirProbe)
+            ? is_writable($dirProbe)
+            : (@mkdir($dirProbe, 0700, true) || is_dir($dirProbe));
+    }
+
+    if ($isRelative) {
+        $storage = 'BAD PATH — application_dir does not start with a slash, so it is being '
+                 . 'created inside your website folder. It must be an absolute path, like '
+                 . '/home/YOURUSERNAME/tmf-applications';
+    } elseif (!$dirOk) {
+        $storage = 'NOT writable — check application_dir in config.php. It should look like '
+                 . '/home/YOURUSERNAME/tmf-applications and the username must be your real one.';
+    } elseif ($insideWebRoot) {
+        $storage = 'writable, but it is INSIDE your website folder. Move it above public_html — '
+                 . 'these are bank statements.';
+    } else {
+        $storage = 'writable';
+    }
+
+    $ok = ($publicKeyPem !== '') && $dirOk && !$isRelative && !$insideWebRoot;
     respond(200, [
         'ok'      => $ok,
         'config'  => is_readable(__DIR__ . '/config.php') ? 'found' : 'MISSING — create api/config.php',
         'key'     => $publicKeyPem !== '' ? 'loaded and usable' : $keyStatus,
-        'storage' => $dirOk ? 'writable' : 'NOT writable — check application_dir in config.php',
+        'storage' => $storage,
         'verdict' => $ok
             ? 'Ready. The application form will accept submissions.'
             : 'Not ready. Fix whatever is reported above, then reload this page.',
     ]);
+}
+
+/* Same check on the real path. A relative path here is a misconfiguration
+   serious enough to refuse, because the alternative is writing customer
+   bank statements into the web root and reporting success. */
+if ($storeDir !== '' && $storeDir[0] !== '/') {
+    error_log('application.php: application_dir is relative (' . $storeDir . ') — refusing. Use an absolute path.');
+    fail(503, 'Applications cannot be accepted right now. Please call us and an advisor will take this over the phone.');
 }
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {

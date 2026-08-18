@@ -73,6 +73,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 $cfg = is_readable(__DIR__ . '/config.php') ? (require __DIR__ . '/config.php') : [];
 $baseDir = rtrim((string) ($cfg['application_dir'] ?? (__DIR__ . '/uploads')), '/');
 
+/* A relative application_dir resolves against this script's directory, which
+   silently puts the lead store inside the web root. Unlike application.php
+   this endpoint does not refuse — losing someone's enquiry is worse than
+   storing it in the fallback — but it does not honour the bad path either. */
+if ($baseDir === '' || $baseDir[0] !== '/') {
+    error_log('lead.php: application_dir is relative (' . $baseDir . ') — using the protected fallback instead. Fix it to an absolute path.');
+    $baseDir = __DIR__ . '/uploads';
+}
+
 // ---------------------------------------------------------------
 // Rate limit
 // ---------------------------------------------------------------

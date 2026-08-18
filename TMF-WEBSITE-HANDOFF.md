@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=24`.**
+**Last updated: 18 August 2026 — assets at `?v=25`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -91,10 +91,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=24/styles.css?v=25/g; s/app\.js?v=24/app.js?v=25/g' *.html
+sed -i 's/styles\.css?v=25/styles.css?v=26/g; s/app\.js?v=25/app.js?v=26/g' *.html
 ```
 
-Currently at **v24**. Forget this and John sees no change, reports the site is
+Currently at **v25**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -200,6 +200,16 @@ Chromium through the actual tool. The stored directory was searched for the test
 SSN and it does not appear in plaintext anywhere. Wrong-key decryption fails
 with a clear message and leaks nothing. A `.exe` renamed `statement.pdf` is
 still rejected on its bytes.
+
+**A relative `application_dir` is refused.** Hit for real on 18 Aug 2026: the
+value in `config.php` was missing its leading slash, so PHP resolved it against
+the script directory and started building
+`public_html/api/home/<user>/tmf-applications` — customer bank statements inside
+the web root, with everything appearing to work. `application.php` now refuses
+to run with a relative path and the self-check says so in plain words;
+`lead.php` falls back to its protected default rather than losing an enquiry.
+The self-check also warns when an absolute path still resolves inside
+`DOCUMENT_ROOT`.
 
 **Rules that must not be weakened:**
 
@@ -410,6 +420,16 @@ separate grid items and the layout breaks. Wrap everything after the tick in one
 
 `.htaccess` denies `config.php`, `config.example.php`, `*.log`, and
 `api/uploads/`. `api/uploads/` is also gitignored.
+
+**A relative `application_dir` is refused.** Hit for real on 18 Aug 2026: the
+value in `config.php` was missing its leading slash, so PHP resolved it against
+the script directory and started building
+`public_html/api/home/<user>/tmf-applications` — customer bank statements inside
+the web root, with everything appearing to work. `application.php` now refuses
+to run with a relative path and the self-check says so in plain words;
+`lead.php` falls back to its protected default rather than losing an enquiry.
+The self-check also warns when an absolute path still resolves inside
+`DOCUMENT_ROOT`.
 
 **Rules that must not be weakened:**
 
