@@ -11,7 +11,7 @@ deployment:
     - /bin/cp -f contact.html            $DEPLOYPATH/
     - /bin/cp -f funding-estimator.html  $DEPLOYPATH/
     - /bin/cp -f heloc-calculator.html   $DEPLOYPATH/
-    - /bin/cp -f long-term-loans.html    $DEPLOYPATH/
+    - /bin/cp -f sba-loans.html          $DEPLOYPATH/
     - /bin/cp -f mca.html                $DEPLOYPATH/
     - /bin/cp -f 404.html                $DEPLOYPATH/
     - /bin/cp -f .htaccess               $DEPLOYPATH/

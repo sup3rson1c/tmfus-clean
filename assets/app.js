@@ -614,13 +614,13 @@
       match: (p) => p.credit >= 660
     },
     {
-      id: 'term',
-      name: 'Long-Term Business Loan',
-      range: '$50K – $5M',
-      blurb: 'Predictable monthly payments for sustained growth, expansion, or refinancing.',
-      term: '1 – 10 years',
-      speed: '1 – 2 weeks',
-      href: 'long-term-loans.html',
+      id: 'sba',
+      name: 'SBA Loan (7a / 504)',
+      range: 'Up to $5.5M',
+      blurb: 'Government-backed, the lowest rates available — if the timeline allows for it.',
+      term: '10 – 25 years',
+      speed: '30 – 90 days',
+      href: 'sba-loans.html',
       match: (p) => p.revenue >= 25000 && p.credit >= 650 && p.positions === 0 && p.tib >= 2
     }
   ];
@@ -658,48 +658,60 @@
   const DEFAULT_INDUSTRY_MULT = 1.00;
 
   /* How much of the outstanding balance comes off the offer.
-     1.0 = the full balance. Was 0.8; raised to 1.0 so the figure quoted
-     is what the merchant nets after clearing existing positions. */
+     1.0 = the full balance. */
   const BALANCE_DEDUCTION_RATE = 1.0;
 
-  /* Offer =  monthly revenue
-              x industry multiplier
-              x credit multiplier
-              - outstanding balance x BALANCE_DEDUCTION_RATE
+  /* Half-width of the quoted range, as a fraction of the projection.
+     0.15 means the range is projection -15% to +15%, so high is always
+     about 1.35x low. Previously low and high came from two separate
+     multipliers (0.8 and 1.5) and the balance was subtracted from both,
+     which kept the spread absolute while the midpoint fell — a merchant
+     with a large balance could see something like $4K – $92K, a 23x range
+     that reads as a broken calculator. Deriving the band from the final
+     number instead keeps it sane at every size. */
+  const RANGE_SPREAD = 0.15;
 
-     There is deliberately no separate positions factor: the balance
-     deduction already accounts for existing positions, and applying
-     both penalised the same merchant twice. */
+  /* One multiplier per credit band. These are the midpoints of the old
+     low/high pairs, so overall levels are unchanged — only the width is. */
+  const CREDIT_MULT = [
+    { min: 740, mult: 1.40 },
+    { min: 660, mult: 1.15 },
+    { min: 600, mult: 0.925 },
+    { min: 0,   mult: 0.75 }
+  ];
+
+  /* Projection =  monthly revenue
+                   x industry multiplier
+                   x credit multiplier
+                   - outstanding balance x BALANCE_DEDUCTION_RATE
+     then widened to a +/- RANGE_SPREAD band. Capped at 500k, floored at 0. */
   function estimateAdvance(profile) {
     const rev = profile.revenue || 0;
     if (!rev) return null;
 
-    let lowMult = 0.8, highMult = 1.5;
     const c = profile.credit == null ? 700 : profile.credit;
-    if (c < 600) { lowMult = 0.5; highMult = 1.0; }
-    else if (c < 660) { lowMult = 0.65; highMult = 1.2; }
-    else if (c >= 740) { lowMult = 1.0; highMult = 1.8; }
+    const creditMult = (CREDIT_MULT.find((b) => c >= b.min) || CREDIT_MULT[CREDIT_MULT.length - 1]).mult;
 
     const ind = profile.industry && INDUSTRY_MULT[profile.industry] != null
       ? INDUSTRY_MULT[profile.industry]
       : DEFAULT_INDUSTRY_MULT;
 
-    let low = Math.min(rev * ind * lowMult, 500000);
-    let high = Math.min(rev * ind * highMult, 500000);
-
-    // What is still owed comes off both ends, preserving the spread.
     const balance = profile.balance || 0;
     const deduction = balance * BALANCE_DEDUCTION_RATE;
-    if (deduction > 0) {
-      low = Math.max(0, low - deduction);
-      high = Math.max(0, high - deduction);
-    }
+
+    let base = Math.min(rev * ind * creditMult, 500000) - deduction;
+    base = Math.max(0, base);
+
+    const low = Math.max(0, base * (1 - RANGE_SPREAD));
+    const high = Math.min(base * (1 + RANGE_SPREAD), 500000);
 
     return {
       low: low,
       high: high,
+      base: base,
       deduction: deduction,
       industryMult: ind,
+      creditMult: creditMult,
       viable: high > 0
     };
   }
@@ -829,7 +841,10 @@
       if (step === 2) {
         const phone = root.querySelector('[data-field="phone"]').value.replace(/\D/g, '');
         const email = root.querySelector('[data-field="email"]').value.trim();
-        if (phone.length < 10) return 'Enter a valid 10-digit US phone number.';
+        // Phone is optional. Only complain if they started typing one.
+        if (phone.length > 0 && phone.length < 10) {
+          return 'That phone number looks incomplete — leave it blank or enter 10 digits.';
+        }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return 'Enter a valid email address.';
       }
       return null;
@@ -877,24 +892,28 @@
 
   function showAnswer(root, profile) {
     const est = estimateAdvance(profile);
-    const list = matchProducts(profile);
     const card = root.closest('.panel') || root;
+
+    // Merchants with decent credit have a second route worth showing, whether
+    // they want more than the advance covers or the balance ruled them out.
+    const creditForHeloc = profile.credit == null ? 0 : profile.credit;
+    const showHeloc = creditForHeloc > 650;
+
     card.innerHTML = `
       <div class="calc-head">
         <span class="calc-kicker eyebrow">Your result</span>
         <span class="calc-step">COMPLETE</span>
       </div>
-      <h3 class="calc-title">You look like a fit for <b>${list.length} product${list.length === 1 ? '' : 's'}</b>.</h3>
+      <h3 class="calc-title">Here is your <b>indicative projection</b>.</h3>
       <div class="result-list" style="margin-top:26px">
         ${est
-          ? `<div class="result-row hi"><span class="k">Indicative range</span><span class="v">${
+          ? `<div class="result-row hi"><span class="k">Projected range</span><span class="v">${
               est.viable === false ? 'Over leveraged' : usd(est.low) + ' – ' + usd(est.high)
             }</span></div>`
           : ''}
         ${est && est.deduction > 0
           ? `<div class="result-row"><span class="k">Less existing positions</span><span class="v">− ${usd(est.deduction)}</span></div>`
           : ''}
-        <div class="result-row"><span class="k">Products matched</span><span class="v">${list.length}</span></div>
         <div class="result-row"><span class="k">Typical decision</span><span class="v">3–24h</span></div>
       </div>
       <p style="color:var(--muted-fg);margin:22px 0 0">
@@ -902,10 +921,24 @@
           ? 'Based on what you owe against what you bring in, you are over leveraged ' +
             'for a new advance right now. A specialist can look at consolidation or ' +
             'a payoff structure — it is worth the conversation.'
-          : 'A funding specialist will reach out within 24 hours with a pre-qualified offer. ' +
-            'Figures are indicative only and subject to underwriting.'}
+          : 'A funding specialist will reach out within 24 hours to go through your options.'}
       </p>
-      <div style="margin-top:26px"><a class="btn btn-primary btn-block" href="contact.html">Talk to an advisor <span class="icon">&rarr;</span></a></div>
+
+      <p class="calc-disclaimer">
+        <b>This is a projection, not an offer.</b> The figures above are an
+        estimate based on the details you entered. They are not a quote, not a
+        commitment to lend, and not the exact amount you will be offered. Real
+        terms depend on underwriting, your bank statements and the funder — and
+        can land above or below this range.
+      </p>
+
+      ${showHeloc ? `
+      <a class="heloc-nudge" href="heloc-calculator.html">
+        <span class="heloc-nudge-k">Looking for more, or over leveraged?</span>
+        <span class="heloc-nudge-v">Try our HELOC calculator <span class="icon">&rarr;</span></span>
+      </a>` : ''}
+
+      <div style="margin-top:22px"><a class="btn btn-primary btn-block" href="contact.html">Talk to an advisor <span class="icon">&rarr;</span></a></div>
     `;
     card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
   }

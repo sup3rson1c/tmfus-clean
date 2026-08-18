@@ -23,6 +23,11 @@ DirectoryIndex index.html
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
 
+  # 2b. The term-loans page was replaced by the SBA page. This must come
+  #     before the rules below: rule 4 would otherwise rewrite
+  #     /long-term-loans to a file that no longer exists and 404.
+  RewriteRule ^long-term-loans(\.html)?/?$ /sba-loans [R=301,L]
+
   # 3. Strip .html so /heloc-calculator works as a URL.
   #    Existing .html URLs redirect to the clean version so you
   #    never have two addresses serving the same page.
