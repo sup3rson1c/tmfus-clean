@@ -576,7 +576,7 @@
     {
       id: 'mca',
       name: 'Merchant Cash Advance',
-      range: '$5K – $500K',
+      range: '$5K – $2M',
       blurb: 'Fast capital with flexible daily or weekly remittances based on your revenue.',
       term: '3 – 18 months',
       speed: '1 – 3 days',
@@ -896,8 +896,9 @@
 
     // Merchants with decent credit have a second route worth showing, whether
     // they want more than the advance covers or the balance ruled them out.
+    // >= not >: the "650 - 699" band reports 650, so > silently excluded it.
     const creditForHeloc = profile.credit == null ? 0 : profile.credit;
-    const showHeloc = creditForHeloc > 650;
+    const showHeloc = creditForHeloc >= 650;
 
     card.innerHTML = `
       <div class="calc-head">
@@ -938,7 +939,10 @@
         <span class="heloc-nudge-v">Try our HELOC calculator <span class="icon">&rarr;</span></span>
       </a>` : ''}
 
-      <div style="margin-top:22px"><a class="btn btn-primary btn-block" href="contact.html">Talk to an advisor <span class="icon">&rarr;</span></a></div>
+      <div class="result-actions">
+        <a class="btn btn-primary btn-block" href="funding-estimator.html">Do you like the numbers? Start an application <span class="icon">&rarr;</span></a>
+        <a class="btn btn-ghost btn-block" href="contact.html">Not sure? Any question? Talk to an advisor</a>
+      </div>
     `;
     card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
   }
