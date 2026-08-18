@@ -1208,3 +1208,32 @@ select.input option { background: #141417; color: var(--fg); }
 .fg-grid div b { display: block; font-size: 1.02rem; margin-top: 5px; }
 .fg-note { color: var(--muted-fg); font-size: .82rem; margin-top: 18px; line-height: 1.6; }
 .fg-busy { color: var(--muted-fg); font-size: .92rem; margin-top: 22px; }
+
+/* ============================================================
+   Outstanding balance field
+   Revealed only when the visitor reports 1+ existing MCA positions.
+   Spans the full row so it reads as a follow-up question rather
+   than a third column.
+   ============================================================ */
+.balance-field { grid-column: 1 / -1; }
+.balance-field[hidden] { display: none; }
+
+.balance-field {
+  animation: balanceIn .32s var(--ease) both;
+  border-left: 2px solid rgba(52, 211, 153, .45);
+  padding-left: 14px;
+}
+@keyframes balanceIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .balance-field { animation: none; }
+}
+
+.field-hint {
+  margin: 8px 0 0;
+  font-size: .8rem;
+  line-height: 1.5;
+  color: var(--muted-fg);
+}

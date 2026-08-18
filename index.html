@@ -11,8 +11,8 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/styles.css?v=10">
-<script src="assets/app.js?v=10" defer></script>
+<link rel="stylesheet" href="assets/styles.css?v=16">
+<script src="assets/app.js?v=16" defer></script>
 </head>
 <body>
 
@@ -170,6 +170,16 @@
                     <button type="button" data-value="3">3+ positions</button>
                   </div>
                 </div>
+              </div>
+
+              <!-- Appears only when the visitor reports 1+ existing positions -->
+              <div class="field balance-field" data-balance-field hidden>
+                <label class="field-label" for="balance">Total outstanding balance on those positions</label>
+                <div class="money-wrap">
+                  <span class="sym">$</span>
+                  <input id="balance" data-field="balance" data-money inputmode="numeric" placeholder="0">
+                </div>
+                <p class="field-hint">The combined payoff amount still owed. This is deducted from your available funding.</p>
               </div>
             </div>
 

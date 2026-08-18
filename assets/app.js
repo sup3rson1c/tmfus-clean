@@ -637,19 +637,70 @@
   }
 
   // indicative advance size: 0.8×–1.5× monthly revenue, scaled by credit & positions
+  /* ---------------------------------------------------------
+     Industry multipliers
+
+     ⚠ THESE ARE PLACEHOLDER VALUES, NOT TMF UNDERWRITING POLICY.
+     They are centred on 1.0 so quotes stay close to previous levels
+     until John supplies the real figures. Edit this table only —
+     nothing else needs to change.
+     --------------------------------------------------------- */
+  const INDUSTRY_MULT = {
+    healthcare:   1.10,
+    retail:       1.05,
+    restaurant:   1.00,
+    salon:        1.00,
+    wholesale:    0.95,
+    other:        0.90,
+    construction: 0.85,
+    trucking:     0.80
+  };
+  const DEFAULT_INDUSTRY_MULT = 1.00;
+
+  /* How much of the outstanding balance comes off the offer.
+     1.0 = the full balance. Was 0.8; raised to 1.0 so the figure quoted
+     is what the merchant nets after clearing existing positions. */
+  const BALANCE_DEDUCTION_RATE = 1.0;
+
+  /* Offer =  monthly revenue
+              x industry multiplier
+              x credit multiplier
+              - outstanding balance x BALANCE_DEDUCTION_RATE
+
+     There is deliberately no separate positions factor: the balance
+     deduction already accounts for existing positions, and applying
+     both penalised the same merchant twice. */
   function estimateAdvance(profile) {
     const rev = profile.revenue || 0;
     if (!rev) return null;
+
     let lowMult = 0.8, highMult = 1.5;
     const c = profile.credit == null ? 700 : profile.credit;
     if (c < 600) { lowMult = 0.5; highMult = 1.0; }
     else if (c < 660) { lowMult = 0.65; highMult = 1.2; }
     else if (c >= 740) { lowMult = 1.0; highMult = 1.8; }
-    const pos = profile.positions || 0;
-    const posFactor = [1, 0.8, 0.6, 0.45][Math.min(pos, 3)];
+
+    const ind = profile.industry && INDUSTRY_MULT[profile.industry] != null
+      ? INDUSTRY_MULT[profile.industry]
+      : DEFAULT_INDUSTRY_MULT;
+
+    let low = Math.min(rev * ind * lowMult, 500000);
+    let high = Math.min(rev * ind * highMult, 500000);
+
+    // What is still owed comes off both ends, preserving the spread.
+    const balance = profile.balance || 0;
+    const deduction = balance * BALANCE_DEDUCTION_RATE;
+    if (deduction > 0) {
+      low = Math.max(0, low - deduction);
+      high = Math.max(0, high - deduction);
+    }
+
     return {
-      low: Math.min(rev * lowMult * posFactor, 500000),
-      high: Math.min(rev * highMult * posFactor, 500000)
+      low: low,
+      high: high,
+      deduction: deduction,
+      industryMult: ind,
+      viable: high > 0
     };
   }
 
@@ -714,8 +765,25 @@
         : null,
       tib: root.querySelector('[data-field="tib"]')?.dataset.value
         ? Number(root.querySelector('[data-field="tib"]').dataset.value)
-        : null
+        : null,
+      balance: moneyVal($('[data-field="balance"]', root)),
+      industry: root.querySelector('[data-field="industry"]')?.dataset.value || null
     });
+
+    /* The balance question only makes sense once positions > 0. Show it
+       then, and clear it when they go back to "None" so a stale figure
+       can never quietly reduce someone's offer. */
+    const balanceField = $('[data-balance-field]', root);
+    const balanceInput = $('[data-field="balance"]', root);
+    const positionsSel = root.querySelector('[data-field="positions"]');
+
+    const syncBalance = () => {
+      if (!balanceField || !positionsSel) return;
+      const n = Number(positionsSel.dataset.value || 0);
+      const show = n > 0;
+      balanceField.hidden = !show;
+      if (!show && balanceInput) balanceInput.value = '';
+    };
 
     const paint = () => {
       panes.forEach((p, i) => p.classList.toggle('active', i === step));
@@ -725,10 +793,19 @@
       if (errEl) errEl.textContent = '';
     };
 
-    const sync = () => renderMatches(matchesHost, profile());
+    const sync = () => {
+      syncBalance();
+      renderMatches(matchesHost, profile());
+    };
 
     root.addEventListener('change', sync);
     root.addEventListener('money', sync);
+    // The custom selects set dataset.value on click rather than firing change
+    root.addEventListener('click', (e) => {
+      if (e.target.closest('[data-field="positions"] .select-menu')) {
+        setTimeout(sync, 0);
+      }
+    });
     sync();
     paint();
 
@@ -737,6 +814,10 @@
         if (!moneyVal($('[data-field="revenue"]', root))) return 'Enter your monthly revenue.';
         if (!root.querySelector('[data-field="credit"]').dataset.value) return 'Select a credit score range.';
         if (!root.querySelector('[data-field="positions"]').dataset.value) return 'Select your MCA positions.';
+        if (Number(root.querySelector('[data-field="positions"]').dataset.value || 0) > 0
+            && !moneyVal($('[data-field="balance"]', root))) {
+          return 'Enter the outstanding balance on your existing positions.';
+        }
       }
       if (step === 1) {
         for (const key of ['first', 'last', 'business']) {
@@ -805,13 +886,24 @@
       </div>
       <h3 class="calc-title">You look like a fit for <b>${list.length} product${list.length === 1 ? '' : 's'}</b>.</h3>
       <div class="result-list" style="margin-top:26px">
-        ${est ? `<div class="result-row hi"><span class="k">Indicative range</span><span class="v">${usd(est.low)} – ${usd(est.high)}</span></div>` : ''}
+        ${est
+          ? `<div class="result-row hi"><span class="k">Indicative range</span><span class="v">${
+              est.viable === false ? 'Over leveraged' : usd(est.low) + ' – ' + usd(est.high)
+            }</span></div>`
+          : ''}
+        ${est && est.deduction > 0
+          ? `<div class="result-row"><span class="k">Less existing positions</span><span class="v">− ${usd(est.deduction)}</span></div>`
+          : ''}
         <div class="result-row"><span class="k">Products matched</span><span class="v">${list.length}</span></div>
         <div class="result-row"><span class="k">Typical decision</span><span class="v">3–24h</span></div>
       </div>
       <p style="color:var(--muted-fg);margin:22px 0 0">
-        A funding specialist will reach out within 24 hours with a pre-qualified offer.
-        Figures are indicative only and subject to underwriting.
+        ${est && est.viable === false
+          ? 'Based on what you owe against what you bring in, you are over leveraged ' +
+            'for a new advance right now. A specialist can look at consolidation or ' +
+            'a payoff structure — it is worth the conversation.'
+          : 'A funding specialist will reach out within 24 hours with a pre-qualified offer. ' +
+            'Figures are indicative only and subject to underwriting.'}
       </p>
       <div style="margin-top:26px"><a class="btn btn-primary btn-block" href="contact.html">Talk to an advisor <span class="icon">&rarr;</span></a></div>
     `;
