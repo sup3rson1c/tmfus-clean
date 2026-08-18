@@ -26,6 +26,22 @@
      ========================================================= */
   const LEAD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbze3tD_fvvy7of5o4BQwoY2TcEQ3zBADhJ2hERxTwYEvbgb0En_67rSBRMz1IKMP-YBGQ/exec';
 
+  /* =========================================================
+     APPLICATION HANDOFF
+
+     Signet's altaFlow application. Opening this URL makes altaFlow mint a
+     fresh per-applicant session, which is what lets someone stop halfway
+     and resume later — so it must be opened directly, never cached or
+     rewritten with a stored session id.
+
+     NOTE ON AUTO-FILL: pushing answers from this site straight into
+     altaFlow needs the altaFlow/airSlate REST API — an API credential for
+     the Signet account plus the field slugs of that flow. Neither exists
+     here yet, so this is a clean handoff, not a pre-filled application.
+     See SETUP-APPLICATION.md.
+     ========================================================= */
+  const APPLICATION_URL = 'https://alfw.at/m7l8kpNQ6';
+
   /* Harvests every [data-field] under `root`, so new fields are picked up
      automatically without touching this function. */
   function collectFields(root) {
@@ -606,7 +622,7 @@
     {
       id: 'heloc',
       name: 'HELOC',
-      range: '$25K – $500K',
+      range: '$25K – $750K',
       blurb: 'Leverage your home equity for business capital with competitive rates.',
       term: '10 – 30 years',
       speed: '2 – 4 weeks',
@@ -940,7 +956,7 @@
       </a>` : ''}
 
       <div class="result-actions">
-        <a class="btn btn-primary btn-block" href="funding-estimator.html">Do you like the numbers? Start an application <span class="icon">&rarr;</span></a>
+        <a class="btn btn-primary btn-block" href="apply.html">Do you like the numbers? Start an application <span class="icon">&rarr;</span></a>
         <a class="btn btn-ghost btn-block" href="contact.html">Not sure? Any question? Talk to an advisor</a>
       </div>
     `;
@@ -950,6 +966,9 @@
   /* ---------------------------------------------------------
      12. HELOC calculator (live)
      --------------------------------------------------------- */
+  /* Highest line we will quote, regardless of equity or income headroom. */
+  const HELOC_MAX = 750000;
+
   const HELOC_RATES = { 780: 8.15, 740: 8.45, 700: 8.95, 660: 9.75, 620: 10.9, 0: 12.25 };
   const rateFor = (score) => {
     const keys = Object.keys(HELOC_RATES).map(Number).sort((a, b) => b - a);
@@ -1016,10 +1035,13 @@
       const roomForPayment = Math.max(0, maxTotalDebt - debt);
       const incomeLine = monthlyRate > 0 ? roomForPayment / monthlyRate : 0;
 
-      const line = Math.max(0, Math.min(equityLine, incomeLine));
+      // 3. product ceiling — no HELOC we place goes above this
+      const line = Math.max(0, Math.min(equityLine, incomeLine, HELOC_MAX));
       const payment = line * monthlyRate;
       const dti = income > 0 ? ((debt + payment) / income) * 100 : 0;
-      const limiter = incomeLine < equityLine ? 'Income / DTI' : 'Home equity';
+      const limiter = (equityLine > HELOC_MAX && incomeLine > HELOC_MAX)
+        ? 'Product maximum'
+        : (incomeLine < equityLine ? 'Income / DTI' : 'Home equity');
 
       out.innerHTML = `
         <div class="result-list">
@@ -1314,6 +1336,379 @@
     });
   }
 
+
+  /* ---------------------------------------------------------
+     14c. Branded application — apply.html
+
+     A four-step application in the site's own theme that mirrors the
+     Signet document field for field, then hands the applicant to Signet
+     with everything already filled in.
+
+     HOW THE HANDOFF WORKS
+     altaFlow forwards any query string on the public link into the
+     document session as proxy_params[name]=value — verified live on
+     18 Aug 2026 against this flow. What it does NOT do out of the box is
+     map those params onto fields: the flow showed 0/29 filled. A Signet
+     admin has to add a pre-fill bot on the flow once, mapping each
+     proxy_param name below to its field. No API token needed for that.
+     Until they do, the params ride along harmlessly and the applicant
+     fills the Signet page as before — nothing breaks either way.
+
+     WHY SSN / DOB / SIGNATURE ARE NOT COLLECTED HERE
+     Query strings are logged by proxies, browser history and analytics,
+     so those three can never travel by URL. They need the altaFlow REST
+     API and a server-side POST. That path is written and waiting on a
+     credential — flip APPLICATION_MODE to 'api' once api/config.php has
+     ALTAFLOW_TOKEN and the fields un-hide themselves. See
+     SETUP-APPLICATION.md.
+     --------------------------------------------------------- */
+
+  const APPLICATION_MODE = 'prefill';           // 'prefill' | 'api'
+  const APPLICATION_UPLOAD_ENDPOINT = 'api/application.php';
+  const MAX_FILE_MB = 10;
+  const MAX_FILES = 12;
+
+  /* Fields safe to put in a URL. Deliberately excludes anything tagged
+     [data-sensitive] — do not add SSN, date of birth or signature here. */
+  const PREFILL_FIELDS = [
+    'business_legal_name', 'business_dba_name', 'ein', 'business_address',
+    'business_city', 'business_state', 'business_zip', 'business_start_date',
+    'industry',
+    'owner_name', 'owner_ownership_pct', 'owner_address', 'owner_city',
+    'owner_state', 'owner_zip',
+    'co_owner_name', 'co_owner_ownership_pct', 'co_owner_address',
+    'co_owner_city', 'co_owner_state', 'co_owner_zip'
+  ];
+
+  const MASKS = {
+    ein:   (v) => { const d = v.replace(/\D/g, '').slice(0, 9); return d.length > 2 ? d.slice(0, 2) + '-' + d.slice(2) : d; },
+    ssn:   (v) => { const d = v.replace(/\D/g, '').slice(0, 9);
+                    return d.length > 5 ? d.slice(0, 3) + '-' + d.slice(3, 5) + '-' + d.slice(5)
+                         : d.length > 3 ? d.slice(0, 3) + '-' + d.slice(3) : d; },
+    zip:   (v) => { const d = v.replace(/\D/g, '').slice(0, 9); return d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; },
+    pct:   (v) => { const d = v.replace(/\D/g, '').slice(0, 3); return d === '' ? '' : String(Math.min(100, Number(d))); },
+    phone: (v) => { const d = v.replace(/\D/g, '').slice(0, 10);
+                    return d.length > 6 ? '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6)
+                         : d.length > 3 ? '(' + d.slice(0, 3) + ') ' + d.slice(3)
+                         : d.length > 0 ? '(' + d : ''; },
+    date:  (v) => { const d = v.replace(/\D/g, '').slice(0, 8);
+                    return d.length > 4 ? d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4)
+                         : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d; }
+  };
+
+  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
+  const isFullDate = (v) => {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);
+    if (!m) return false;
+    const mo = +m[1], da = +m[2], yr = +m[3];
+    if (mo < 1 || mo > 12 || da < 1 || da > 31 || yr < 1900) return false;
+    const d = new Date(yr, mo - 1, da);
+    return d.getMonth() === mo - 1 && d.getDate() === da && d <= new Date();
+  };
+
+  function initApplication() {
+    const form = $('[data-application]');
+    if (!form) return;
+
+    const panes = $$('[data-pane]', form);
+    const bars = $$('.steps-bar i', form);
+    const stepLabel = $('[data-step-label]', form);
+    const apiMode = APPLICATION_MODE === 'api';
+    let step = 1;
+    const TOTAL = 4;
+    const files = [];
+
+    /* ---- identity fields only exist in API mode ---- */
+    $$('[data-identity-block]', form).forEach((b) => {
+      if (apiMode) b.removeAttribute('hidden');
+      else $$('[data-sensitive]', b).forEach((el) => { el.value = ''; el.disabled = true; });
+    });
+    const note = $('[data-handoff-note]', form);
+    if (apiMode && note) note.remove();
+
+    /* ---- input masks ---- */
+    $$('[data-mask]', form).forEach((input) => {
+      const fn = MASKS[input.dataset.mask];
+      if (!fn) return;
+      input.addEventListener('input', () => {
+        const atEnd = input.selectionStart === input.value.length;
+        input.value = fn(input.value);
+        if (atEnd) input.setSelectionRange(input.value.length, input.value.length);
+      });
+    });
+
+    /* ---- clear the invalid state as soon as the visitor fixes it ---- */
+    form.addEventListener('input', (e) => {
+      if (e.target.classList) e.target.classList.remove('invalid');
+    });
+    form.addEventListener('change', (e) => {
+      if (e.target.classList) e.target.classList.remove('invalid');
+    });
+
+    /* ---- co-owner toggle ---- */
+    const coFields = $('[data-coowner-fields]', form);
+    let hasCoOwner = false;
+    $$('[data-coowner-toggle] .chip', form).forEach((chip) => {
+      chip.addEventListener('click', () => {
+        $$('[data-coowner-toggle] .chip', form).forEach((c) => c.classList.remove('sel'));
+        chip.classList.add('sel');
+        hasCoOwner = chip.dataset.co === 'yes';
+        if (coFields) coFields.hidden = !hasCoOwner;
+      });
+    });
+
+    /* ---- signature pad ---- */
+    let sigDrawn = false;
+    const pad = $('[data-sig-pad]', form);
+    if (pad) {
+      const wrap = pad.closest('.sig-wrap');
+      const ctx = pad.getContext('2d');
+      let drawing = false;
+
+      const size = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const w = pad.clientWidth || 400;
+        pad.width = w * dpr;
+        pad.height = 150 * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#fafafa';
+      };
+      size();
+      window.addEventListener('resize', () => { size(); sigDrawn = false; if (wrap) wrap.classList.remove('signed'); });
+
+      const pt = (e) => {
+        const r = pad.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      };
+      pad.addEventListener('pointerdown', (e) => {
+        drawing = true;
+        pad.setPointerCapture(e.pointerId);
+        const p = pt(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        sigDrawn = true;
+        if (wrap) wrap.classList.add('signed');
+      });
+      pad.addEventListener('pointermove', (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        const p = pt(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) =>
+        pad.addEventListener(ev, () => { drawing = false; }));
+
+      const clear = $('[data-sig-clear]', form);
+      if (clear) clear.addEventListener('click', () => {
+        ctx.clearRect(0, 0, pad.width, pad.height);
+        sigDrawn = false;
+        if (wrap) wrap.classList.remove('signed');
+      });
+    }
+
+    /* ---- bank statements ---- */
+    const zone = $('[data-dropzone]', form);
+    const picker = $('[data-files]', form);
+    const list = $('[data-file-list]', form);
+
+    const renderFiles = () => {
+      if (!list) return;
+      list.innerHTML = '';
+      files.forEach((f, i) => {
+        const li = document.createElement('li');
+        const tooBig = f.size > MAX_FILE_MB * 1024 * 1024;
+        if (tooBig) li.className = 'bad';
+        const nm = document.createElement('span');
+        nm.className = 'nm';
+        nm.textContent = f.name;
+        const sz = document.createElement('span');
+        sz.className = 'sz';
+        sz.textContent = tooBig ? 'Too large' : (f.size / 1024 / 1024).toFixed(1) + ' MB';
+        const rm = document.createElement('button');
+        rm.type = 'button';
+        rm.setAttribute('aria-label', 'Remove ' + f.name);
+        rm.textContent = '×';
+        rm.addEventListener('click', () => { files.splice(i, 1); renderFiles(); });
+        li.append(nm, sz, rm);
+        list.appendChild(li);
+      });
+    };
+
+    const addFiles = (incoming) => {
+      Array.from(incoming).forEach((f) => {
+        if (files.length >= MAX_FILES) return;
+        if (files.some((x) => x.name === f.name && x.size === f.size)) return;
+        files.push(f);
+      });
+      renderFiles();
+    };
+
+    if (zone && picker) {
+      zone.addEventListener('click', () => picker.click());
+      zone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); picker.click(); }
+      });
+      picker.addEventListener('change', () => { addFiles(picker.files); picker.value = ''; });
+      ['dragenter', 'dragover'].forEach((ev) =>
+        zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add('drag'); }));
+      ['dragleave', 'drop'].forEach((ev) =>
+        zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove('drag'); }));
+      zone.addEventListener('drop', (e) => {
+        if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+      });
+    }
+
+    /* ---- validation ---- */
+    function validate(n) {
+      const pane = panes.find((p) => p.dataset.pane === String(n));
+      if (!pane) return true;
+      const err = $('[data-err]', pane);
+      const fail = (el, msg) => {
+        if (el) { el.classList.add('invalid'); el.focus({ preventScroll: false }); }
+        if (err) err.textContent = msg;
+        return false;
+      };
+      if (err) err.textContent = '';
+
+      // Co-owner fields are only required once the visitor asks for them.
+      const scope = $$('[data-field]', pane).filter((el) => {
+        if (el.disabled) return false;
+        const co = el.closest('[data-coowner-fields]');
+        return !co || hasCoOwner;
+      });
+
+      for (const el of scope) {
+        const key = el.getAttribute('data-field');
+        const val = (el.value || '').trim();
+        const optional = key === 'amount_requested';
+        const label = (el.closest('.field') && $('.field-label', el.closest('.field')));
+        const name = label ? label.textContent.replace(' *', '').trim() : 'this field';
+
+        if (!optional && el.type !== 'checkbox' && !val) return fail(el, 'Please fill in ' + name.toLowerCase() + '.');
+        if (key === 'email' && !isEmail(val)) return fail(el, 'That email address does not look right.');
+        if (key === 'phone' && val.replace(/\D/g, '').length !== 10) return fail(el, 'Please enter a 10-digit phone number.');
+        if (key === 'ein' && val.replace(/\D/g, '').length !== 9) return fail(el, 'An EIN is nine digits.');
+        if (el.dataset.mask === 'ssn' && val.replace(/\D/g, '').length !== 9) return fail(el, 'A Social Security number is nine digits.');
+        if (el.dataset.mask === 'zip' && val.replace(/\D/g, '').length < 5) return fail(el, 'Please enter a five-digit zip code.');
+        if (el.dataset.mask === 'date' && !isFullDate(val)) return fail(el, 'Please enter a real date as MM/DD/YYYY.');
+      }
+
+      // Ownership is checked across the WHOLE form, not just this pane —
+      // the owner's share lives on step 2 and the co-owner's on step 3, so a
+      // per-pane sum would happily accept 100% + 50%.
+      const pcts = $$('[data-mask="pct"]', form).filter((el) => {
+        if (el.disabled) return false;
+        const co = el.closest('[data-coowner-fields]');
+        return !co || hasCoOwner;
+      });
+      const mine = scope.find((el) => el.dataset.mask === 'pct');
+      if (mine) {
+        const total = pcts.reduce((sum, el) => sum + (Number(el.value) || 0), 0);
+        if (total > 100) return fail(mine, 'Ownership adds up to ' + total + '% across all owners. It cannot exceed 100%.');
+        if (Number(mine.value) === 0) return fail(mine, 'Ownership percentage cannot be zero.');
+      }
+
+      for (const box of $$('[data-required-check]', pane)) {
+        if (!box.checked) {
+          if (err) err.textContent = 'Both boxes have to be ticked before we can submit this.';
+          box.focus();
+          return false;
+        }
+      }
+
+      if (n === 4) {
+        const bad = files.find((f) => f.size > MAX_FILE_MB * 1024 * 1024);
+        if (bad) { if (err) err.textContent = '"' + bad.name + '" is over ' + MAX_FILE_MB + ' MB. Remove it and an advisor will send a secure upload link.'; return false; }
+        if (apiMode && !sigDrawn) { if (err) err.textContent = 'Please sign in the box above.'; return false; }
+      }
+      return true;
+    }
+
+    /* ---- step navigation ---- */
+    function show(n) {
+      panes.forEach((p) => p.classList.toggle('active', p.dataset.pane === String(n)));
+      bars.forEach((b, i) => b.classList.toggle('done', n === 'done' || i < n));
+      if (stepLabel) stepLabel.textContent = n === 'done' ? 'Complete' : 'Step ' + n + ' of ' + TOTAL;
+      const top = form.getBoundingClientRect().top + window.scrollY - 110;
+      window.scrollTo({ top: top, behavior: reduced ? 'auto' : 'smooth' });
+    }
+
+    $$('[data-next]', form).forEach((btn) => btn.addEventListener('click', () => {
+      if (!validate(step)) return;
+      step = Math.min(TOTAL, step + 1);
+      show(step);
+    }));
+    $$('[data-back]', form).forEach((btn) => btn.addEventListener('click', () => {
+      step = Math.max(1, step - 1);
+      show(step);
+    }));
+
+    /* ---- build the Signet URL ---- */
+    function prefillUrl(data) {
+      const params = new URLSearchParams();
+      PREFILL_FIELDS.forEach((k) => { if (data[k]) params.set(k, data[k]); });
+      const qs = params.toString();
+      return qs ? APPLICATION_URL + '?' + qs : APPLICATION_URL;
+    }
+
+    /* ---- submit ---- */
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!validate(4)) return;
+
+      const btn = $('[data-submit]', form);
+      const err = $('[data-err]', $('[data-pane="4"]', form));
+      const label = btn ? btn.innerHTML : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+
+      const data = collectFields(form);
+      if (!hasCoOwner) {
+        Object.keys(data).forEach((k) => { if (k.indexOf('co_owner_') === 0) delete data[k]; });
+      }
+      data.co_owner = hasCoOwner ? 'yes' : 'no';
+      data.statements_attached = String(files.length);
+
+      // The Signet tab has to open from inside the click, or the browser
+      // treats it as an unsolicited pop-up and blocks it.
+      // window.open with 'noopener' returns null by design, so its return
+      // value tells us nothing about whether the tab actually opened. The
+      // done pane always carries the same link, which covers both cases.
+      const target = prefillUrl(data);
+      const cont = $('[data-continue-link]', form);
+      if (cont) cont.href = target;
+      window.open(target, '_blank', 'noopener');
+
+      // Never let a summary carrying an SSN reach the leads sheet.
+      const summary = {};
+      Object.keys(data).forEach((k) => {
+        if (k.indexOf('ssn') === -1 && k.indexOf('dob') === -1) summary[k] = data[k];
+      });
+
+      try {
+        if (files.length) {
+          const fd = new FormData();
+          fd.append('meta', JSON.stringify(summary));
+          files.forEach((f) => fd.append('statements[]', f, f.name));
+          await fetch(APPLICATION_UPLOAD_ENDPOINT, { method: 'POST', body: fd });
+        }
+      } catch (_) {
+        // An upload that fails must not cost the applicant the application —
+        // an advisor emails a secure link instead. Logged, not surfaced.
+      }
+
+      try { await sendLead('application', summary); } catch (_) {}
+
+      if (btn) { btn.disabled = false; btn.innerHTML = label; }
+      if (err) err.textContent = '';
+      step = 'done';
+      show('done');
+    });
+  }
+
   /* ---------------------------------------------------------
      15. Hero v2 — headline reveal, ticker, cursor spotlight
      --------------------------------------------------------- */
@@ -1401,6 +1796,7 @@
     initTermLoan();
     initContactForm();
     initFigureOffers();
+    initApplication();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

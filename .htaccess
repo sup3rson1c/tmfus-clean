@@ -112,3 +112,19 @@ ErrorDocument 404 /404.html
 <FilesMatch "\.log$">
   Require all denied
 </FilesMatch>
+
+# ------------------------------------------------------------------
+# Applicant bank statements.
+#
+# api/application.php writes here. These are customer financial
+# documents and must never be reachable over the web — not by guessing
+# a filename, not by listing the folder.
+#
+# Better still: set 'application_dir' in api/config.php to a path
+# outside public_html. This block is the fallback for when it is not.
+# ------------------------------------------------------------------
+RedirectMatch 404 ^/api/uploads(/.*)?$
+
+<IfModule mod_autoindex.c>
+  Options -Indexes
+</IfModule>

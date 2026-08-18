@@ -40,4 +40,33 @@ return [
     // Written on failures. Never contains the affiliate ID.
     // Keep it outside the web root if your host allows.
     'log_file' => __DIR__ . '/figure-errors.log',
+
+    // ---------------------------------------------------------------
+    // BRANDED APPLICATION  (api/application.php)
+    // ---------------------------------------------------------------
+
+    // Where bank statements land. Put this OUTSIDE public_html if your
+    // host allows it — e.g. '/home/YOURUSER/tmf-applications'. These are
+    // customer financial documents; the further from the web root, the
+    // better. If left as-is the .htaccess in this repo blocks web access,
+    // which is a second line of defence, not the first.
+    'application_dir' => __DIR__ . '/uploads',
+
+    // Emailed when an application with statements arrives. Leave empty
+    // to switch notifications off.
+    'application_notify' => '',
+
+    // ---------------------------------------------------------------
+    // altaFlow / Signet  — NOT YET ISSUED
+    //
+    // Needed only to push SSN, date of birth and signature into Signet
+    // automatically. Until a token exists, apply.html runs in 'prefill'
+    // mode: everything else is passed to Signet in the link and the
+    // applicant enters those three there.
+    //
+    // Ask a Signet altaFlow admin for a bearer token, then set
+    // APPLICATION_MODE = 'api' at the top of assets/app.js.
+    // ---------------------------------------------------------------
+    'altaflow_token' => '',
+    'altaflow_flow_id' => '5CCBCD60-9A00-0000-0000BA29',
 ];

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Start your application | TMF Team</title>
+<meta name="description" content="Start your TMF Team funding application. Takes about 10 minutes, and you can save and return to it later.">
+<meta name="theme-color" content="#09090b">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/styles.css?v=20">
+<script src="assets/app.js?v=20" defer></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container-x header-inner">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" focusable="false"><rect class="lm lm-1" x="4.5" y="12" width="3.2" height="6" rx="1.6"/><rect class="lm lm-2" x="10.4" y="8" width="3.2" height="10" rx="1.6"/><rect class="lm lm-3" x="16.3" y="4.5" width="3.2" height="13.5" rx="1.6"/></svg></span><span><span class="brand-name">TMF Team</span><span class="brand-sub">Capital Strategy</span></span></a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="index.html#solutions">Solutions</a>
+      <a href="funding-estimator.html">Cash injection calculator</a>
+      <a href="heloc-calculator.html">HELOC calculator</a>
+      <a href="sba-loans.html">SBA loans</a>
+      <a href="about.html">About</a>
+    </nav>
+    <a class="btn btn-primary header-cta" href="apply.html">Apply Now <span class="icon">&#8599;</span></a>
+  </div>
+  <div class="scroll-progress"></div>
+</header>
+
+<main>
+<section class="page-hero" style="padding-bottom:30px">
+  <div class="hero-bg" data-parallax="0.26"></div>
+  <div class="hero-fade"></div>
+  <div class="container-x">
+    <span class="eyebrow" data-reveal>Application</span>
+    <h1 class="display" style="margin-top:22px;max-width:16ch" data-reveal>Start your<br><span class="grad">application.</span></h1>
+    <p class="lede" style="margin-top:26px" data-reveal>
+      About ten minutes. Have your EIN, business address and three to four months
+      of business bank statements to hand. Your answers are kept on this page as
+      you go, so a mistyped field never costs you the whole form.
+    </p>
+  </div>
+</section>
+
+<section class="container-x" style="padding-bottom:110px">
+  <div class="calc-layout">
+
+    <form class="panel panel-glow" data-application novalidate data-reveal>
+      <div class="steps-bar" aria-hidden="true">
+        <i class="done"></i><i></i><i></i><i></i>
+      </div>
+
+      <div class="calc-head">
+        <div class="calc-kicker">
+          <span class="mono-label">TMF Team</span>
+        </div>
+        <span class="calc-step" data-step-label>Step 1 of 4</span>
+      </div>
+
+      <!-- ============ STEP 1 — BUSINESS ============ -->
+      <div class="step-pane active" data-pane="1">
+        <h2 class="calc-title">Tell us about <b>the business.</b></h2>
+        <div class="form-stack" style="margin-top:26px">
+
+          <div class="field">
+            <label class="field-label" for="ap-legal">Business legal name *</label>
+            <input class="input" id="ap-legal" data-field="business_legal_name" autocomplete="organization" placeholder="Acme Logistics LLC" required>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="ap-dba">Business DBA name *</label>
+            <input class="input" id="ap-dba" data-field="business_dba_name" placeholder="Acme Freight" required>
+            <span class="field-hint">Trading name. If you do not use one, repeat the legal name.</span>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="ap-ein">EIN *</label>
+            <input class="input" id="ap-ein" data-field="ein" inputmode="numeric" data-mask="ein" maxlength="10" placeholder="12-3456789" required>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="ap-baddr">Business physical address *</label>
+            <input class="input" id="ap-baddr" data-field="business_address" autocomplete="street-address" placeholder="140 Commerce Way, Suite 3" required>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-bcity">City *</label>
+              <input class="input" id="ap-bcity" data-field="business_city" placeholder="Miami" required>
+            </div>
+            <div class="field">
+          <label class="field-label" for="ap-bstate">State *</label>
+          <select class="input" id="ap-bstate" data-field="business_state" required>
+            <option value="">Select a state</option>
+          <option value="AL">AL — Alabama</option>
+          <option value="AK">AK — Alaska</option>
+          <option value="AZ">AZ — Arizona</option>
+          <option value="AR">AR — Arkansas</option>
+          <option value="CA">CA — California</option>
+          <option value="CO">CO — Colorado</option>
+          <option value="CT">CT — Connecticut</option>
+          <option value="DE">DE — Delaware</option>
+          <option value="DC">DC — District of Columbia</option>
+          <option value="FL">FL — Florida</option>
+          <option value="GA">GA — Georgia</option>
+          <option value="HI">HI — Hawaii</option>
+          <option value="ID">ID — Idaho</option>
+          <option value="IL">IL — Illinois</option>
+          <option value="IN">IN — Indiana</option>
+          <option value="IA">IA — Iowa</option>
+          <option value="KS">KS — Kansas</option>
+          <option value="KY">KY — Kentucky</option>
+          <option value="LA">LA — Louisiana</option>
+          <option value="ME">ME — Maine</option>
+          <option value="MD">MD — Maryland</option>
+          <option value="MA">MA — Massachusetts</option>
+          <option value="MI">MI — Michigan</option>
+          <option value="MN">MN — Minnesota</option>
+          <option value="MS">MS — Mississippi</option>
+          <option value="MO">MO — Missouri</option>
+          <option value="MT">MT — Montana</option>
+          <option value="NE">NE — Nebraska</option>
+          <option value="NV">NV — Nevada</option>
+          <option value="NH">NH — New Hampshire</option>
+          <option value="NJ">NJ — New Jersey</option>
+          <option value="NM">NM — New Mexico</option>
+          <option value="NY">NY — New York</option>
+          <option value="NC">NC — North Carolina</option>
+          <option value="ND">ND — North Dakota</option>
+          <option value="OH">OH — Ohio</option>
+          <option value="OK">OK — Oklahoma</option>
+          <option value="OR">OR — Oregon</option>
+          <option value="PA">PA — Pennsylvania</option>
+          <option value="RI">RI — Rhode Island</option>
+          <option value="SC">SC — South Carolina</option>
+          <option value="SD">SD — South Dakota</option>
+          <option value="TN">TN — Tennessee</option>
+          <option value="TX">TX — Texas</option>
+          <option value="UT">UT — Utah</option>
+          <option value="VT">VT — Vermont</option>
+          <option value="VA">VA — Virginia</option>
+          <option value="WA">WA — Washington</option>
+          <option value="WV">WV — West Virginia</option>
+          <option value="WI">WI — Wisconsin</option>
+          <option value="WY">WY — Wyoming</option>
+          </select>
+        </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-bzip">Zip code *</label>
+              <input class="input" id="ap-bzip" data-field="business_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33131" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ap-start">Business start date *</label>
+              <input class="input" id="ap-start" data-field="business_start_date" data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" required>
+            </div>
+          </div>
+
+          <div class="field">
+          <label class="field-label" for="ap-industry">Industry *</label>
+          <select class="input" id="ap-industry" data-field="industry" required>
+            <option value="">Select an industry</option>
+          <option value="Construction">Construction</option>
+          <option value="Healthcare / Medical">Healthcare / Medical</option>
+          <option value="Restaurant / Food service">Restaurant / Food service</option>
+          <option value="Retail">Retail</option>
+          <option value="Trucking / Transportation">Trucking / Transportation</option>
+          <option value="Wholesale / Distribution">Wholesale / Distribution</option>
+          <option value="Auto services">Auto services</option>
+          <option value="Beauty / Salon / Spa">Beauty / Salon / Spa</option>
+          <option value="Professional services">Professional services</option>
+          <option value="Manufacturing">Manufacturing</option>
+          <option value="Real estate">Real estate</option>
+          <option value="Technology">Technology</option>
+          <option value="Staffing">Staffing</option>
+          <option value="Cleaning / Janitorial">Cleaning / Janitorial</option>
+          <option value="Landscaping">Landscaping</option>
+          <option value="Entertainment / Events">Entertainment / Events</option>
+          <option value="Education">Education</option>
+          <option value="Fitness">Fitness</option>
+          <option value="E-commerce">E-commerce</option>
+          <option value="Other">Other</option>
+          </select>
+        </div>
+
+          <p class="err" data-err></p>
+          <button class="btn btn-primary btn-block" type="button" data-next>Continue <span class="icon">&rarr;</span></button>
+        </div>
+      </div>
+
+      <!-- ============ STEP 2 — OWNER ============ -->
+      <div class="step-pane" data-pane="2">
+        <h2 class="calc-title">Now the <b>owner.</b></h2>
+        <div class="form-stack" style="margin-top:26px">
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-oname">Full name *</label>
+              <input class="input" id="ap-oname" data-field="owner_name" autocomplete="name" placeholder="Jane Doe" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ap-opct">Ownership % *</label>
+              <input class="input" id="ap-opct" data-field="owner_ownership_pct" inputmode="numeric" data-mask="pct" maxlength="3" placeholder="100" required>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="ap-oaddr">Home address *</label>
+            <input class="input" id="ap-oaddr" data-field="owner_address" autocomplete="street-address" placeholder="88 Palm Avenue" required>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-ocity">City *</label>
+              <input class="input" id="ap-ocity" data-field="owner_city" placeholder="Miami" required>
+            </div>
+            <div class="field">
+          <label class="field-label" for="ap-ostate">State *</label>
+          <select class="input" id="ap-ostate" data-field="owner_state" required>
+            <option value="">Select a state</option>
+          <option value="AL">AL — Alabama</option>
+          <option value="AK">AK — Alaska</option>
+          <option value="AZ">AZ — Arizona</option>
+          <option value="AR">AR — Arkansas</option>
+          <option value="CA">CA — California</option>
+          <option value="CO">CO — Colorado</option>
+          <option value="CT">CT — Connecticut</option>
+          <option value="DE">DE — Delaware</option>
+          <option value="DC">DC — District of Columbia</option>
+          <option value="FL">FL — Florida</option>
+          <option value="GA">GA — Georgia</option>
+          <option value="HI">HI — Hawaii</option>
+          <option value="ID">ID — Idaho</option>
+          <option value="IL">IL — Illinois</option>
+          <option value="IN">IN — Indiana</option>
+          <option value="IA">IA — Iowa</option>
+          <option value="KS">KS — Kansas</option>
+          <option value="KY">KY — Kentucky</option>
+          <option value="LA">LA — Louisiana</option>
+          <option value="ME">ME — Maine</option>
+          <option value="MD">MD — Maryland</option>
+          <option value="MA">MA — Massachusetts</option>
+          <option value="MI">MI — Michigan</option>
+          <option value="MN">MN — Minnesota</option>
+          <option value="MS">MS — Mississippi</option>
+          <option value="MO">MO — Missouri</option>
+          <option value="MT">MT — Montana</option>
+          <option value="NE">NE — Nebraska</option>
+          <option value="NV">NV — Nevada</option>
+          <option value="NH">NH — New Hampshire</option>
+          <option value="NJ">NJ — New Jersey</option>
+          <option value="NM">NM — New Mexico</option>
+          <option value="NY">NY — New York</option>
+          <option value="NC">NC — North Carolina</option>
+          <option value="ND">ND — North Dakota</option>
+          <option value="OH">OH — Ohio</option>
+          <option value="OK">OK — Oklahoma</option>
+          <option value="OR">OR — Oregon</option>
+          <option value="PA">PA — Pennsylvania</option>
+          <option value="RI">RI — Rhode Island</option>
+          <option value="SC">SC — South Carolina</option>
+          <option value="SD">SD — South Dakota</option>
+          <option value="TN">TN — Tennessee</option>
+          <option value="TX">TX — Texas</option>
+          <option value="UT">UT — Utah</option>
+          <option value="VT">VT — Vermont</option>
+          <option value="VA">VA — Virginia</option>
+          <option value="WA">WA — Washington</option>
+          <option value="WV">WV — West Virginia</option>
+          <option value="WI">WI — Wisconsin</option>
+          <option value="WY">WY — Wyoming</option>
+          </select>
+        </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-ozip">Zip code *</label>
+              <input class="input" id="ap-ozip" data-field="owner_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33139" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ap-oemail">Email *</label>
+              <input class="input" id="ap-oemail" type="email" data-field="email" autocomplete="email" placeholder="jane@acme.com" required>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="ap-ophone">Phone *</label>
+              <input class="input" id="ap-ophone" data-field="phone" inputmode="tel" data-mask="phone" maxlength="14" placeholder="(555) 123-4567" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ap-amount">Amount requested</label>
+              <div class="money-wrap">
+                <span>$</span>
+                <input id="ap-amount" data-field="amount_requested" data-money inputmode="numeric" placeholder="150,000">
+              </div>
+            </div>
+          </div>
+
+          <!-- Identity block. Hidden unless the Signet API path is configured —
+               see initApplication() in app.js and SETUP-APPLICATION.md. -->
+          <div data-identity-block hidden>
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label" for="ap-odob">Date of birth *</label>
+                <input class="input" id="ap-odob" data-field="owner_dob" data-sensitive data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" autocomplete="off">
+              </div>
+              <div class="field">
+                <label class="field-label" for="ap-ossn">Social Security number *</label>
+                <input class="input" id="ap-ossn" data-field="owner_ssn" data-sensitive data-mask="ssn" inputmode="numeric" maxlength="11" placeholder="•••-••-••••" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <p class="err" data-err></p>
+          <div class="field-row">
+            <button class="btn btn-ghost btn-block" type="button" data-back>Back</button>
+            <button class="btn btn-primary btn-block" type="button" data-next>Continue <span class="icon">&rarr;</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ STEP 3 — CO-OWNER ============ -->
+      <div class="step-pane" data-pane="3">
+        <h2 class="calc-title">Is there a <b>second owner?</b></h2>
+        <div class="form-stack" style="margin-top:26px">
+
+          <div class="chips" data-coowner-toggle>
+            <button class="chip sel" type="button" data-co="no">No, just me</button>
+            <button class="chip" type="button" data-co="yes">Yes, add a co-owner</button>
+          </div>
+          <p style="color:var(--muted-fg);font-size:.9rem;margin:0">
+            Most lenders want every owner holding 20% or more on the file. Adding
+            them now avoids a second round of questions later.
+          </p>
+
+          <div data-coowner-fields hidden>
+            <div class="form-stack">
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label" for="ap-cname">Co-owner full name *</label>
+                  <input class="input" id="ap-cname" data-field="co_owner_name" placeholder="John Doe">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="ap-cpct">Ownership % *</label>
+                  <input class="input" id="ap-cpct" data-field="co_owner_ownership_pct" inputmode="numeric" data-mask="pct" maxlength="3" placeholder="50">
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="ap-caddr">Home address *</label>
+                <input class="input" id="ap-caddr" data-field="co_owner_address" placeholder="88 Palm Avenue">
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label" for="ap-ccity">City *</label>
+                  <input class="input" id="ap-ccity" data-field="co_owner_city" placeholder="Miami">
+                </div>
+                <div class="field">
+          <label class="field-label" for="ap-cstate">State *</label>
+          <select class="input" id="ap-cstate" data-field="co_owner_state" required>
+            <option value="">Select a state</option>
+          <option value="AL">AL — Alabama</option>
+          <option value="AK">AK — Alaska</option>
+          <option value="AZ">AZ — Arizona</option>
+          <option value="AR">AR — Arkansas</option>
+          <option value="CA">CA — California</option>
+          <option value="CO">CO — Colorado</option>
+          <option value="CT">CT — Connecticut</option>
+          <option value="DE">DE — Delaware</option>
+          <option value="DC">DC — District of Columbia</option>
+          <option value="FL">FL — Florida</option>
+          <option value="GA">GA — Georgia</option>
+          <option value="HI">HI — Hawaii</option>
+          <option value="ID">ID — Idaho</option>
+          <option value="IL">IL — Illinois</option>
+          <option value="IN">IN — Indiana</option>
+          <option value="IA">IA — Iowa</option>
+          <option value="KS">KS — Kansas</option>
+          <option value="KY">KY — Kentucky</option>
+          <option value="LA">LA — Louisiana</option>
+          <option value="ME">ME — Maine</option>
+          <option value="MD">MD — Maryland</option>
+          <option value="MA">MA — Massachusetts</option>
+          <option value="MI">MI — Michigan</option>
+          <option value="MN">MN — Minnesota</option>
+          <option value="MS">MS — Mississippi</option>
+          <option value="MO">MO — Missouri</option>
+          <option value="MT">MT — Montana</option>
+          <option value="NE">NE — Nebraska</option>
+          <option value="NV">NV — Nevada</option>
+          <option value="NH">NH — New Hampshire</option>
+          <option value="NJ">NJ — New Jersey</option>
+          <option value="NM">NM — New Mexico</option>
+          <option value="NY">NY — New York</option>
+          <option value="NC">NC — North Carolina</option>
+          <option value="ND">ND — North Dakota</option>
+          <option value="OH">OH — Ohio</option>
+          <option value="OK">OK — Oklahoma</option>
+          <option value="OR">OR — Oregon</option>
+          <option value="PA">PA — Pennsylvania</option>
+          <option value="RI">RI — Rhode Island</option>
+          <option value="SC">SC — South Carolina</option>
+          <option value="SD">SD — South Dakota</option>
+          <option value="TN">TN — Tennessee</option>
+          <option value="TX">TX — Texas</option>
+          <option value="UT">UT — Utah</option>
+          <option value="VT">VT — Vermont</option>
+          <option value="VA">VA — Virginia</option>
+          <option value="WA">WA — Washington</option>
+          <option value="WV">WV — West Virginia</option>
+          <option value="WI">WI — Wisconsin</option>
+          <option value="WY">WY — Wyoming</option>
+          </select>
+        </div>
+              </div>
+
+              <div class="field-row">
+                <div class="field">
+                  <label class="field-label" for="ap-czip">Zip code *</label>
+                  <input class="input" id="ap-czip" data-field="co_owner_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33139">
+                </div>
+                <div class="field" data-identity-block hidden>
+                  <label class="field-label" for="ap-cdob">Date of birth *</label>
+                  <input class="input" id="ap-cdob" data-field="co_owner_dob" data-sensitive data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" autocomplete="off">
+                </div>
+              </div>
+
+              <div class="field" data-identity-block hidden>
+                <label class="field-label" for="ap-cssn">Social Security number *</label>
+                <input class="input" id="ap-cssn" data-field="co_owner_ssn" data-sensitive data-mask="ssn" inputmode="numeric" maxlength="11" placeholder="•••-••-••••" autocomplete="off">
+              </div>
+            </div>
+          </div>
+
+          <p class="err" data-err></p>
+          <div class="field-row">
+            <button class="btn btn-ghost btn-block" type="button" data-back>Back</button>
+            <button class="btn btn-primary btn-block" type="button" data-next>Continue <span class="icon">&rarr;</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ STEP 4 — STATEMENTS & CONSENT ============ -->
+      <div class="step-pane" data-pane="4">
+        <h2 class="calc-title">Statements and <b>consent.</b></h2>
+        <div class="form-stack" style="margin-top:26px">
+
+          <div class="field">
+            <label class="field-label">Business bank statements</label>
+            <div class="dropzone" data-dropzone tabindex="0" role="button" aria-label="Add bank statements">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+              </svg>
+              <b>Add your last 3–4 months</b>
+              <span>PDF, JPG or PNG &middot; up to 10&nbsp;MB each</span>
+              <input type="file" data-files multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+            </div>
+            <ul class="file-list" data-file-list></ul>
+            <span class="field-hint">
+              Optional here — if it is easier to send them later, an advisor will
+              email you a secure upload link.
+            </span>
+          </div>
+
+          <div class="consent-box">
+            <p>
+              By signing below, the applicant authorizes Signet Capital Group, its
+              assigned agents, and affiliates to obtain a consumer report from a
+              Credit Bureau or Credit Agency and to investigate the references given
+              on any other statement or data obtained by the applicant. The applicant
+              also authorizes Signet Capital Group to send relevant marketing
+              information and carry out market research about our products and services.
+            </p>
+          </div>
+
+          <label class="check">
+            <input type="checkbox" data-field="consent_credit" data-required-check>
+            <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#04120e" stroke-width="3.4"><path d="m5 13 4 4L19 7"/></svg></span>
+            <span>I have read and agree to the authorization above. *</span>
+          </label>
+
+          <label class="check">
+            <input type="checkbox" data-field="consent_contact" data-required-check>
+            <span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#04120e" stroke-width="3.4"><path d="m5 13 4 4L19 7"/></svg></span>
+            <span>TMF Team may contact me about this application by phone, email and text. *</span>
+          </label>
+
+          <!-- Signature. Hidden unless the Signet API path is configured. -->
+          <div class="field" data-identity-block hidden>
+            <label class="field-label">E-signature *</label>
+            <div class="sig-wrap">
+              <canvas data-sig-pad height="150" aria-label="Sign here"></canvas>
+              <span class="sig-hint">Draw your signature</span>
+              <button class="sig-clear" type="button" data-sig-clear>Clear</button>
+            </div>
+          </div>
+
+          <div class="handoff-note" data-handoff-note>
+            <span class="mono-label">Last step</span>
+            <p>
+              When you press submit we take you to the secure Signet application
+              with everything above already filled in. All that is left there is
+              your date of birth, Social Security number and signature — the three
+              things that have to be entered on the signing platform itself so the
+              signature is legally recorded.
+            </p>
+          </div>
+
+          <p class="err" data-err></p>
+          <div class="field-row">
+            <button class="btn btn-ghost btn-block" type="button" data-back>Back</button>
+            <button class="btn btn-primary btn-block" type="submit" data-submit>Submit application <span class="icon">&rarr;</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ DONE ============ -->
+      <div class="step-pane" data-pane="done">
+        <h2 class="calc-title">Application <b>received.</b></h2>
+        <div class="form-stack" style="margin-top:22px">
+          <p style="color:var(--muted-fg)">
+            We have your details. The secure signing page should have opened in a
+            new tab — finish there and you are done.
+          </p>
+          <a class="btn btn-primary btn-block" href="#" data-continue-link target="_blank" rel="noopener">
+            Open the signing page <span class="icon">&#8599;</span>
+          </a>
+          <p style="color:var(--muted-fg);font-size:.9rem">
+            Nothing opened? Your browser may have blocked the pop-up — the button
+            above works either way. Trouble at any point:
+            <a href="contact.html" style="color:var(--accent)">talk to an advisor</a>.
+          </p>
+        </div>
+      </div>
+    </form>
+
+    <div data-reveal>
+      <span class="mono-label">What you will need</span>
+      <ul class="bullets" style="margin-top:18px">
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Business legal name, EIN and start date</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Owner name, home address and ownership split</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>Three to four months of business bank statements</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>About ten minutes, start to finish</span></li>
+      </ul>
+
+      <span class="mono-label" style="display:block;margin-top:34px">How it goes</span>
+      <ul class="bullets" style="margin-top:18px">
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>No hard credit pull to get an indicative offer</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>An advisor reviews the file, usually inside 3–24 hours</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>We come back with the structures you actually qualify for</span></li>
+        <li><span class="tick"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 13 4 4L19 7"/></svg></span><span>On approval, funding can land in 24–48 hours</span></li>
+      </ul>
+
+      <div class="panel" style="margin-top:34px;padding:24px">
+        <span class="mono-label">Your information</span>
+        <p style="color:var(--muted-fg);font-size:.9rem;margin-top:12px">
+          This form runs over an encrypted connection. Your Social Security number
+          and signature are entered on the signing platform itself, not stored on
+          this website.
+        </p>
+      </div>
+
+      <p style="margin-top:26px;color:var(--muted-fg);font-size:.9rem">
+        Rather talk it through first? <a href="contact.html" style="color:var(--accent)">Speak to an advisor</a> — it costs nothing and often saves a step.
+      </p>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="container-x">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" focusable="false"><rect class="lm lm-1" x="4.5" y="12" width="3.2" height="6" rx="1.6"/><rect class="lm lm-2" x="10.4" y="8" width="3.2" height="10" rx="1.6"/><rect class="lm lm-3" x="16.3" y="4.5" width="3.2" height="13.5" rx="1.6"/></svg></span><span><span class="brand-name">TMF Team</span><span class="brand-sub">Capital Strategy</span></span></a>
+        <p>TMF Team — strategic capital aligned to how modern businesses actually grow. Fast decisions. Transparent terms. Tailored structure.</p>
+        <a class="btn btn-primary btn-sm" href="apply.html">Start application <span class="icon">&rarr;</span></a>
+      </div>
+      <div class="footer-col">
+        <h4>Products</h4>
+        <ul>
+          <li><a href="sba-loans.html">SBA Loans</a></li>
+          <li><a href="mca.html">Cash Injection (MCA)</a></li>
+          <li><a href="heloc-calculator.html">HELOC Calculator</a></li>
+          <li><a href="funding-estimator.html">Funding Estimator</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="about.html">About</a></li>
+          <li><a href="contact.html">Contact</a></li>
+          <li><a href="apply.html">Apply Now</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Hours</h4>
+        <ul>
+          <li><span style="color:var(--muted-fg)">Mon–Fri</span><br>9am–6pm EST</li>
+          <li><a href="index.html">tmfus.com</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 TMF Team. All rights reserved.</span>
+      <span>Strategic business funding solutions</span>
+    </div>
+  </div>
+</footer>
+
+<button class="fab" aria-label="Open chat">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4-.8L3 21l1.9-4.6A8.3 8.3 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5Z"/>
+  </svg>
+</button>
+
+</body>
+</html>

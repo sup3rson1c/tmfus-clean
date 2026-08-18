@@ -13,3 +13,7 @@ desktop.ini
 # Figure API credentials — the repo is public, this must never be committed
 api/config.php
 api/figure-errors.log
+
+# Applicant bank statements written by api/application.php.
+# Customer financial documents — never commit these.
+api/uploads/

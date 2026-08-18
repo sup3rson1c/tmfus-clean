@@ -1294,3 +1294,161 @@ select.input option { background: #141417; color: var(--fg); }
 /* Result screen action stack — CTA first, advisor as the quiet second option */
 .result-actions { display: grid; gap: 10px; margin-top: 22px; }
 .result-actions .btn-ghost { font-weight: 550; }
+
+/* ============================================================
+   Apply page
+   ============================================================ */
+.apply-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  padding: 18px 22px; margin-bottom: 22px;
+  border: 1px solid rgba(90, 200, 190, .3);
+  border-radius: 14px;
+  background: linear-gradient(140deg, rgba(52,211,153,.09), rgba(74,165,232,.06));
+}
+
+.apply-frame-wrap {
+  position: relative;
+  min-height: 640px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+.apply-frame-wrap iframe {
+  width: 100%; height: 1100px; border: 0; display: block;
+  opacity: 0; transition: opacity .4s var(--ease);
+}
+.apply-frame-wrap.ready iframe { opacity: 1; }
+
+/* Placeholder while loading, and the message if framing is refused */
+.apply-frame-wrap::after {
+  content: 'Loading your application…';
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  color: var(--muted-fg); font-size: .95rem;
+  background: var(--card-bg);
+  pointer-events: none;
+  transition: opacity .4s var(--ease);
+}
+.apply-frame-wrap.ready::after { opacity: 0; }
+.apply-frame-wrap.blocked::after {
+  content: 'Your application opens in its own secure window — use the "Open application" button above.';
+  padding: 40px; text-align: center; max-width: 46ch; margin: 0 auto;
+  pointer-events: auto;
+}
+.apply-frame-wrap.blocked { min-height: 260px; }
+.apply-frame-wrap.blocked iframe { display: none; }
+
+@media (max-width: 680px) {
+  .apply-frame-wrap iframe { height: 780px; }
+  .apply-bar { flex-direction: column; align-items: stretch; }
+}
+
+/* ============================================================
+   BRANDED APPLICATION — apply.html
+   ============================================================ */
+
+/* The `hidden` attribute loses to any class that sets display — and
+   .field is display:grid — so hidden blocks such as the signature pad
+   rendered anyway. This wins the specificity fight for all of them. */
+[hidden] { display: none !important; }
+
+/* Native selects, dressed to match .input */
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 46px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+}
+select.input option { background: #131316; color: var(--fg); }
+
+/* Bank statement dropzone */
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted-fg);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .3s, background .3s, transform .3s var(--ease);
+}
+.dropzone:hover, .dropzone:focus-visible { border-color: rgba(120, 220, 200, 0.5); background: rgba(52, 211, 153, 0.05); }
+.dropzone.drag { border-color: var(--accent); background: rgba(52, 211, 153, 0.09); transform: scale(1.01); }
+.dropzone svg { color: var(--accent); }
+.dropzone b { color: var(--fg); font-weight: 600; }
+.dropzone span { font-size: 0.85rem; }
+
+.file-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.file-list:empty { margin: 0; }
+.file-list li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.88rem;
+}
+.file-list li .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-list li .sz { color: var(--muted-fg); font-family: var(--mono); font-size: 0.74rem; flex: none; }
+.file-list li button {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent;
+  color: var(--muted-fg); cursor: pointer; line-height: 1;
+  transition: color .25s, border-color .25s;
+}
+.file-list li button:hover { color: #ff8b8b; border-color: rgba(255, 139, 139, 0.5); }
+.file-list li.bad { border-color: rgba(255, 139, 139, 0.4); }
+.file-list li.bad .sz { color: #ff8b8b; }
+
+/* Verbatim authorization text */
+.consent-box {
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+  max-height: 190px;
+  overflow-y: auto;
+}
+.consent-box p { margin: 0; color: var(--muted-fg); font-size: 0.86rem; line-height: 1.65; }
+
+/* Signature pad */
+.sig-wrap { position: relative; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(255,255,255,0.03); overflow: hidden; }
+.sig-wrap canvas { display: block; width: 100%; height: 150px; touch-action: none; cursor: crosshair; }
+.sig-hint {
+  position: absolute; inset: auto 0 18px; text-align: center;
+  color: rgba(255,255,255,0.25); font-size: 0.85rem; pointer-events: none;
+  transition: opacity .25s;
+}
+.sig-wrap.signed .sig-hint { opacity: 0; }
+.sig-clear {
+  position: absolute; top: 10px; right: 12px;
+  border: 1px solid var(--line); background: rgba(10,10,11,.7); color: var(--muted-fg);
+  border-radius: 8px; padding: 5px 11px; font-size: 0.76rem; cursor: pointer;
+  transition: color .25s, border-color .25s;
+}
+.sig-clear:hover { color: var(--fg); border-color: rgba(255,255,255,.28); }
+
+/* Handoff explainer above the submit button */
+.handoff-note {
+  padding: 20px 22px;
+  border: 1px solid rgba(120, 220, 200, 0.22);
+  border-radius: var(--radius);
+  background: linear-gradient(140deg, rgba(52, 211, 153, 0.07), rgba(74, 165, 232, 0.04));
+}
+.handoff-note p { margin: 10px 0 0; color: var(--muted-fg); font-size: 0.88rem; line-height: 1.65; }
+
+/* Field-level validation */
+.input.invalid, select.input.invalid { border-color: rgba(255, 139, 139, 0.65); background: rgba(255, 139, 139, 0.05); }
+
+@media (max-width: 680px) {
+  .steps-bar { gap: 7px; }
+  .consent-box { max-height: 150px; }
+}
