@@ -1958,6 +1958,303 @@
   }
 
   /* ---------------------------------------------------------
+     16. Live chat widget
+
+     Built here rather than in markup so it exists on all nine pages
+     without editing nine files.
+
+     The widget knows nothing about the agent — no URL, no key, no
+     model name. It posts to api/chat.php and that is the whole of
+     its knowledge. Anything in this file is readable by every
+     visitor, so anything secret must never appear in it.
+
+     Messages are rendered with textContent, never innerHTML. The
+     text comes from a language model and from whatever a stranger
+     typed; treating either as markup is how you get an XSS hole in
+     your own site.
+     --------------------------------------------------------- */
+  const CHAT_ENDPOINT = '/api/chat.php';
+  const CHAT_SESSION_KEY = 'tmf_chat_session';
+  const CHAT_POLL_MS = 4000;
+
+  function initChat() {
+    if ($('[data-chat-panel]')) return;           // never twice
+
+    let session = null;
+    let seen = 0;
+    let open = false;
+    let human = false;
+    let waiting = false;
+    let poller = null;
+    let sending = false;
+
+    try { session = sessionStorage.getItem(CHAT_SESSION_KEY) || null; } catch (_) {}
+
+    /* ---- markup ---- */
+    const launch = document.createElement('button');
+    launch.className = 'chat-launch';
+    launch.type = 'button';
+    launch.setAttribute('aria-label', 'Open chat');
+    launch.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.1' +
+      'A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg><span>Questions?</span>';
+
+    const panel = document.createElement('div');
+    panel.className = 'chat-panel';
+    panel.setAttribute('data-chat-panel', '');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-label', 'Chat with TMF Team');
+    panel.innerHTML =
+      '<div class="chat-head">' +
+        '<div><b>TMF Team</b><span data-chat-status><i class="dot"></i>Assistant &mdash; an advisor can join</span></div>' +
+        '<button class="chat-close" type="button" aria-label="Close chat">&times;</button>' +
+      '</div>' +
+      '<div class="chat-log" data-chat-log aria-live="polite"></div>' +
+      '<div class="chat-foot">' +
+        '<div class="chat-row">' +
+          '<textarea class="chat-input" data-chat-input rows="1" placeholder="Ask a question…" aria-label="Your message"></textarea>' +
+          '<button class="chat-send" type="button" data-chat-send>Send</button>' +
+        '</div>' +
+        '<div class="chat-actions">' +
+          '<button class="chat-chip" type="button" data-chat-human>Talk to a person</button>' +
+          '<button class="chat-chip" type="button" data-chat-apply>Start an application</button>' +
+        '</div>' +
+        '<div class="chat-capture" data-chat-capture hidden>' +
+          '<input data-chat-name placeholder="Your name" autocomplete="name">' +
+          '<input data-chat-phone placeholder="Best number to reach you" inputmode="tel" autocomplete="tel">' +
+          '<button class="chat-send" type="button" data-chat-save>Send my details</button>' +
+        '</div>' +
+        '<p class="chat-legal">Answers here are general information, not an offer of funding. ' +
+          'Please do not type your Social Security number in chat.</p>' +
+      '</div>';
+
+    document.body.appendChild(launch);
+    document.body.appendChild(panel);
+
+    const log = $('[data-chat-log]', panel);
+    const input = $('[data-chat-input]', panel);
+    const sendBtn = $('[data-chat-send]', panel);
+    const status = $('[data-chat-status]', panel);
+    const capture = $('[data-chat-capture]', panel);
+
+    /* ---- rendering ---- */
+    function bubble(role, text) {
+      const el = document.createElement('div');
+      el.className = 'chat-msg ' + (
+        role === 'visitor' ? 'me' :
+        role === 'operator' ? 'operator' :
+        role === 'system' ? 'note' : 'them'
+      );
+      el.textContent = text;                       // never innerHTML
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    }
+
+    function note(text) {
+      const el = document.createElement('div');
+      el.className = 'chat-msg note';
+      el.textContent = text;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    let typingEl = null;
+    function typing(on) {
+      if (on && !typingEl) {
+        typingEl = document.createElement('div');
+        typingEl.className = 'chat-typing';
+        typingEl.textContent = 'Typing…';
+        log.appendChild(typingEl);
+        log.scrollTop = log.scrollHeight;
+      } else if (!on && typingEl) {
+        typingEl.remove();
+        typingEl = null;
+      }
+    }
+
+    function post(body) {
+      return fetch(CHAT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok || !j.ok) throw new Error(j && j.error ? j.error : 'chat unavailable');
+          return j;
+        });
+      });
+    }
+
+    function setStatus() {
+      if (human) {
+        status.innerHTML = '<i class="dot"></i>An advisor has joined';
+      } else if (waiting) {
+        status.innerHTML = '<i class="dot"></i>Getting an advisor for you';
+      } else {
+        status.innerHTML = '<i class="dot"></i>Assistant &mdash; an advisor can join';
+      }
+    }
+
+    /* ---- session ---- */
+    function ensureSession() {
+      if (session) return Promise.resolve(session);
+      return post({ action: 'start', page: location.pathname }).then(function (j) {
+        session = j.session;
+        try { sessionStorage.setItem(CHAT_SESSION_KEY, session); } catch (_) {}
+        return session;
+      });
+    }
+
+    /* ---- polling for anything the advisor sends ---- */
+    function pump() {
+      if (!session) return Promise.resolve();
+      return post({ action: 'poll', session: session, since: seen })
+        .then(function (j) {
+          const wasHuman = human;
+          human = !!j.human;
+          waiting = !!j.waiting;
+          if (human && !wasHuman) note('An advisor has joined the conversation.');
+          setStatus();
+          (j.messages || []).forEach(function (m) {
+            if (m.role === 'visitor') return;      // already on screen
+            bubble(m.role, m.text);
+          });
+          seen = j.total;
+        })
+        .catch(function () { /* a dropped poll is not worth telling anyone about */ });
+    }
+
+    function startPolling() {
+      if (poller) return;
+      poller = setInterval(pump, CHAT_POLL_MS);
+    }
+    function stopPolling() {
+      if (!poller) return;
+      clearInterval(poller);
+      poller = null;
+    }
+
+    /* ---- actions ---- */
+    function send() {
+      const text = input.value.trim();
+      if (!text || sending) return;
+      sending = true;
+      sendBtn.disabled = true;
+      bubble('visitor', text);
+      seen++;
+      input.value = '';
+      input.style.height = 'auto';
+      typing(true);
+
+      ensureSession()
+        .then(function () { return post({ action: 'send', session: session, message: text }); })
+        .then(function (j) {
+          typing(false);
+          human = !!j.human;
+          setStatus();
+          (j.messages || []).forEach(function (m) { bubble(m.role, m.text); seen++; });
+          if (human) note('An advisor is reading this.');
+        })
+        .catch(function (e) {
+          typing(false);
+          note('That did not send — ' + (e.message || 'please try again') + '.');
+        })
+        .then(function () { sending = false; sendBtn.disabled = false; input.focus(); });
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    input.addEventListener('input', function () {
+      input.style.height = 'auto';
+      input.style.height = Math.min(110, input.scrollHeight) + 'px';
+    });
+
+    $('[data-chat-human]', panel).addEventListener('click', function () {
+      ensureSession()
+        .then(function () { return post({ action: 'human', session: session }); })
+        .then(function () {
+          waiting = true;
+          setStatus();
+          note('We have let an advisor know. Leave your name and number and we will reach you even if you close this.');
+          capture.removeAttribute('hidden');
+          // Pre-fill from anything they have already told us elsewhere.
+          const v = readVisitor();
+          const nameEl = $('[data-chat-name]', panel);
+          const phoneEl = $('[data-chat-phone]', panel);
+          if (nameEl && !nameEl.value) {
+            nameEl.value = [v.first || v.firstName || '', v.last || v.lastName || ''].join(' ').trim();
+          }
+          if (phoneEl && !phoneEl.value) phoneEl.value = v.phone || '';
+        })
+        .catch(function () { note('Could not reach us just now. Please use the contact page.'); });
+    });
+
+    $('[data-chat-apply]', panel).addEventListener('click', function () {
+      location.href = 'apply.html';
+    });
+
+    $('[data-chat-save]', panel).addEventListener('click', function () {
+      const name = $('[data-chat-name]', panel).value.trim();
+      const phone = $('[data-chat-phone]', panel).value.trim();
+      if (!name && !phone) return;
+      rememberVisitor({ first: name.split(' ')[0] || '', phone: phone });
+      ensureSession()
+        .then(function () { return post({ action: 'details', session: session, name: name, phone: phone }); })
+        .then(function () {
+          capture.setAttribute('hidden', '');
+          note('Thank you — an advisor will come back to you on that number.');
+        })
+        .catch(function () { note('That did not save. Please use the contact page.'); });
+    });
+
+    /* ---- open / close ---- */
+    function openChat() {
+      open = true;
+      panel.classList.add('open');
+      launch.hidden = true;
+      startPolling();
+      ensureSession()
+        .then(function () {
+          if (!log.children.length) {
+            bubble('assistant',
+              'Hello — I can answer questions about funding, what we need from you, and how long it takes. ' +
+              'What are you trying to do?');
+          }
+          return pump();
+        })
+        .catch(function () {
+          note('Chat is not available right now. The contact page will reach us.');
+        });
+      setTimeout(function () { input.focus(); }, 220);
+    }
+
+    function closeChat() {
+      open = false;
+      panel.classList.remove('open');
+      launch.hidden = false;
+      // Keep polling if a person is involved, so a reply is not missed.
+      if (!human && !waiting) stopPolling();
+    }
+
+    launch.addEventListener('click', openChat);
+    $('.chat-close', panel).addEventListener('click', closeChat);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && open) closeChat();
+    });
+
+    // A conversation already under way should resume itself, so an advisor's
+    // reply is not lost because the visitor changed page.
+    if (session) {
+      pump().then(function () {
+        if (human || waiting || seen > 0) { startPolling(); }
+      });
+    }
+  }
+
+  /* ---------------------------------------------------------
      boot
      --------------------------------------------------------- */
   function boot() {
@@ -1983,6 +2280,7 @@
     initFigureOffers();
     initVisitorCapture();
     initApplication();
+    initChat();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=26`.**
+**Last updated: 18 August 2026 — assets at `?v=27`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -48,6 +48,7 @@ assets/app.js            Every interaction, both calculators, all integrations
 api/figure-heloc.php     Server-side proxy to Figure's HELOC API
 api/application.php      Application intake — encrypted at rest
 api/lead.php             Every submission, stored on our own server
+api/chat.php             Live chat — proxies to John's Hermes agent
 admin.php                Password-protected inbox for applications and leads
 api/config.example.php   Template. Real config.php lives ONLY on the server
 ```
@@ -92,10 +93,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=26/styles.css?v=27/g; s/app\.js?v=26/app.js?v=27/g' *.html
+sed -i 's/styles\.css?v=27/styles.css?v=28/g; s/app\.js?v=27/app.js?v=28/g' *.html
 ```
 
-Currently at **v26**. Forget this and John sees no change, reports the site is
+Currently at **v27**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -373,6 +374,39 @@ Defences, all tested on 18 Aug 2026 against a live server:
 **`admin.php` is in `.cpanel.yml`.** Fourth new file this session that needed
 adding by hand.
 
+## 6C. Live chat — added 18 Aug 2026
+
+Widget on every page, built by `initChat()` in `app.js`. Visitor talks to
+`api/chat.php`; that file talks to John's Hermes agent. Off until
+`chat_enabled` is true. Full detail in `SETUP-CHAT.md`.
+
+**The key never reaches the browser.** Verified with a real key in config: it
+appears in the request to the agent and nowhere in the page HTML or `app.js`,
+and neither does the agent URL. Any change that moves the model call into
+client-side JavaScript is a leaked credential — do not accept one.
+
+**Takeover.** John joins from the inbox's Live chat tab; `human` flips true and
+`chat.php` stops calling the agent for that conversation entirely. Handing back
+clears it. Operator turns are fed to the agent as assistant messages, so a
+handed-back conversation does not contradict what John just said. Tested end to
+end in two browsers: the visitor saw the operator's reply within one poll, and
+the agent stayed silent throughout.
+
+**SSN scrubbing.** Anything SSN-shaped becomes `[removed]` before storage,
+before the agent, before John. Tested with two formats then grepping every
+stored file and the agent's received payload — absent from both. Deliberately
+eager; a false positive is cheap and a false negative is forever.
+
+**Guardrails in the prompt:** never quote a rate, amount or approval; never
+claim an approval; never ask for SSN, DOB or bank credentials; never claim to be
+human. If `chat_system_prompt` is ever replaced, those rules must survive —
+John is a broker and a chatbot's quote is a representation.
+
+**Transcripts are NOT encrypted**, unlike applications. They hold names and
+phone numbers, never SSNs. Nothing prunes them.
+
+**`api/chat.php` is in `.cpanel.yml`.** Fifth file this session needing it.
+
 ## 7. Tunable knobs
 
 All at the top of their sections in `assets/app.js`:
@@ -533,5 +567,6 @@ at the handoff.
 | `README.md` | Quick orientation |
 | `SETUP-LEAD-CAPTURE.md` | Google Sheets step by step |
 | `SETUP-FIGURE-API.md` | Figure integration and the 500 |
-| `SETUP-APPLICATION.md` | The application, and the exact ask for Signet |
+| `SETUP-APPLICATION.md` | The application, encryption, the inbox |
+| `SETUP-CHAT.md` | Live chat, the agent, and taking over |
 | `google-apps-script.gs` | The script behind the leads sheet |

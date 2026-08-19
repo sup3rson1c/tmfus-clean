@@ -1467,3 +1467,93 @@ select.input option { background: #131316; color: var(--fg); }
   color: var(--fg);
 }
 .prefill-note[hidden] { display: none !important; }
+
+/* ==================================================================
+   Live chat widget.  Built by initChat() in app.js so it exists on
+   every page without touching nine HTML files.
+   ================================================================== */
+.chat-launch{
+  position:fixed; right:22px; bottom:22px; z-index:900;
+  display:inline-flex; align-items:center; gap:9px;
+  padding:13px 20px; border:none; border-radius:999px; cursor:pointer;
+  font:inherit; font-weight:600; font-size:.94rem; color:#04120e;
+  background:var(--accent-grad);
+  box-shadow:0 10px 30px rgba(0,0,0,.45);
+  transition:transform .25s var(--ease), opacity .25s var(--ease);
+}
+.chat-launch:hover{ transform:translateY(-2px) }
+.chat-launch[hidden]{ display:none !important }
+
+.chat-panel{
+  position:fixed; right:22px; bottom:22px; z-index:901;
+  width:min(390px, calc(100vw - 32px));
+  height:min(600px, calc(100vh - 44px));
+  display:flex; flex-direction:column; overflow:hidden;
+  background:var(--card-bg); border:1px solid var(--line);
+  border-radius:var(--radius); box-shadow:0 24px 60px rgba(0,0,0,.6);
+  opacity:0; transform:translateY(14px) scale(.98); pointer-events:none;
+  transition:opacity .28s var(--ease), transform .28s var(--ease);
+}
+.chat-panel.open{ opacity:1; transform:none; pointer-events:auto }
+
+.chat-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:15px 16px; border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.02);
+}
+.chat-head b{ display:block; font-size:.96rem }
+.chat-head span{ display:block; font-size:.78rem; color:var(--muted-fg) }
+.chat-head .dot{
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:var(--accent); margin-right:6px; vertical-align:middle;
+}
+.chat-close{
+  background:none; border:none; color:var(--muted-fg);
+  font-size:1.5rem; line-height:1; cursor:pointer; padding:0 4px;
+}
+.chat-close:hover{ color:var(--fg) }
+
+.chat-log{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:11px }
+.chat-msg{ max-width:85%; padding:10px 13px; border-radius:14px; font-size:.92rem; line-height:1.5; white-space:pre-wrap; word-wrap:break-word }
+.chat-msg.them{ align-self:flex-start; background:hsl(var(--muted)); border:1px solid var(--line) }
+.chat-msg.me{ align-self:flex-end; background:var(--accent-grad); color:#04120e; font-weight:500 }
+.chat-msg.note{ align-self:center; background:none; border:none; color:var(--muted-fg); font-size:.82rem; text-align:center; max-width:100% }
+.chat-msg.operator{ align-self:flex-start; background:rgba(74,165,232,.12); border:1px solid rgba(74,165,232,.4) }
+.chat-typing{ align-self:flex-start; color:var(--muted-fg); font-size:.85rem }
+
+.chat-foot{ border-top:1px solid var(--line); padding:12px }
+.chat-row{ display:flex; gap:8px; align-items:flex-end }
+.chat-input{
+  flex:1; resize:none; font:inherit; font-size:.92rem; line-height:1.45;
+  max-height:110px; padding:10px 12px; border-radius:12px;
+  background:#08080a; color:var(--fg); border:1px solid var(--line);
+}
+.chat-input:focus{ outline:none; border-color:var(--accent) }
+.chat-send{
+  border:none; border-radius:12px; padding:10px 15px; cursor:pointer;
+  font:inherit; font-weight:600; color:#04120e;
+  background:var(--accent-grad);
+}
+.chat-send:disabled{ opacity:.5; cursor:not-allowed }
+.chat-actions{ display:flex; gap:8px; margin-top:9px; flex-wrap:wrap }
+.chat-chip{
+  font:inherit; font-size:.8rem; padding:6px 12px; border-radius:999px; cursor:pointer;
+  background:transparent; border:1px solid var(--line); color:var(--muted-fg);
+}
+.chat-chip:hover{ border-color:var(--accent); color:var(--fg) }
+.chat-legal{ margin:9px 2px 0; font-size:.72rem; color:var(--muted-fg); line-height:1.45 }
+
+.chat-capture{ display:grid; gap:8px; margin-top:10px }
+.chat-capture input{
+  font:inherit; font-size:.88rem; padding:9px 11px; border-radius:10px;
+  background:#08080a; color:var(--fg); border:1px solid var(--line);
+}
+.chat-capture[hidden]{ display:none !important }
+
+@media (max-width:520px){
+  .chat-panel{ right:8px; left:8px; bottom:8px; width:auto; height:min(560px, calc(100vh - 16px)) }
+  .chat-launch{ right:14px; bottom:14px }
+}
+@media (prefers-reduced-motion: reduce){
+  .chat-panel, .chat-launch{ transition:none }
+}

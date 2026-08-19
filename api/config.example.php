@@ -97,4 +97,42 @@ return [
     // put a password_hash() output here instead and leave the line above
     // empty. This one wins if both are set.
     'admin_password_hash' => '',
+
+    // ---------------------------------------------------------------
+    // LIVE CHAT  (api/chat.php, widget on every page, takeover in admin)
+    //
+    // The visitor's browser never sees any of this. It talks only to
+    // api/chat.php, which talks to your agent. Put nothing here in the
+    // site's JavaScript, ever — page scripts are public.
+    // ---------------------------------------------------------------
+    'chat_enabled' => false,
+
+    // Your Hermes agent's URL, and the key it expects.
+    'chat_endpoint' => '',
+    'chat_api_key'  => '',
+
+    // 'openai' — POST {model, messages:[{role,content}]}, reply read from
+    //            choices[0].message.content. What most hosted model APIs speak.
+    // 'simple' — POST {session, message, history, system}, reply read from
+    //            `reply`. For a custom agent service of your own.
+    'chat_format' => 'openai',
+    'chat_model'  => '',
+
+    // How the key is sent. Defaults suit almost everything; change only
+    // if your provider documents something different.
+    'chat_auth_header' => 'Authorization',
+    'chat_auth_prefix' => 'Bearer ',
+
+    'chat_max_tokens'  => 500,
+    'chat_temperature' => 0.4,
+
+    // Leave empty to use the built-in one, which already tells the agent
+    // never to quote rates, never to claim an approval, and never to ask
+    // for an SSN. Read DEFAULT_SYSTEM_PROMPT in api/chat.php before you
+    // replace it — those rules are there for a reason.
+    'chat_system_prompt' => '',
+
+    // Emailed when a visitor asks to speak to a person. Falls back to
+    // application_notify if left empty.
+    'chat_notify' => '',
 ];

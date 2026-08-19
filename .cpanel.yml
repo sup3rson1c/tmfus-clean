@@ -25,4 +25,5 @@ deployment:
     - /bin/cp -f api/figure-heloc.php    $DEPLOYPATH/api/
     - /bin/cp -f api/application.php     $DEPLOYPATH/api/
     - /bin/cp -f api/lead.php            $DEPLOYPATH/api/
+    - /bin/cp -f api/chat.php            $DEPLOYPATH/api/
     - /bin/cp -f api/config.example.php  $DEPLOYPATH/api/

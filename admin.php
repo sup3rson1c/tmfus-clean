@@ -239,6 +239,92 @@ function leadRecords(string $storeDir, int $limit = 400): array
     return $out;
 }
 
+/* ---------------------------------------------------------------
+   Live chat. Transcripts are written by api/chat.php; this side reads
+   them and can write operator turns into them.
+   --------------------------------------------------------------- */
+function chatPath(string $storeDir, string $session): ?string
+{
+    if (!preg_match('/^[a-f0-9]{32}$/', $session)) {
+        return null;
+    }
+    $p = $storeDir . '/chats/' . substr($session, 0, 2) . '/' . $session . '.json';
+    return is_file($p) ? $p : null;
+}
+
+function loadChat(string $storeDir, string $session): ?array
+{
+    $p = chatPath($storeDir, $session);
+    if ($p === null) {
+        return null;
+    }
+    $t = json_decode((string) @file_get_contents($p), true);
+    return is_array($t) ? $t : null;
+}
+
+function saveChat(string $storeDir, array $t): bool
+{
+    $p = chatPath($storeDir, (string) ($t['session'] ?? ''));
+    if ($p === null) {
+        return false;
+    }
+    $t['updated'] = date('c');
+    $ok = @file_put_contents($p, json_encode($t, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), LOCK_EX) !== false;
+    @chmod($p, 0600);
+    return $ok;
+}
+
+function chatList(string $storeDir, int $limit = 80): array
+{
+    $base = $storeDir . '/chats';
+    $out = [];
+    foreach ((array) @scandir($base) as $bucket) {
+        if (!is_string($bucket) || !preg_match('/^[a-f0-9]{2}$/', $bucket)) {
+            continue;
+        }
+        foreach ((array) @scandir($base . '/' . $bucket) as $f) {
+            if (!is_string($f) || !preg_match('/^[a-f0-9]{32}\.json$/', $f)) {
+                continue;
+            }
+            $t = json_decode((string) @file_get_contents($base . '/' . $bucket . '/' . $f), true);
+            if (!is_array($t)) {
+                continue;
+            }
+            $msgs = (array) ($t['messages'] ?? []);
+            $last = '';
+            for ($i = count($msgs) - 1; $i >= 0; $i--) {
+                if (($msgs[$i]['role'] ?? '') !== 'system') {
+                    $last = (string) $msgs[$i]['text'];
+                    break;
+                }
+            }
+            $v = (array) ($t['visitor'] ?? []);
+            $out[] = [
+                'session' => (string) ($t['session'] ?? ''),
+                'created' => (string) ($t['created'] ?? ''),
+                'updated' => (string) ($t['updated'] ?? ''),
+                'page'    => (string) ($t['page'] ?? ''),
+                'human'   => !empty($t['human']),
+                'waiting' => !empty($t['waiting']),
+                'name'    => (string) ($v['name'] ?? ''),
+                'phone'   => (string) ($v['phone'] ?? ''),
+                'turns'   => count($msgs),
+                'last'    => mb_substr($last, 0, 90),
+            ];
+        }
+    }
+
+    // Anyone waiting for a person goes to the top, then most recent.
+    usort($out, static function ($a, $b) {
+        if ($a['waiting'] !== $b['waiting']) {
+            return $a['waiting'] ? -1 : 1;
+        }
+        return strcmp($b['updated'], $a['updated']);
+    });
+
+    return array_slice($out, 0, $limit);
+}
+
 /** Resolve a browser-supplied folder name to a real folder, or null. */
 function safeFolder(string $storeDir, string $wanted): ?string
 {
@@ -262,6 +348,56 @@ if ($authed && $action !== '') {
     if ($action === 'leads') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(leadRecords($storeDir));
+        exit;
+    }
+
+    /* ---- live chat ---- */
+    if ($action === 'chats') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(chatList($storeDir));
+        exit;
+    }
+
+    if ($action === 'chat') {
+        $t = loadChat($storeDir, (string) ($_GET['session'] ?? ''));
+        if ($t === null) { http_response_code(404); exit; }
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($t);
+        exit;
+    }
+
+    if ($action === 'chattake' || $action === 'chatrelease' || $action === 'chatsend') {
+        $session = (string) ($_POST['session'] ?? $_GET['session'] ?? '');
+        $t = loadChat($storeDir, $session);
+        if ($t === null) { http_response_code(404); exit; }
+
+        if ($action === 'chattake') {
+            $t['human'] = true;
+            $t['waiting'] = false;
+        } elseif ($action === 'chatrelease') {
+            $t['human'] = false;
+            $t['messages'][] = [
+                'role' => 'system',
+                'text' => 'The advisor stepped away. The assistant is answering again.',
+                'at'   => date('c'),
+            ];
+        } else {
+            $text = trim((string) ($_POST['text'] ?? ''));
+            if ($text === '') { http_response_code(400); exit; }
+            // The operator is a trusted human, but the transcript is shared
+            // with a language model later — keep the same rule for everyone.
+            $t['human'] = true;
+            $t['waiting'] = false;
+            $t['messages'][] = [
+                'role' => 'operator',
+                'text' => mb_substr($text, 0, 2000),
+                'at'   => date('c'),
+            ];
+        }
+
+        saveChat($storeDir, $t);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => true, 'total' => count($t['messages'])]);
         exit;
     }
 
@@ -429,6 +565,7 @@ header('Content-Type: text/html; charset=utf-8');
   <div class="tabs noprint">
     <div class="tab on" data-tab="applications">Applications</div>
     <div class="tab" data-tab="leads">Calculators &amp; contact</div>
+    <div class="tab" data-tab="chats">Live chat <span id="chatBadge" class="hide"></span></div>
   </div>
 
   <div class="card" id="paneApplications">
@@ -450,6 +587,36 @@ header('Content-Type: text/html; charset=utf-8');
       <thead><tr><th>Received</th><th>Type</th><th>Name</th><th>Business</th><th>Email</th><th>Phone</th></tr></thead>
       <tbody></tbody>
     </table>
+  </div>
+
+  <div class="card hide" id="paneChats">
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:20px;min-height:440px">
+      <div style="border-right:1px solid var(--line);padding-right:16px">
+        <span class="mono-label">Conversations</span>
+        <p class="muted" id="chatsEmpty" style="margin-top:14px;font-size:.9rem">Loading…</p>
+        <div id="chatsList" style="margin-top:10px;max-height:520px;overflow:auto"></div>
+      </div>
+      <div>
+        <div class="top" style="margin-bottom:8px">
+          <span class="mono-label" id="chatWho">Pick a conversation</span>
+          <div>
+            <button class="ghost hide" id="btnTake">Take over</button>
+            <button class="ghost hide" id="btnRelease">Hand back to the assistant</button>
+          </div>
+        </div>
+        <div id="chatLog" style="background:#08080a;border:1px solid var(--line);border-radius:var(--radius);
+             padding:14px;height:390px;overflow:auto;display:flex;flex-direction:column;gap:10px"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <input type="search" id="chatText" placeholder="Type a reply — this takes the conversation over"
+                 style="flex:1;font:inherit;background:#08080a;color:var(--fg);border:1px solid var(--line);
+                        border-radius:var(--radius);padding:11px 13px">
+          <button class="primary" id="chatSend">Send</button>
+        </div>
+        <p class="muted" style="font-size:.82rem;margin-top:8px">
+          The moment you send, the assistant stops replying in this conversation. Hand it back when you are done.
+        </p>
+      </div>
+    </div>
   </div>
 
   <dialog id="viewer">
@@ -517,6 +684,7 @@ header('Content-Type: text/html; charset=utf-8');
       var which = t.getAttribute('data-tab');
       $('paneApplications').classList.toggle('hide', which !== 'applications');
       $('paneLeads').classList.toggle('hide', which !== 'leads');
+      $('paneChats').classList.toggle('hide', which !== 'chats');
     });
   });
 
@@ -690,6 +858,110 @@ header('Content-Type: text/html; charset=utf-8');
   }
 
   $('closeViewer').addEventListener('click', function () { $('viewer').close(); });
+
+  /* ================= live chat =================
+     Polls twice as often when a conversation is open, because a merchant
+     sitting in a chat window notices a ten-second gap and a merchant who
+     has wandered off does not. */
+  var current = null, chatSeen = 0, chats = [];
+
+  function loadChats() {
+    return fetch('admin.php?action=chats', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (rows) {
+        chats = rows;
+        var waiting = rows.filter(function (c) { return c.waiting; }).length;
+        var badge = $('chatBadge');
+        badge.textContent = waiting ? ' ' + waiting + ' waiting' : '';
+        badge.classList.toggle('hide', !waiting);
+        badge.style.color = '#f87171';
+
+        if (!rows.length) {
+          $('chatsEmpty').textContent = 'No conversations yet.';
+          $('chatsList').innerHTML = '';
+          return;
+        }
+        $('chatsEmpty').classList.add('hide');
+        $('chatsList').innerHTML = rows.map(function (c) {
+          var tag = c.waiting ? '<span style="color:#f87171">waiting</span>'
+                  : c.human ? '<span class="ok">you</span>'
+                  : '<span class="muted">assistant</span>';
+          return '<div class="chatitem" data-session="' + esc(c.session) + '" ' +
+            'style="padding:11px;border:1px solid ' + (c.session === current ? 'var(--accent)' : 'var(--line)') +
+            ';border-radius:10px;margin-bottom:8px;cursor:pointer">' +
+            '<div style="display:flex;justify-content:space-between;gap:8px;font-size:.82rem">' +
+            tag + '<span class="muted">' + esc(when(c.updated)) + '</span></div>' +
+            '<div style="font-size:.9rem;margin-top:4px"><b>' + esc(c.name || 'Visitor') + '</b>' +
+            (c.phone ? ' <span class="muted">' + esc(c.phone) + '</span>' : '') + '</div>' +
+            '<div class="muted" style="font-size:.82rem;margin-top:2px">' + esc(c.last || '') + '</div>' +
+            '</div>';
+        }).join('');
+
+        Array.prototype.forEach.call(document.querySelectorAll('.chatitem'), function (el) {
+          el.addEventListener('click', function () { openChat(el.getAttribute('data-session')); });
+        });
+      })
+      .catch(function () {});
+  }
+
+  function openChat(session) {
+    if (session !== current) { current = session; chatSeen = 0; $('chatLog').innerHTML = ''; }
+    return fetch('admin.php?action=chat&session=' + encodeURIComponent(session), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (t) {
+        $('chatWho').textContent = (t.visitor && t.visitor.name ? t.visitor.name : 'Visitor') +
+          (t.visitor && t.visitor.phone ? ' · ' + t.visitor.phone : '') + ' · ' + (t.page || '');
+        $('btnTake').classList.toggle('hide', !!t.human);
+        $('btnRelease').classList.toggle('hide', !t.human);
+
+        var log = $('chatLog');
+        (t.messages || []).slice(chatSeen).forEach(function (m) {
+          var el = document.createElement('div');
+          var mine = m.role === 'operator';
+          var sys = m.role === 'system';
+          el.style.cssText = 'max-width:82%;padding:9px 12px;border-radius:12px;font-size:.9rem;white-space:pre-wrap;' +
+            (sys ? 'align-self:center;color:var(--muted);font-size:.8rem;text-align:center;max-width:100%'
+                 : mine ? 'align-self:flex-end;background:rgba(74,165,232,.16);border:1px solid rgba(74,165,232,.4)'
+                 : m.role === 'visitor' ? 'align-self:flex-start;background:var(--panel-2);border:1px solid var(--line)'
+                 : 'align-self:flex-start;background:rgba(52,211,153,.09);border:1px solid rgba(52,211,153,.28)');
+          el.textContent = (m.role === 'assistant' ? 'Assistant: ' : '') + m.text;
+          log.appendChild(el);
+        });
+        chatSeen = (t.messages || []).length;
+        log.scrollTop = log.scrollHeight;
+      })
+      .catch(function () {});
+  }
+
+  function chatAction(action, extra) {
+    if (!current) return Promise.resolve();
+    var body = new URLSearchParams();
+    body.set('session', current);
+    Object.keys(extra || {}).forEach(function (k) { body.set(k, extra[k]); });
+    return fetch('admin.php?action=' + action, {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    }).then(function () { return openChat(current); }).then(loadChats);
+  }
+
+  $('btnTake').addEventListener('click', function () { chatAction('chattake'); });
+  $('btnRelease').addEventListener('click', function () { chatAction('chatrelease'); });
+  $('chatSend').addEventListener('click', function () {
+    var v = $('chatText').value.trim();
+    if (!v) return;
+    $('chatText').value = '';
+    chatAction('chatsend', { text: v });
+  });
+  $('chatText').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('chatSend').click(); }
+  });
+
+  loadChats();
+  setInterval(function () {
+    loadChats();
+    if (current && !$('paneChats').classList.contains('hide')) openChat(current);
+  }, 5000);
 })();
 </script>
 <?php endif; ?>
