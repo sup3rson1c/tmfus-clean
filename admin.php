@@ -549,6 +549,80 @@ header('Content-Type: text/html; charset=utf-8');
     </form>
   </div>
 
+  <script>
+  /* ============================================================
+     ONE PASSWORD FOR THE WHOLE PAGE
+
+     Signing in is the only step. The private key kept in this browser is
+     wrapped under the same password you type here, so it is unwrapped
+     right here, on this page, at the moment you press Sign in.
+
+     The password itself is never stored anywhere. What crosses to the
+     next page is the unwrapped key as a NON-EXTRACTABLE CryptoKey handle
+     in IndexedDB — the browser will hand it back to be used for
+     decryption, and will not hand back its bytes, to this page or to
+     anything else. That is the whole reason it is done this way round
+     rather than by stashing what you typed.
+
+     If the unwrap fails we submit anyway and let PHP reject the login,
+     so a wrong password looks the same either way.
+     ============================================================ */
+  (function () {
+    var form = document.querySelector('form');
+    var VAULT_KEY = 'tmf_admin_key_v2';
+
+    function idb(fn) {
+      return new Promise(function (res, rej) {
+        var open = indexedDB.open('tmf-admin', 1);
+        open.onupgradeneeded = function () { open.result.createObjectStore('keys'); };
+        open.onerror = function () { rej(open.error); };
+        open.onsuccess = function () {
+          var db = open.result;
+          var tx = db.transaction('keys', 'readwrite');
+          var req = fn(tx.objectStore('keys'));
+          tx.oncomplete = function () { db.close(); res(req && req.result); };
+          tx.onerror = function () { db.close(); rej(tx.error); };
+        };
+      });
+    }
+
+    function b64ToBuf(s) {
+      var bin = atob(s), out = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    form.addEventListener('submit', function (e) {
+      var subtle = window.crypto && window.crypto.subtle;
+      var stored = null;
+      try { stored = JSON.parse(localStorage.getItem(VAULT_KEY) || 'null'); } catch (_) {}
+      if (!subtle || !stored || !window.indexedDB) return;      // nothing to unwrap
+
+      e.preventDefault();
+      var pass = document.getElementById('pw').value;
+
+      subtle.importKey('raw', new TextEncoder().encode(pass), { name: 'PBKDF2' }, false, ['deriveKey'])
+        .then(function (base) {
+          return subtle.deriveKey(
+            { name: 'PBKDF2', salt: b64ToBuf(stored.salt), iterations: stored.iter, hash: 'SHA-256' },
+            base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+        })
+        .then(function (wk) {
+          return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(stored.iv) }, wk, b64ToBuf(stored.data));
+        })
+        .then(function (pkcs8) {
+          // false = non-extractable. The bytes cannot come back out.
+          return subtle.importKey('pkcs8', pkcs8, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt']);
+        })
+        .then(function (key) {
+          return idb(function (store) { return store.put(key, 'priv'); });
+        })
+        .catch(function () { /* wrong password, or no key here yet */ })
+        .then(function () { form.submit(); });
+    });
+  }());
+  </script>
+
 <?php else: ?>
 
   <div class="top">
@@ -566,74 +640,59 @@ header('Content-Type: text/html; charset=utf-8');
   <!-- ============================================================
        The key vault.
 
-       The old way was a file: find tmf-private-key.pem, click Load,
-       every single time, on every computer. In practice that means the
-       key ends up living in Downloads for ever, which is the one place
-       it must not.
+       Signing in is the only step. The key kept in this browser is
+       wrapped under the same password used to sign in, so the login page
+       unwraps it on the way through and this page picks it up already
+       open. There is no second password and nothing to click.
 
-       Now the key is stored in this browser, wrapped in a passphrase
-       only John knows, and unlocked by typing that passphrase. The
-       server still never sees the key and still cannot decrypt
-       anything — that invariant is untouched. What changes is that the
-       file can go back in the safe.
+       The server still never sees the key and still cannot decrypt
+       anything. That invariant is what makes the whole scheme worth
+       having, and it is untouched.
+
+       This panel therefore only appears when something needs saying:
+       the first time on a computer, or after the admin password changed
+       and the stored key no longer matches it.
        ============================================================ -->
-  <div class="card noprint" id="vault">
+  <div class="card noprint hide" id="vault">
     <div class="top" style="margin-bottom:0">
-      <span class="mono-label" id="vaultTitle">Unlock the encrypted applications</span>
+      <span class="mono-label" id="vaultTitle">Set this computer up, once</span>
       <button class="ghost" id="vaultClose" style="padding:6px 12px;font-size:.85rem">Close</button>
     </div>
 
-    <!-- Everyday path: the key is already on this device. -->
-    <div id="vaultUnlock" class="hide" style="margin-top:14px">
-      <p class="muted" style="margin:0 0 10px;font-size:.92rem">
-        Type your passphrase to open applications on this computer.
-      </p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input type="password" id="vaultPass" placeholder="Your passphrase"
-               autocomplete="current-password" style="flex:1;min-width:220px">
-        <button class="primary" id="btnUnlock">Unlock</button>
-      </div>
-      <p class="bad hide" id="vaultUnlockErr"></p>
-      <p style="margin-top:12px">
-        <button class="ghost" id="btnForget" style="padding:7px 13px;font-size:.85rem">Forget the key on this computer</button>
-      </p>
-    </div>
-
-    <!-- First time on a device, or after Forget. -->
     <div id="vaultSetup" class="hide" style="margin-top:14px">
       <p class="muted" style="margin:0 0 12px;font-size:.92rem">
-        One time only. Choose your private key file, pick a passphrase, and this
-        computer remembers the key from then on — you will only ever type the
-        passphrase again. Keep the key file itself somewhere safe and offline;
-        it is the only copy and nobody can replace it.
+        One time on this computer. Choose your private key file. From then on,
+        signing in is all you do &mdash; the key is scrambled with your admin
+        password and opened automatically when you sign in.
       </p>
       <label class="file">
         <input type="file" id="privFile" accept=".pem,.txt">
         <span id="privLabel">Choose your private key file</span>
       </label>
-      <div style="display:grid;gap:8px;margin-top:12px;max-width:420px">
-        <input type="password" id="setupPass" placeholder="Choose a passphrase (12 characters or more)" autocomplete="new-password">
-        <input type="password" id="setupPass2" placeholder="Type the passphrase again" autocomplete="new-password">
+      <div style="margin-top:12px">
         <button class="primary" id="btnStore">Remember this key on this computer</button>
       </div>
       <p class="bad hide" id="vaultSetupErr"></p>
       <div class="warn" style="margin-top:14px">
-        <b>There is no reset.</b> If you forget the passphrase, nothing is lost as
-        long as you still have the key file — click <i>Forget the key on this
-        computer</i> and set it up again. If you lose the key file as well, every
-        application already received becomes permanently unreadable, by design.
+        <b>Keep the key file.</b> Put it somewhere safe and offline &mdash; a USB
+        stick or a password manager &mdash; and take it out of your Downloads
+        folder. You need it again only if you change your admin password or move
+        to a new computer. If you lose it <i>and</i> change your admin password,
+        every application already received becomes permanently unreadable. That
+        is the same property that makes a stolen server useless to a thief.
       </div>
       <p style="margin-top:12px">
         <button class="ghost" id="btnOnce" style="padding:7px 13px;font-size:.85rem">Just use the file this once, do not remember it</button>
       </p>
+      <p style="margin-top:6px">
+        <button class="ghost" id="btnForget" style="padding:7px 13px;font-size:.85rem">Forget the key stored on this computer</button>
+      </p>
     </div>
   </div>
 
-  <div class="warn noprint">
-    Your private key is unwrapped in this browser and never sent anywhere. The
-    server does not have it and cannot open an application for you — that is the
-    point. Without it you can still see who applied; you just cannot read the
-    encrypted half.
+  <div class="warn noprint" id="keyNote">
+    Applications are opened here in your browser, with a key the server does not
+    have and cannot get. Sign out, or twenty idle minutes, closes them again.
   </div>
 
   <div class="tabs noprint">
@@ -721,22 +780,31 @@ header('Content-Type: text/html; charset=utf-8');
   var apps = [], leads = [];
 
   /* ============================================================
-     KEY VAULT
+     KEY VAULT — one password, no extra steps
 
      What the server knows: nothing. It stores ciphertext and serves
-     ciphertext. Everything below happens in this browser.
+     ciphertext, and it holds no key of any kind. Moving decryption to
+     the server would make all of this simpler and would also mean a
+     stolen hosting account hands over every Social Security number TMF
+     holds. It is not done, deliberately.
 
-     What is kept on this device (localStorage, key tmf_admin_key_v2):
-     the PKCS#8 private key, encrypted with AES-256-GCM under a key
-     derived from John's passphrase by PBKDF2-SHA256 at 310,000
-     iterations with a random 16-byte salt. Without the passphrase that
-     blob is useless; with a weak passphrase it is only as strong as the
-     passphrase, which is why setup insists on 12 characters.
+     THE EVERYDAY PATH
+     Sign in. That is the whole of it. The login page wrapped the private
+     key under the admin password when this computer was set up, so it
+     unwraps it on the way through and leaves it here. This code picks it
+     up and the page is already unlocked.
 
-     The unwrapped CryptoKey lives in the `privKey` variable and nowhere
-     else — it is imported non-extractable, so even this page's own code
-     cannot read the bytes back out, and it is dropped on lock, on
-     inactivity and on page close.
+     WHAT IS STORED WHERE
+     - localStorage `tmf_admin_key_v2`: the PKCS#8 private key encrypted
+       with AES-256-GCM under a key derived from the admin password by
+       PBKDF2-SHA256, 310,000 iterations, random 16-byte salt. Useless on
+       its own.
+     - IndexedDB `tmf-admin/keys/priv`: the unwrapped key as a CryptoKey
+       handle, imported NON-EXTRACTABLE. The browser decrypts with it and
+       will not give its bytes back — not to this page, not to anything.
+       Cleared on sign-out, on Lock, and after 20 idle minutes.
+
+     The admin password is never written to storage of any kind.
      ============================================================ */
   var VAULT_KEY   = 'tmf_admin_key_v2';
   var PBKDF2_ITER = 310000;
@@ -758,6 +826,26 @@ header('Content-Type: text/html; charset=utf-8');
     for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
     return btoa(s);
   }
+
+  /* ---- the CryptoKey handed over by the login page ---- */
+  function idb(mode, fn) {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) return rej(new Error('no indexedDB'));
+      var open = indexedDB.open('tmf-admin', 1);
+      open.onupgradeneeded = function () { open.result.createObjectStore('keys'); };
+      open.onerror = function () { rej(open.error); };
+      open.onsuccess = function () {
+        var db = open.result;
+        var tx = db.transaction('keys', mode);
+        var req = fn(tx.objectStore('keys'));
+        tx.oncomplete = function () { db.close(); res(req && req.result); };
+        tx.onerror = function () { db.close(); rej(tx.error); };
+      };
+    });
+  }
+  function takeHandedKey() { return idb('readonly',  function (s) { return s.get('priv'); }); }
+  function keepKey(k)      { return idb('readwrite', function (s) { return s.put(k, 'priv'); }); }
+  function dropKey()       { return idb('readwrite', function (s) { return s.delete('priv'); }); }
 
   /* The private key as a CryptoKey. Non-extractable: once it is in, the
      bytes cannot come back out of the browser. */
@@ -800,25 +888,15 @@ header('Content-Type: text/html; charset=utf-8');
       });
   }
 
-  function unwrap(passphrase) {
-    var v = storedVault();
-    if (!v) return Promise.reject(new Error('nothing stored on this device'));
-    return deriveWrapKey(passphrase, b64ToBuf(v.salt))
-      .then(function (wk) {
-        return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(v.iv) }, wk, b64ToBuf(v.data));
-      })
-      .then(importPrivate);
-  }
-
   /* ---------- lock state ---------- */
   var idleTimer = null;
 
   function setLocked(locked) {
-    if (locked) privKey = null;
+    if (locked) { privKey = null; dropKey().catch(function () {}); }
     $('keyState').textContent = locked ? 'Locked' : 'Unlocked';
     $('keyState').className = 'keystate' + (locked ? '' : ' on');
-    $('btnVault').textContent = locked ? 'Unlock' : 'Lock';
-    if (locked && idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    $('btnVault').textContent = locked ? 'Set up / unlock' : 'Lock';
+    if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
     if (!locked) touchIdle();
   }
 
@@ -827,25 +905,27 @@ header('Content-Type: text/html; charset=utf-8');
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = setTimeout(function () {
       setLocked(true);
-      showVault(true);
-      $('vaultTitle').textContent = 'Locked again after 20 quiet minutes';
+      $('keyNote').textContent =
+        'Locked again after 20 quiet minutes. Sign out and back in to read applications.';
     }, IDLE_MS);
   }
   ['click', 'keydown'].forEach(function (ev) {
     document.addEventListener(ev, touchIdle, true);
   });
 
-  /* ---------- the panel ---------- */
+  /* Signing out must not leave an openable key behind on the machine. */
+  var signOut = document.querySelector('a[href="admin.php?action=logout"]');
+  if (signOut) {
+    signOut.addEventListener('click', function (e) {
+      e.preventDefault();
+      dropKey().catch(function () {}).then(function () { location.href = signOut.href; });
+    });
+  }
+
+  /* ---------- the panel, shown only when something needs saying ---------- */
   function showVault(show) {
-    var have = !!storedVault();
     $('vault').classList.toggle('hide', !show);
-    if (!show) return;
-    $('vaultUnlock').classList.toggle('hide', !have);
-    $('vaultSetup').classList.toggle('hide', have);
-    $('vaultTitle').textContent = have
-      ? 'Unlock the encrypted applications'
-      : 'Set this computer up, once';
-    if (have) setTimeout(function () { $('vaultPass').focus(); }, 50);
+    if (show) $('vaultSetup').classList.remove('hide');
   }
 
   function vaultErr(id, msg) {
@@ -855,41 +935,10 @@ header('Content-Type: text/html; charset=utf-8');
   }
 
   $('btnVault').addEventListener('click', function () {
-    if (privKey) { setLocked(true); showVault(false); return; }
+    if (privKey) { setLocked(true); return; }
     showVault($('vault').classList.contains('hide'));
   });
   $('vaultClose').addEventListener('click', function () { showVault(false); });
-
-  /* ---------- unlock ---------- */
-  function doUnlock() {
-    var pass = $('vaultPass').value;
-    if (!pass) return;
-    vaultErr('vaultUnlockErr', '');
-    $('btnUnlock').disabled = true;
-    $('btnUnlock').textContent = 'Unlocking…';
-    unwrap(pass).then(
-      function (k) {
-        privKey = k;
-        $('vaultPass').value = '';
-        $('btnUnlock').disabled = false;
-        $('btnUnlock').textContent = 'Unlock';
-        setLocked(false);
-        showVault(false);
-      },
-      function () {
-        $('btnUnlock').disabled = false;
-        $('btnUnlock').textContent = 'Unlock';
-        vaultErr('vaultUnlockErr',
-          'That passphrase does not open the key stored on this computer. ' +
-          'If you have forgotten it, click "Forget the key on this computer" and set it up ' +
-          'again from your key file.');
-      }
-    );
-  }
-  $('btnUnlock').addEventListener('click', doUnlock);
-  $('vaultPass').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); doUnlock(); }
-  });
 
   $('btnForget').addEventListener('click', function () {
     if (!confirm('Remove the stored key from this computer?\n\n' +
@@ -898,6 +947,7 @@ header('Content-Type: text/html; charset=utf-8');
     localStorage.removeItem(VAULT_KEY);
     setLocked(true);
     showVault(true);
+    $('vaultTitle').textContent = 'Set this computer up, once';
   });
 
   /* ---------- setup ---------- */
@@ -929,25 +979,30 @@ header('Content-Type: text/html; charset=utf-8');
     r.readAsText(f);
   });
 
+  /* Setup has to scramble the key with the admin password, and this page
+     deliberately never receives it — the login page is the only place it
+     exists. So it is asked for once, here, used immediately, and not kept. */
   $('btnStore').addEventListener('click', function () {
-    var a = $('setupPass').value, b = $('setupPass2').value;
     vaultErr('vaultSetupErr', '');
-    if (!pendingPkcs8)   return vaultErr('vaultSetupErr', 'Choose your private key file first.');
-    if (a.length < 12)   return vaultErr('vaultSetupErr', 'Please use a passphrase of at least 12 characters. Three or four unrelated words is ideal.');
-    if (a !== b)         return vaultErr('vaultSetupErr', 'The two passphrases do not match.');
+    if (!pendingPkcs8) return vaultErr('vaultSetupErr', 'Choose your private key file first.');
+
+    var pass = prompt('Type your admin password once, to scramble the key with it.\n\n' +
+                      'From now on, signing in is all you need to do on this computer.');
+    if (!pass) return;
 
     $('btnStore').disabled = true;
     $('btnStore').textContent = 'Saving…';
-    wrapAndStore(pendingPkcs8, a)
+    wrapAndStore(pendingPkcs8, pass)
       .then(function () { return importPrivate(pendingPkcs8); })
-      .then(function (k) {
-        privKey = k;
+      .then(function (k) { privKey = k; return keepKey(k); })
+      .then(function () {
         pendingPkcs8 = null;
-        $('setupPass').value = $('setupPass2').value = '';
         $('btnStore').disabled = false;
         $('btnStore').textContent = 'Remember this key on this computer';
         setLocked(false);
         showVault(false);
+        $('keyNote').textContent =
+          'Set up. From now on, signing in is all you need to do on this computer.';
       })
       .catch(function (e) {
         $('btnStore').disabled = false;
@@ -968,7 +1023,24 @@ header('Content-Type: text/html; charset=utf-8');
     });
   });
 
+  /* ---------- boot: did the login page leave us an open key? ---------- */
   setLocked(true);
+  takeHandedKey().then(function (k) {
+    if (k) { privKey = k; setLocked(false); return; }
+
+    // Nothing open. Either this computer has never been set up, or the
+    // admin password has changed since it was and the stored key no
+    // longer matches it. Both are fixed the same way: the key file.
+    showVault(true);
+    if (storedVault()) {
+      $('vaultTitle').textContent = 'The stored key did not open with that password';
+      $('keyNote').textContent = 'The key saved on this computer was scrambled with a ' +
+        'different admin password. Choose your key file below to set it up again with ' +
+        'the current one.';
+    } else {
+      $('vaultTitle').textContent = 'Set this computer up, once';
+    }
+  }).catch(function () { showVault(true); });
 
   /* ---------- tabs ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {

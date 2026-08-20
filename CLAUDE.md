@@ -62,10 +62,10 @@ Every page references `styles.css?v=N` and `app.js?v=N`. **Bump N in all eleven
 HTML files on every CSS or JS change:**
 
 ```bash
-sed -i 's/styles\.css?v=29/styles.css?v=30/g; s/app\.js?v=29/app.js?v=30/g' *.html
+sed -i 's/styles\.css?v=30/styles.css?v=31/g; s/app\.js?v=30/app.js?v=31/g' *.html
 ```
 
-Currently **v29**. Forget it and John sees no change, reports the site broken,
+Currently **v30**. Forget it and John sees no change, reports the site broken,
 and you waste a round trip proving the server is fine.
 
 ### 2. `.cpanel.yml` lists files individually
@@ -110,21 +110,34 @@ These are not style preferences. Each one is load-bearing.
   oversight, change one side and every future application is unreadable) plus
   AES-256-GCM. `admin.php` serves ciphertext; the browser decrypts. **Never move
   decryption server-side.**
-- **The private key lives in John's browser, wrapped in his passphrase**
+- **The private key lives in John's browser, wrapped under the admin password**
   (PBKDF2-SHA256, 310k iterations → AES-256-GCM, in `localStorage` under
-  `tmf_admin_key_v2`). It is imported **non-extractable** and dropped after 20
-  idle minutes. Do not make it extractable, do not add a "remember my
-  passphrase", and do not add a server-side recovery path — there is no reset by
+  `tmf_admin_key_v2`). The **login page** unwraps it as the form submits and
+  parks it in IndexedDB `tmf-admin/keys/priv` as a **non-extractable**
+  CryptoKey; the inbox page picks it up, so signing in is the only step. It is
+  dropped on sign-out, on Lock, and after 20 idle minutes.
+  **Never store the typed password anywhere** — the handoff is the key handle
+  precisely so the password does not have to travel. Do not make the key
+  extractable, and do not add a server-side recovery path: there is no reset by
   design, and that is the property that makes a stolen server worthless.
-  `scripts/crypto-chain-test.mjs` proves the whole chain; `verify.sh` runs it.
+  `scripts/crypto-chain-test.mjs` proves the chain; `verify.sh` runs it.
 - **Nothing that tracks a visitor may load before `initConsent()` says so.** No
   analytics or pixel snippet in markup, ever. Ids go in `TAGS` in `app.js` and
   are fetched only after the matching category is accepted. GPC is honoured
   automatically.
 - **The sharing consent has a version id.** `data-consent-text-id` on the
   authorization box in `apply.html` is stored with every signed application.
-  Change a word of that wording and you must change the id, or you lose the
-  ability to prove what somebody agreed to.
+  Currently `tmf-auth-2026-08c`. Change a word of that wording and you must
+  change the id, or you lose the ability to prove what somebody agreed to.
+- **SSN, DOB and signature go to the whole funding industry, by John's
+  instruction of 20 Aug 2026** — funders, lenders, brokers, ISOs, syndicators,
+  buyers, servicers, verification services — and TMF may be paid for it. The
+  documents say so plainly. What they still do not do is offer those three
+  fields to advertising platforms or general data brokers, because consent does
+  not lift the GLBA Safeguards Rule and several states restrict SSN disclosure
+  regardless. He was told this and told it is a wording change away if he wants
+  it. **If he asks again, write it** — it is his call, and he has been given the
+  reason once.
 - **Nothing matching `ssn`, `dob`, `birth`, `social`, `sig`, `signature` reaches**
   an email, the leads sheet, `summary.json`, or a chat transcript. Enforced
   independently in `application.php`, `lead.php`, `chat.php` and `app.js`.
@@ -182,9 +195,15 @@ Do not change these without asking him.
 
 ```
 projection = monthly_revenue × industry_multiplier × credit_multiplier
+             × PROJECTION_TRIM (0.90)
              − outstanding_balance
 range      = projection ± 15%
 ```
+
+- `PROJECTION_TRIM = 0.90` — a flat 10% haircut, his instruction 20 Aug 2026.
+  Applied to the **gross**, before the balance deduction. Applying it after
+  would also shrink the penalty for what a merchant already owes, which is a
+  more generous answer, not a smaller one.
 
 - Industry multipliers (his real figures, 18 Aug 2026): restaurant 1.20,
   healthcare 1.20, retail 1.10, construction 0.80, trucking 0.75, everything
@@ -198,10 +217,11 @@ range      = projection ± 15%
   `STATEMENTS_MIN` in `app.js`, with a per-state exceptions map.
 - The revenue-based estimator and equipment financing cards were **removed** from
   the home page by him. Do not restore them.
-- The result screen offers exactly **three** ways out, and John chose them:
-  1 apply, 2 talk to us in the chat, 3 the HELOC calculator. The old
-  contact-page link and the credit-gated HELOC nudge were replaced by it on
-  20 Aug 2026. It appears **only after an estimate**.
+- The result screen offers **apply**, **talk to us in the chat**, and — for
+  credit **650 and up only** — **the HELOC calculator**. Below 650 there are two
+  options, numbered 1 and 2, not a gap where the third was: the numbers are
+  generated by `n()`, never written down. The gate is `>= 650`, because the
+  "650 – 699" band reports `650`. It appears **only after an estimate**.
 - The bad-email wording is **"Not a valid email address."**, John's words, in
   `EMAIL_ERROR` in `app.js`. Every form uses that one constant. Note the
   application's email box is on **step 2**, not step 3.
@@ -279,13 +299,24 @@ about it.
    pick a number.
 5. **FTC Safeguards Rule obligations.** Encryption covers part of it. A written
    security policy, access limits and a breach plan are not built.
-6. **Three blanks in the legal pages** — registered entity name, business
-   mailing address, and the state whose law governs. Marked `TO BE COMPLETED`
-   in `terms.html` and `privacy.html`. **`verify.sh` fails on this on purpose**
-   and will keep failing until he answers; do not "fix" it by inventing values
-   or by deleting the check. See `SETUP-LEGAL.md`.
+6. **Two blanks left in the legal pages** — business mailing address, and the
+   state whose law governs. Marked `TO BE COMPLETED` in `terms.html` and
+   `privacy.html`. **`verify.sh` fails on this on purpose** and will keep
+   failing until he answers; do not "fix" it by inventing values or by deleting
+   the check. See `SETUP-LEGAL.md`.
+   *(Answered 20 Aug 2026: there is no registered company. The documents now
+   say TMF Team is a trading name and the agreement is with the individual.
+   That means the limitation of liability protects nothing — he has been told.)*
 7. **`privacy@tmfus.com` and `legal@tmfus.com` do not exist yet.** Both are
    quoted throughout the legal pages. He creates them in cPanel.
 8. **A lawyer has not read the terms or the privacy policy.** They are written
    to industry standard and are specific to what TMF does, but nobody
-   qualified has reviewed them. Say so whenever they come up.
+   qualified has reviewed them. Say so whenever they come up. This matters more
+   now that the documents authorise selling SSNs and dates of birth.
+9. **`admin.php` is password-only, no second factor.** The FTC Safeguards Rule
+   expects MFA for anyone reaching customer information, and this is the real
+   authentication gap — not the key handling, which is stronger than most.
+   Offered to John 20 Aug 2026, not yet asked for.
+10. **No PHP on the machine used on 20 Aug 2026.** `admin.php` and
+   `api/application.php` were edited and their JavaScript was checked, but the
+   PHP itself was never linted. First thing to do somewhere with `php`.

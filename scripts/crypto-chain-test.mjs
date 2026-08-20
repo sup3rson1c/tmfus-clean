@@ -1,9 +1,14 @@
 /* End-to-end test of the application encryption chain.
  *
- *   offline tool  ->  RSA keypair
+ *   offline tool     ->  RSA keypair
  *   application.php  ->  seals an envelope with the PUBLIC key
- *   admin.php vault  ->  wraps the PRIVATE key under a passphrase
- *   admin.php viewer ->  unwraps and decrypts the envelope
+ *   admin.php setup  ->  wraps the PRIVATE key under the admin password
+ *   admin.php login  ->  unwraps it when that password is typed
+ *   admin.php viewer ->  decrypts the envelope
+ *
+ * The one step not reproduced here is the handoff itself: the login page
+ * parks the unwrapped CryptoKey in IndexedDB and the inbox page picks it
+ * up. Node has no IndexedDB. Everything either side of that is covered.
  *
  * The PHP side is reproduced with node:crypto using exactly the
  * primitives openssl uses for OPENSSL_PKCS1_OAEP_PADDING (OAEP/SHA-1)
@@ -75,6 +80,8 @@ check('envelope carries a key_id', !!envelope.key_id);
 
 /* ---------- 3. the admin.php vault wraps the private key ---------- */
 const PBKDF2_ITER = 310000;
+// Whatever is in admin_password in api/config.php. Any string works here;
+// what is being tested is the wrapping, not the password.
 const PASS = 'correct horse battery staple';
 
 async function deriveWrapKey(passphrase, salt) {
@@ -90,16 +97,16 @@ const wIv = webcrypto.getRandomValues(new Uint8Array(12));
 const wrapped = await deriveWrapKey(PASS, salt)
   .then((wk) => subtle.encrypt({ name: 'AES-GCM', iv: wIv }, wk, pkcs8));
 const vault = { v: 2, iter: PBKDF2_ITER, salt: b64(salt), iv: b64(wIv), data: b64(wrapped) };
-check('private key wrapped under the passphrase', vault.data.length > 100);
+check('private key wrapped under the admin password', vault.data.length > 100);
 check('wrapped blob is not the key in the clear', vault.data !== b64(pkcs8));
 
 /* ---------- 4. the wrong passphrase must not open it ---------- */
 let wrongRejected = false;
 try {
-  const wk = await deriveWrapKey('the wrong passphrase', unb64(vault.salt));
+  const wk = await deriveWrapKey('the wrong password', unb64(vault.salt));
   await subtle.decrypt({ name: 'AES-GCM', iv: unb64(vault.iv) }, wk, unb64(vault.data));
 } catch (_) { wrongRejected = true; }
-check('a wrong passphrase is rejected', wrongRejected);
+check('a wrong admin password unwraps nothing', wrongRejected);
 
 /* ---------- 5. unlock, then open the application ---------- */
 const wk = await deriveWrapKey(PASS, unb64(vault.salt));

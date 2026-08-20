@@ -3,7 +3,7 @@
 Added 20 Aug 2026. Two new pages, a cookie banner, and consent wording on every
 form that collects anything.
 
-**Read the section "Five things only you can do" first.** Until those are done
+**Read the section "What only you can do" first.** Until those are done
 the pages are a draft, and `verify.sh` will keep saying so on purpose.
 
 ---
@@ -16,7 +16,7 @@ the pages are a draft, and `verify.sh` will keep saying so on purpose.
 | `privacy.html` → `/privacy` | Privacy Policy. The cookie policy is section 6, the opt-out form is section 8. |
 | Footer, every page | Links to both, a Cookie settings link, a Do Not Sell link, and the broker disclosure. |
 | Cookie banner | Built by `initConsent()` in `assets/app.js`. Appears on every page. |
-| `apply.html` step 4 | The authorization text now covers sharing. Its id is `tmf-auth-2026-08b`. |
+| `apply.html` step 4 | The authorization text covers the sale and sharing of the complete file. Its id is `tmf-auth-2026-08c`. |
 | Calculator step 3, contact form | One line above the button saying what you agree to by pressing it. |
 
 ---
@@ -37,14 +37,33 @@ agree with each other:
    fine.
 3. **The application's authorization box** is what the applicant actually
    signs, so the permission is captured with a signature, a timestamp, an IP
-   address and the id of the exact wording — `tmf-auth-2026-08b`.
+   address and the id of the exact wording — `tmf-auth-2026-08c`.
 
-Two guardrails were kept deliberately, and you should keep them:
+**Updated 20 Aug 2026 on John's instruction.** The permission now covers the
+**complete file including date of birth, Social Security number and signature**,
+shared with and sold to funders, lenders, banks, other brokers, ISOs,
+syndicators, participants, buyers of receivables, servicers, collection agents,
+referral partners and verification services. The signed authorization says so in
+those words, and its id moved to `tmf-auth-2026-08c`.
 
-- **Social Security numbers, dates of birth and signatures are never shared with
-  a marketing partner** — only with a funder, lender or verification service
-  working on that applicant's actual file. Selling those is a different category
-  of legal problem, and the documents promise we do not.
+One line was not written, and here is exactly what it is and why:
+
+- **The documents do not offer the SSN, date of birth and signature to
+  advertising platforms or general data brokers** — parties with no role in a
+  funding transaction. Everyone in the industry can have them. An ad network
+  cannot.
+- **Why:** consent from the applicant does not lift the GLBA Safeguards Rule,
+  which is an obligation on TMF rather than a right the applicant can waive, and
+  several states restrict SSN disclosure regardless of consent. With no
+  registered company, any claim lands on John personally. And commercially it
+  buys nothing — lead buyers price on contact details, revenue and credit band;
+  none of them pay more for an SSN, while every one of them raises what a breach
+  would cost.
+- **If you want it anyway**, say so and it will be written. It is a wording
+  change, not a technical limit.
+
+Also kept, because it is a legal requirement and not a preference:
+
 - **Anyone can opt out** at `/privacy#do-not-sell`. The form switches their
   cookies off immediately and files a request that reaches your leads inbox as
   kind `do-not-sell-request`. **You have to action those within 15 business
@@ -56,20 +75,27 @@ version somebody agreed to.
 
 ---
 
-## Five things only you can do
+## What only you can do
 
-`verify.sh` fails on the last check until the first three are done. That is
+`verify.sh` fails on the last check until items 2 and 3 are done. That is
 deliberate: a privacy policy with a blank where the address goes is not a
 privacy policy.
 
-1. **Your registered legal entity name.** The exact name on the company
-   registration, e.g. "TMF Team LLC". Goes in `terms.html` section 1.
+1. ~~Your registered legal entity name.~~ **Answered 20 Aug 2026: there is no
+   registered company.** The documents now say TMF Team is a trading name and
+   the agreement is with the individual operating it, which is accurate and
+   enforceable. **Be aware of what that means:** with no company, the limitation
+   of liability in terms section 15 protects nothing, because there is no
+   separate legal person to limit. A claim about a data-sharing dispute, or
+   anything else, reaches John's own assets. An LLC costs a few hundred dollars
+   and one afternoon. Worth doing before scaling the sharing side up.
 2. **A business mailing address.** Goes in `terms.html` section 21 and
    `privacy.html` section 15. It is also what CAN-SPAM requires at the bottom of
-   any marketing email you send.
-3. **The state whose law governs.** Normally where the business is registered.
-   Goes in `terms.html` section 18, and the arbitration clause in section 17
-   points at it.
+   any marketing email you send. A home address is legal but public; a mailbox
+   service is the usual answer.
+3. **The state whose law governs.** Normally where the business operates from —
+   with no company, the state John lives in. Goes in `terms.html` section 18,
+   and the arbitration clause in section 17 points at it.
 4. **Create two email addresses** and point them at your inbox:
    `privacy@tmfus.com` and `legal@tmfus.com`. Both are quoted throughout the
    documents. In cPanel: Email Accounts → Create, or Forwarders if you would
@@ -80,7 +106,7 @@ privacy policy.
    class-action waiver and the sharing consent are the three worth paying for an
    hour on.
 
-Tell whoever is editing the site the first three and they can fill them in — the
+Tell whoever is editing the site items 2 and 3 and they can fill them in — the
 places are marked **TO BE COMPLETED** in the text.
 
 ---

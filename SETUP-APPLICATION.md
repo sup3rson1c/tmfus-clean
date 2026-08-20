@@ -59,8 +59,8 @@ does not appear anywhere in plaintext.
 
 `scripts/crypto-chain-test.mjs` re-runs the whole chain — seal an envelope the
 way `application.php` does, wrap a private key the way `admin.php` does, unlock
-it with a passphrase, decrypt — and `verify.sh` runs it. If you change anything
-in the chain, that test tells you before an applicant does.
+it with the admin password, decrypt — and `verify.sh` runs it. If you change
+anything in the chain, that test tells you before an applicant does.
 
 Each sealed envelope also carries a `key_id`, a short code derived from the
 **public** key. It is not a secret. It exists because the only failure that has
@@ -171,67 +171,83 @@ Then go to **https://tmfus.com/admin.php** and sign in. You get every
 application and every calculator or contact submission in one list, searchable,
 newest first. Click an application to read it in full.
 
-**You unlock it with a passphrase, not a file.** The server hands your browser
-the sealed file and your browser opens it. The key never leaves your machine,
-and the server could not read an application if it wanted to. Without unlocking
-you can still see who applied, when, and download their bank statements — you
-just cannot see the encrypted half.
+**Signing in is the only step.** Type your admin password, and every
+application is readable. There is no second password and nothing to click.
+
+The server still hands your browser the sealed file and your browser opens it.
+The key never goes to the server, and the server could not read an application
+if it wanted to.
 
 #### Setting up a computer, the first time only
 
 Do this once on each computer you want to read applications on.
 
 1. Sign in at **https://tmfus.com/admin.php**.
-2. Click **Unlock** at the top right.
-3. Click **Choose your private key file** and pick your
-   `tmf-private-key.pem`. You should see: *Key file read ✓*.
-4. Type a passphrase in both boxes. Use **four unrelated words**, like
-   `copper-window-lemon-train`. It must be at least 12 characters.
-5. Click **Remember this key on this computer**.
+2. A box appears saying *Set this computer up, once*.
+3. Click **Choose your private key file** and pick your `tmf-private-key.pem`.
+   You should see: *Key file read ✓*.
+4. Click **Remember this key on this computer**.
+5. It asks for your admin password one time. Type it and press OK.
 6. The label at the top right should now say **Unlocked**.
 
 Now put the key file somewhere safe and offline — a USB stick in a drawer, or a
-password manager. **Take it out of your Downloads folder.** You do not need it
-again on this computer.
+password manager. **Take it out of your Downloads folder.**
 
 #### Every time after that
 
 1. Sign in at **https://tmfus.com/admin.php**.
-2. Click **Unlock**, type your passphrase, press Enter.
-3. Open any application.
+2. Open any application.
 
-It re-locks itself after 20 minutes with nothing happening, and whenever you
-close the page.
+That is the whole of it. It re-locks after 20 minutes with nothing happening,
+and when you sign out.
 
-#### The three buttons you might need
+#### The buttons you might need
 
-- **Forget the key on this computer** — removes the stored key from that
+- **Show** — Social Security numbers and dates of birth stay covered until you
+  click Show, so nobody reads one over your shoulder. Printing uncovers them
+  automatically.
+- **Lock** (top right) — closes everything without signing out.
+- **Set up / unlock** (top right, when locked) — opens the setup box.
+- **Forget the key stored on this computer** — removes the key from that
   browser. Use it on a computer you are giving up. Nothing on the server changes
   and no application is lost.
 - **Just use the file this once** — for somebody else's computer, where storing
   the key would be the wrong thing to do.
-- **Show** — Social Security numbers and dates of birth stay covered until you
-  click Show, so nobody reads one over your shoulder. Printing uncovers them
-  automatically.
 
-#### What happens if you forget the passphrase
+#### If you change your admin password
 
-Nothing is lost, as long as you still have the key file. Click **Forget the key
-on this computer**, then set it up again from step 3 above with a new
-passphrase.
+The key on each computer is scrambled with the old password, so it will not
+open any more. The page tells you so and asks for your key file again. Redo
+steps 3 to 5 above on each computer. Nothing is lost.
 
-**If you lose the key file as well, every application already received becomes
-permanently unreadable.** Nobody can recover it — not TMF, not the host, not
+**This is the one reason to keep the key file.** If you lose the key file *and*
+change your admin password, every application already received becomes
+permanently unreadable. Nobody can recover it — not TMF, not the host, not
 Anthropic. That is the same property that makes a stolen server useless to a
-thief. Keep a second copy of the key file somewhere safe.
+thief.
 
-#### Why this is better than loading the file every time
+#### How one password can do both jobs
 
-The old way meant finding `tmf-private-key.pem` on every visit, which in
-practice means it lives in Downloads for ever — the one place it must not be.
-Now the key sits in your browser, scrambled with your passphrase (PBKDF2 at
-310,000 rounds, then AES-256-GCM), and the file goes back in the safe. The
-server still never sees it, which was the whole point and has not changed.
+When you set a computer up, the private key is scrambled using your admin
+password (PBKDF2 at 310,000 rounds, then AES-256-GCM) and kept in that browser.
+When you sign in, the login page unscrambles it right there, before the page
+even submits, and hands the opened key to the inbox page.
+
+Your password is never stored anywhere. What gets handed over is the opened key
+in a form the browser will use for decryption but **will not hand back as
+readable bytes** — not to the page, not to anything. That was tested in a real
+browser, not assumed.
+
+**The honest trade-off:** the server does see your password when you sign in,
+because that is how signing in works. It does not see the scrambled key, which
+never leaves your computer. An attacker needs both, from two different places.
+The alternative — putting the private key on the server — would mean one
+break-in hands over every Social Security number TMF holds. That is why it is
+done this way.
+
+**The real gap, and it is not this one:** `admin.php` has a password and no
+second factor. The FTC Safeguards Rule expects multi-factor authentication for
+anyone reaching customer information. Worth fixing; ask when you want it.
 
 There is a Print / PDF button for sending a file to a funder, and the leads tab
 has a one-click CSV download for the month.

@@ -311,7 +311,7 @@ todo=$(grep -l 'TO BE COMPLETED' ./*.html | tr '\n' ' ')
 if [ -z "$todo" ]; then
   pass "no unfilled placeholders left in the legal pages"
 else
-  fail "still to be filled in by John: $todo (entity name, mailing address, governing-law state)"
+  fail "still to be filled in by John: $todo (mailing address, governing-law state)"
 fi
 
 # ---------------------------------------------------------------

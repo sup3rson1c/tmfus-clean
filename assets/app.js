@@ -766,6 +766,16 @@
      1.0 = the full balance. */
   const BALANCE_DEDUCTION_RATE = 1.0;
 
+  /* A flat haircut on the projection. John's instruction, 20 Aug 2026:
+     "lower the calculator projections by 10 percent". 0.90 = 10% lower.
+
+     It is applied to the GROSS figure, before the outstanding balance is
+     subtracted. Applying it afterwards would also shrink the effect of what
+     the merchant already owes by 10%, which does not produce a smaller
+     projection — it produces a more forgiving one, the opposite of the
+     intent. To change the haircut later, change only this number. */
+  const PROJECTION_TRIM = 0.90;
+
   /* Half-width of the quoted range, as a fraction of the projection.
      0.15 means the range is projection -15% to +15%, so high is always
      about 1.35x low. Previously low and high came from two separate
@@ -788,6 +798,7 @@
   /* Projection =  monthly revenue
                    x industry multiplier
                    x credit multiplier
+                   x PROJECTION_TRIM
                    - outstanding balance x BALANCE_DEDUCTION_RATE
      then widened to a +/- RANGE_SPREAD band. Capped at 500k, floored at 0. */
   function estimateAdvance(profile) {
@@ -804,7 +815,7 @@
     const balance = profile.balance || 0;
     const deduction = balance * BALANCE_DEDUCTION_RATE;
 
-    let base = Math.min(rev * ind * creditMult, 500000) - deduction;
+    let base = Math.min(rev * ind * creditMult * PROJECTION_TRIM, 500000) - deduction;
     base = Math.max(0, base);
 
     const low = Math.max(0, base * (1 - RANGE_SPREAD));
@@ -1022,6 +1033,21 @@
       'and I can bring a funding advisor into this conversation whenever you want one.'
     );
 
+    /* The third option is only offered from 650 up. A HELOC is priced off
+       the personal credit score, so pointing someone at 580 to it wastes
+       their time and ours.
+
+       >= not >: the "650 - 699" band reports 650, so > silently excluded
+       the whole band. That bug has been fixed once already — leave it.
+
+       When it is not offered the merchant sees two options, not a gap
+       where the third was, so the numbers are generated rather than
+       written down. */
+    const creditForHeloc = profile.credit == null ? 0 : profile.credit;
+    const showHeloc = creditForHeloc >= 650;
+    let optionNo = 0;
+    const n = () => ++optionNo;
+
     card.innerHTML = `
       <div class="calc-head">
         <span class="calc-kicker eyebrow">Your result</span>
@@ -1059,7 +1085,7 @@
         <span class="mono-label">Where would you like to go from here?</span>
 
         <a class="decision-opt is-primary" href="/apply">
-          <span class="decision-n">1</span>
+          <span class="decision-n">${n()}</span>
           <span class="decision-txt">
             <b>Apply now</b>
             <span>Do you like the numbers? Start the application — about ten minutes.</span>
@@ -1068,7 +1094,7 @@
         </a>
 
         <button class="decision-opt" type="button" data-open-chat="${chatGreeting}">
-          <span class="decision-n">2</span>
+          <span class="decision-n">${n()}</span>
           <span class="decision-txt">
             <b>I am not sure yet — talk with us</b>
             <span>Opens the chat here on this page. Ask anything; an advisor can join it.</span>
@@ -1076,14 +1102,15 @@
           <span class="icon">&rarr;</span>
         </button>
 
+        ${showHeloc ? `
         <a class="decision-opt" href="/heloc-calculator">
-          <span class="decision-n">3</span>
+          <span class="decision-n">${n()}</span>
           <span class="decision-txt">
             <b>Looking for more?</b>
             <span>Try our HELOC calculator — up to $750K against the equity in your home.</span>
           </span>
           <span class="icon">&rarr;</span>
-        </a>
+        </a>` : ''}
       </div>
     `;
     card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
