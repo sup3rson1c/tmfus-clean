@@ -1,0 +1,63 @@
+# tmfus.com
+#
+# AI crawlers are deliberately allowed. TMF wants to be quoted when a
+# business owner asks an assistant how funding works — that only happens
+# if these bots can read the site. If you ever want to shut one out, add
+# a Disallow under its name rather than blocking everything.
+
+User-agent: *
+Allow: /
+Disallow: /admin.php
+Disallow: /api/
+
+# Answer engines. Blocking these is the single easiest way to become
+# invisible in AI answers, so they are listed explicitly to make the
+# decision visible rather than accidental.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# The plain-text summary written for language models. Not a standard,
+# but ChatGPT, Claude and Perplexity all fetch it when it exists, and it
+# is the cheapest way to control how TMF Team gets described.
+# https://tmfus.com/llms.txt
+
+Sitemap: https://tmfus.com/sitemap.xml

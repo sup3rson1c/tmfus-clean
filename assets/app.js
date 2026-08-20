@@ -13,6 +13,14 @@
     '$' + Number(Math.max(0, Math.round(n * 10 ** dp) / 10 ** dp))
       .toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
+  /* For text that is going into an HTML attribute in a template literal.
+     Nothing here comes from a stranger today, but a result string that
+     later picks up a user-entered value must not be able to close the
+     attribute and start a tag. */
+  const attrEscape = (s) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
   /* =========================================================
      LEAD CAPTURE
 
@@ -52,11 +60,16 @@
       page: location.pathname,
       submittedAt: new Date().toISOString(),
       referrer: document.referrer || '',
-      data: data
+      // Campaign tags first, so a real form field always wins a name clash.
+      data: Object.assign({}, attributionForLead(), data)
     });
 
     // Remember what we can, so the applicant does not retype it later.
-    try { rememberVisitor(data); } catch (_) {}
+    // Not from the opt-out form: writing someone's email onto their device
+    // at the exact moment they ask us to stop is the wrong instinct.
+    if (kind !== 'do-not-sell-request') {
+      try { rememberVisitor(data); } catch (_) {}
+    }
 
     // Our own store first. This is the copy that matters, and it is the
     // only one whose success we can actually observe.
@@ -147,6 +160,8 @@
       if (!el || !el.getAttribute) return;
       const key = el.getAttribute('data-field') || el.getAttribute('data-fg');
       if (!key || typeof el.value !== 'string') return;
+      // Same reason: nothing typed into the opt-out form is remembered.
+      if (el.closest && el.closest('[data-no-remember]')) return;
       const patch = {};
       patch[key] = el.value;
       try { rememberVisitor(patch); } catch (_) {}
@@ -935,7 +950,7 @@
         if (phone.length > 0 && phone.length < 10) {
           return 'That phone number looks incomplete — leave it blank or enter 10 digits.';
         }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return 'Enter a valid email address.';
+        if (!isEmail(email)) return EMAIL_ERROR;
       }
       return null;
     };
@@ -968,6 +983,18 @@
       }
     });
 
+    // Same immediate feedback on step 3 as the application gives.
+    root.addEventListener('focusout', (e) => {
+      const el = e.target;
+      if (!el || !el.getAttribute || el.getAttribute('data-field') !== 'email') return;
+      const val = (el.value || '').trim();
+      if (val && !isEmail(val)) {
+        if (errEl) errEl.textContent = EMAIL_ERROR;
+      } else if (errEl && errEl.textContent === EMAIL_ERROR) {
+        errEl.textContent = '';
+      }
+    });
+
     // phone formatting
     const phone = root.querySelector('[data-field="phone"]');
     if (phone) {
@@ -984,11 +1011,16 @@
     const est = estimateAdvance(profile);
     const card = root.closest('.panel') || root;
 
-    // Merchants with decent credit have a second route worth showing, whether
-    // they want more than the advance covers or the balance ruled them out.
-    // >= not >: the "650 - 699" band reports 650, so > silently excluded it.
-    const creditForHeloc = profile.credit == null ? 0 : profile.credit;
-    const showHeloc = creditForHeloc >= 650;
+    /* The opening line the advisor's chat shows if they pick option 2. It
+       carries the result across, so the merchant does not have to explain
+       what they just did. Escaped: it is going into an HTML attribute. */
+    const range = est && est.viable !== false ? usd(est.low) + ' – ' + usd(est.high) : '';
+    const chatGreeting = attrEscape(
+      'You have just run the cash injection calculator' +
+      (range ? ' and it projected ' + range + '.' : '.') +
+      ' Ask me anything about that number, what it would cost, or what we need from you — ' +
+      'and I can bring a funding advisor into this conversation whenever you want one.'
+    );
 
     card.innerHTML = `
       <div class="calc-head">
@@ -1023,15 +1055,35 @@
         can land above or below this range.
       </p>
 
-      ${showHeloc ? `
-      <a class="heloc-nudge" href="heloc-calculator.html">
-        <span class="heloc-nudge-k">Looking for more, or over leveraged?</span>
-        <span class="heloc-nudge-v">Try our HELOC calculator <span class="icon">&rarr;</span></span>
-      </a>` : ''}
+      <div class="decision">
+        <span class="mono-label">Where would you like to go from here?</span>
 
-      <div class="result-actions">
-        <a class="btn btn-primary btn-block" href="apply.html">Do you like the numbers? Start an application <span class="icon">&rarr;</span></a>
-        <a class="btn btn-ghost btn-block" href="contact.html">Not sure? Any question? Talk to an advisor</a>
+        <a class="decision-opt is-primary" href="/apply">
+          <span class="decision-n">1</span>
+          <span class="decision-txt">
+            <b>Apply now</b>
+            <span>Do you like the numbers? Start the application — about ten minutes.</span>
+          </span>
+          <span class="icon">&rarr;</span>
+        </a>
+
+        <button class="decision-opt" type="button" data-open-chat="${chatGreeting}">
+          <span class="decision-n">2</span>
+          <span class="decision-txt">
+            <b>I am not sure yet — talk with us</b>
+            <span>Opens the chat here on this page. Ask anything; an advisor can join it.</span>
+          </span>
+          <span class="icon">&rarr;</span>
+        </button>
+
+        <a class="decision-opt" href="/heloc-calculator">
+          <span class="decision-n">3</span>
+          <span class="decision-txt">
+            <b>Looking for more?</b>
+            <span>Try our HELOC calculator — up to $750K against the equity in your home.</span>
+          </span>
+          <span class="icon">&rarr;</span>
+        </a>
       </div>
     `;
     card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
@@ -1216,8 +1268,8 @@
       e.preventDefault();
       const err = $('.err', form);
       const email = form.querySelector('[data-field="email"]').value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-        if (err) err.textContent = 'Enter a valid email address.';
+      if (!isEmail(email)) {
+        if (err) err.textContent = EMAIL_ERROR;
         return;
       }
       const panel = (title, body) =>
@@ -1240,6 +1292,48 @@
             'Your message was not sent. Please reach us directly in the meantime — ' +
             'we don\'t want your enquiry to go missing.'
           );
+        }
+      );
+    });
+  }
+
+  /* ---------------------------------------------------------
+     14a. Do Not Sell or Share — the opt-out form on /privacy
+
+     Two things happen, in this order and on purpose. The browser-level
+     half is done first and unconditionally, because it is free, instant
+     and entirely within our control. The request to stop it everywhere
+     else has to reach the server, and if it does not, the visitor is
+     told to email rather than shown a receipt for nothing.
+     --------------------------------------------------------- */
+  function initOptOut() {
+    const form = $('[data-optout-form]');
+    if (!form) return;
+    const err = $('[data-err]', form);
+    const done = $('[data-optout-done]');
+    const btn = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = (form.querySelector('[data-field="email"]').value || '').trim();
+      if (!isEmail(email)) { if (err) err.textContent = EMAIL_ERROR; return; }
+      if (err) err.textContent = '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+      saveConsent({ analytics: false, marketing: false });
+
+      sendLead('do-not-sell-request', collectFields(form)).then(
+        () => {
+          form.hidden = true;
+          if (done) done.hidden = false;
+        },
+        () => {
+          if (btn) { btn.disabled = false; btn.textContent = 'Send my request'; }
+          if (err) {
+            err.textContent = 'That did not send. Please email privacy@tmfus.com instead — ' +
+              'we will action it by hand. Your cookie settings on this browser have been ' +
+              'switched off either way.';
+          }
         }
       );
     });
@@ -1476,7 +1570,18 @@
                          : d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d; }
   };
 
-  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
+  /* One wording for a bad email address, used by the application, both
+     calculators and the contact form. John asked for this exact sentence;
+     if it changes, change it here and it changes everywhere.
+
+     The pattern is stricter than the old one on the things people actually
+     mistype: a domain cannot contain "..", cannot start or end a label with
+     a hyphen, and must end in a real letters-only suffix. "jane@gmail" and
+     "jane@gmail..com" are now caught rather than accepted. */
+  const EMAIL_ERROR = 'Not a valid email address.';
+  const EMAIL_RE =
+    /^[A-Za-z0-9._%+-]+@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
+  const isEmail = (v) => EMAIL_RE.test(String(v == null ? '' : v).trim());
   const isFullDate = (v) => {
     const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(v);
     if (!m) return false;
@@ -1559,6 +1664,24 @@
     });
     form.addEventListener('change', (e) => {
       if (e.target.classList) e.target.classList.remove('invalid');
+    });
+
+    /* Say so the moment they leave the email box, rather than making them
+       press Continue to find out. An empty box is left alone — that is the
+       required-field check's job, and complaining about a field someone has
+       only tabbed through is noise. */
+    form.addEventListener('focusout', (e) => {
+      const el = e.target;
+      if (!el || !el.getAttribute || el.getAttribute('data-field') !== 'email') return;
+      const val = (el.value || '').trim();
+      const pane = el.closest('[data-pane]');
+      const err = pane ? $('[data-err]', pane) : null;
+      if (val && !isEmail(val)) {
+        el.classList.add('invalid');
+        if (err) err.textContent = EMAIL_ERROR;
+      } else if (err && err.textContent === EMAIL_ERROR) {
+        err.textContent = '';
+      }
     });
 
     /* ---- co-owner toggle ---- */
@@ -1705,7 +1828,7 @@
         const name = label ? label.textContent.replace(' *', '').trim() : 'this field';
 
         if (!optional && el.type !== 'checkbox' && !val) return fail(el, 'Please fill in ' + name.toLowerCase() + '.');
-        if (key === 'email' && !isEmail(val)) return fail(el, 'That email address does not look right.');
+        if (key === 'email' && !isEmail(val)) return fail(el, EMAIL_ERROR);
         if (key === 'phone' && val.replace(/\D/g, '').length !== 10) return fail(el, 'Please enter a 10-digit phone number.');
         if (key === 'ein' && val.replace(/\D/g, '').length !== 9) return fail(el, 'An EIN is nine digits.');
         if (el.dataset.mask === 'ssn' && val.replace(/\D/g, '').length !== 9) return fail(el, 'A Social Security number is nine digits.');
@@ -1955,6 +2078,325 @@
       hero.style.setProperty('--sx', ((e.clientX - r.left) / r.width) * 100 + '%');
       hero.style.setProperty('--sy', ((e.clientY - r.top) / r.height) * 100 + '%');
     });
+  }
+
+  /* =========================================================
+     COOKIES AND CONSENT
+
+     Built in JS rather than markup for the same reason the chat widget
+     is: it has to appear on every page, and nine copies of the same
+     banner is nine places to forget to change.
+
+     THE RULE THIS ENFORCES
+     Nothing that tracks anybody loads until the visitor has said yes.
+     "Necessary" is the only category that runs without being asked, and
+     it is genuinely necessary — the consent record itself, the chat
+     session id, and the answers someone typed into a calculator.
+
+     WHERE THE CHOICE LIVES
+     A first-party cookie, so it survives across pages and visits, plus
+     localStorage as a fallback for browsers that refuse the cookie.
+
+     GLOBAL PRIVACY CONTROL
+     If the browser sends a GPC signal, California law treats that as an
+     instruction not to sell or share. It is honoured without asking:
+     analytics and advertising are recorded as off and the banner is not
+     shown. The visitor can still turn them on by hand from the Cookie
+     settings link in the footer.
+
+     TO ADD A TAG LATER
+     Put the id in TAGS below. Nothing else needs changing — the loader
+     only ever runs from applyConsent(), which only runs after a yes.
+     ========================================================= */
+  const CONSENT_COOKIE  = 'tmf_consent';
+  const CONSENT_VERSION = 1;
+  const CONSENT_DAYS    = 365;
+  const ATTR_COOKIE     = 'tmf_attr';
+  const ATTR_DAYS       = 390;          // browsers cap script-set cookies near 400
+
+  /* Empty on purpose. A measurement id here is fetched ONLY after the
+     visitor accepts the matching category — never on page load. */
+  const TAGS = { ga4: '', metaPixel: '' };
+
+  /* The click ids and campaign tags worth keeping. Everything here is
+     campaign metadata, not personal data — no name, email or phone ever
+     goes into a cookie. */
+  const ATTR_PARAMS = [
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid'
+  ];
+
+  /* ---- cookie plumbing ---- */
+  function readCookie(name) {
+    const parts = ('; ' + document.cookie).split('; ' + name + '=');
+    if (parts.length !== 2) return '';
+    try { return decodeURIComponent(parts.pop().split(';').shift()); } catch (_) { return ''; }
+  }
+
+  function writeCookie(name, value, days) {
+    const exp = new Date(Date.now() + days * 86400000).toUTCString();
+    // Secure only over https, or the cookie is silently dropped on a local
+    // php -S run and every consent test looks broken for the wrong reason.
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = name + '=' + encodeURIComponent(value) +
+      '; Expires=' + exp + '; Path=/; SameSite=Lax' + secure;
+  }
+
+  function eraseCookie(name) {
+    document.cookie = name + '=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; SameSite=Lax';
+  }
+
+  const gpcOn = () => navigator.globalPrivacyControl === true ||
+                      navigator.globalPrivacyControl === 'true';
+
+  /* ---- the record of what they chose ---- */
+  function readConsent() {
+    let raw = readCookie(CONSENT_COOKIE);
+    if (!raw) { try { raw = localStorage.getItem(CONSENT_COOKIE) || ''; } catch (_) {} }
+    if (!raw) return null;
+    try {
+      const c = JSON.parse(raw);
+      if (!c || c.v !== CONSENT_VERSION) return null;   // wording changed, ask again
+      return c;
+    } catch (_) { return null; }
+  }
+
+  function saveConsent(prefs) {
+    const record = {
+      v: CONSENT_VERSION,
+      analytics: !!prefs.analytics,
+      marketing: !!prefs.marketing,
+      gpc: gpcOn(),
+      at: new Date().toISOString()
+    };
+    const raw = JSON.stringify(record);
+    writeCookie(CONSENT_COOKIE, raw, CONSENT_DAYS);
+    try { localStorage.setItem(CONSENT_COOKIE, raw); } catch (_) {}
+    applyConsent(record);
+    document.dispatchEvent(new CustomEvent('tmf:consent', { detail: record }));
+    return record;
+  }
+
+  const consentAllows = (category) => {
+    const c = readConsent();
+    return !!(c && c[category]);
+  };
+  // Readable from the console and from any page script added later.
+  window.tmfConsentAllows = consentAllows;
+
+  /* ---- what consent actually switches on ---- */
+  let tagsLoaded = false;
+
+  function applyConsent(c) {
+    if (c.analytics) {
+      captureAttribution(true);
+      if (TAGS.ga4 && !tagsLoaded) loadGa4(TAGS.ga4);
+    } else {
+      // Withdrawn means gone, not merely unused.
+      eraseCookie(ATTR_COOKIE);
+    }
+    if (c.marketing && TAGS.metaPixel && !tagsLoaded) loadMetaPixel(TAGS.metaPixel);
+    if ((c.analytics && TAGS.ga4) || (c.marketing && TAGS.metaPixel)) tagsLoaded = true;
+  }
+
+  function loadGa4(id) {
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function () { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('consent', 'default', {
+      ad_storage:         consentAllows('marketing') ? 'granted' : 'denied',
+      ad_user_data:       consentAllows('marketing') ? 'granted' : 'denied',
+      ad_personalization: consentAllows('marketing') ? 'granted' : 'denied',
+      analytics_storage:  'granted'
+    });
+    window.gtag('config', id, { anonymize_ip: true });
+  }
+
+  function loadMetaPixel(id) {
+    (function (f, b, e, v) {
+      if (f.fbq) return;
+      const n = f.fbq = function () {
+        n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+      };
+      if (!f._fbq) f._fbq = n;
+      n.push = n; n.loaded = true; n.version = '2.0'; n.queue = [];
+      const t = b.createElement(e);
+      t.async = true;
+      t.src = v;
+      const s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s);
+    }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js'));
+    window.fbq('init', id);
+    window.fbq('track', 'PageView');
+  }
+
+  /* =========================================================
+     WHERE THE VISITOR CAME FROM
+
+     First touch is the campaign that found them and is usually worth
+     more than the last one; last touch is the campaign that brought
+     them back to convert. Both are kept. Neither is personal data —
+     these are campaign tags, and the durable cookie only exists once
+     analytics has been accepted.
+     ========================================================= */
+  function currentTouch() {
+    const q = new URLSearchParams(location.search);
+    const t = {};
+    ATTR_PARAMS.forEach((k) => {
+      const v = q.get(k);
+      if (v) t[k] = v.slice(0, 120);
+    });
+    const ref = document.referrer || '';
+    if (ref && ref.indexOf(location.host) === -1) {
+      t.referrer = ref.slice(0, 200);
+      try { t.referrer_domain = new URL(ref).hostname; } catch (_) {}
+    }
+    if (Object.keys(t).length) {
+      t.landing_page = (location.pathname + location.search).slice(0, 200);
+      t.seen = new Date().toISOString();
+    }
+    return t;
+  }
+
+  function captureAttribution(store) {
+    const touch = currentTouch();
+
+    // Last touch is per-visit and stays in the tab, not in a cookie.
+    if (Object.keys(touch).length) {
+      try { sessionStorage.setItem('tmf_last_touch', JSON.stringify(touch)); } catch (_) {}
+    }
+
+    if (!store || !Object.keys(touch).length) return;
+    if (readCookie(ATTR_COOKIE)) return;        // first touch is written once
+    writeCookie(ATTR_COOKIE, JSON.stringify(touch), ATTR_DAYS);
+  }
+
+  /* Flattened onto the submission the visitor is sending anyway, so an
+     advisor opening a lead can see which campaign produced it. */
+  function attributionForLead() {
+    const out = {};
+    const add = (obj, prefix) => {
+      if (!obj) return;
+      Object.keys(obj).forEach((k) => {
+        const v = obj[k];
+        if (typeof v === 'string' && v) out[prefix + k] = v.slice(0, 200);
+      });
+    };
+
+    let last = null;
+    try { last = JSON.parse(sessionStorage.getItem('tmf_last_touch') || 'null'); } catch (_) {}
+    add(last || currentTouch(), '');
+
+    if (consentAllows('analytics')) {
+      let first = null;
+      try { first = JSON.parse(readCookie(ATTR_COOKIE) || 'null'); } catch (_) {}
+      if (first) add(first, 'first_');
+    }
+    return out;
+  }
+
+  /* ---- the banner ---- */
+  function initConsent() {
+    if ($('[data-cookie-bar]')) return;
+
+    const existing = readConsent();
+
+    // A GPC browser has already answered. Record it, honour it, say nothing.
+    if (!existing && gpcOn()) {
+      saveConsent({ analytics: false, marketing: false });
+    } else if (existing) {
+      applyConsent(existing);
+    }
+
+    const bar = document.createElement('div');
+    bar.className = 'cookie-bar';
+    bar.setAttribute('data-cookie-bar', '');
+    bar.setAttribute('role', 'dialog');
+    bar.setAttribute('aria-label', 'Cookie choices');
+    bar.innerHTML =
+      '<div class="cookie-copy">' +
+        '<b>Cookies on tmfus.com</b>' +
+        '<p>Some are needed to make the site work — your chat session, the answers you type ' +
+          'into a calculator, and this choice itself. The rest tell us which pages and ads bring ' +
+          'business owners here, and let us show you our own ads elsewhere. You decide. ' +
+          '<a href="/privacy#cookies">Cookie policy</a></p>' +
+      '</div>' +
+      '<div class="cookie-opts" data-cookie-opts hidden>' +
+        '<label class="cookie-opt"><input type="checkbox" checked disabled>' +
+          '<span><b>Necessary</b>Always on. The site does not work without these.</span></label>' +
+        '<label class="cookie-opt"><input type="checkbox" data-cookie-cat="analytics">' +
+          '<span><b>Analytics</b>Which pages get read, and which campaigns bring people here.</span></label>' +
+        '<label class="cookie-opt"><input type="checkbox" data-cookie-cat="marketing">' +
+          '<span><b>Advertising</b>Lets us and our advertising partners show you our ads on other sites.</span></label>' +
+      '</div>' +
+      '<div class="cookie-btns">' +
+        '<button class="btn btn-primary btn-sm" type="button" data-cookie="all">Accept all</button>' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-cookie="essential">Reject non-essential</button>' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-cookie="choose">Choose</button>' +
+        '<button class="btn btn-primary btn-sm" type="button" data-cookie="save" hidden>Save my choices</button>' +
+      '</div>';
+
+    document.body.appendChild(bar);
+
+    const opts = $('[data-cookie-opts]', bar);
+    const saveBtn = bar.querySelector('[data-cookie="save"]');
+    const chooseBtn = bar.querySelector('[data-cookie="choose"]');
+
+    const openBar = () => {
+      const c = readConsent();
+      $$('[data-cookie-cat]', bar).forEach((box) => {
+        box.checked = !!(c && c[box.getAttribute('data-cookie-cat')]);
+      });
+      bar.classList.add('open');
+    };
+    const closeBar = () => bar.classList.remove('open');
+
+    const showOptions = (on) => {
+      opts.hidden = !on;
+      saveBtn.hidden = !on;
+      chooseBtn.hidden = on;
+    };
+
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cookie]');
+      if (!btn) return;
+      const what = btn.getAttribute('data-cookie');
+
+      if (what === 'choose')    { showOptions(true); return; }
+      if (what === 'all')       { saveConsent({ analytics: true,  marketing: true  }); closeBar(); return; }
+      if (what === 'essential') { saveConsent({ analytics: false, marketing: false }); closeBar(); return; }
+      if (what === 'save') {
+        const picked = {};
+        $$('[data-cookie-cat]', bar).forEach((box) => {
+          picked[box.getAttribute('data-cookie-cat')] = box.checked;
+        });
+        saveConsent(picked);
+        closeBar();
+      }
+    });
+
+    // "Cookie settings" in the footer, and the same link inside the policy.
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest && e.target.closest('[data-cookie-settings]');
+      if (!trigger) return;
+      e.preventDefault();
+      showOptions(true);
+      openBar();
+    });
+
+    // Never asked before, and no GPC signal answering for them.
+    if (!readConsent()) {
+      showOptions(false);
+      setTimeout(openBar, 700);
+    }
+
+    // Last touch is recorded either way; only the durable first-touch
+    // cookie waits for consent.
+    captureAttribution(consentAllows('analytics'));
   }
 
   /* ---------------------------------------------------------
@@ -2210,8 +2652,11 @@
         .catch(function () { note('That did not save. Please use the contact page.'); });
     });
 
-    /* ---- open / close ---- */
-    function openChat() {
+    /* ---- open / close ----
+       `greeting` lets whatever opened the chat set the first line, so a
+       merchant who arrives from the calculator result does not have to
+       explain what they just did. Ignored once a conversation exists. */
+    function openChat(greeting) {
       open = true;
       panel.classList.add('open');
       launch.hidden = true;
@@ -2220,6 +2665,7 @@
         .then(function () {
           if (!log.children.length) {
             bubble('assistant',
+              (typeof greeting === 'string' && greeting) ? greeting :
               'Hello — I can answer questions about funding, what we need from you, and how long it takes. ' +
               'What are you trying to do?');
           }
@@ -2239,10 +2685,23 @@
       if (!human && !waiting) stopPolling();
     }
 
-    launch.addEventListener('click', openChat);
+    launch.addEventListener('click', function () { openChat(); });
     $('.chat-close', panel).addEventListener('click', closeChat);
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && open) closeChat();
+    });
+
+    /* Anything anywhere on the page can open the chat by carrying
+       data-open-chat, and the attribute's value becomes the opening line.
+       Delegated on document on purpose: the calculator result replaces its
+       own markup after the estimate, so a listener bound to the button
+       itself would not survive. */
+    document.addEventListener('click', function (e) {
+      const trigger = e.target.closest && e.target.closest('[data-open-chat]');
+      if (!trigger) return;
+      e.preventDefault();
+      if (open) { input.focus(); return; }
+      openChat(trigger.getAttribute('data-open-chat') || '');
     });
 
     // A conversation already under way should resume itself, so an advisor's
@@ -2258,6 +2717,7 @@
      boot
      --------------------------------------------------------- */
   function boot() {
+    initConsent();                 // first: nothing may track before this runs
     initHeader();
     initHeadline();
     initTicker();
@@ -2277,6 +2737,7 @@
     initHeloc();
     initTermLoan();
     initContactForm();
+    initOptOut();
     initFigureOffers();
     initVisitorCapture();
     initApplication();

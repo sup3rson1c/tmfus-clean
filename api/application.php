@@ -13,8 +13,10 @@ declare(strict_types=1);
  * URL or the leads spreadsheet. Each application is encrypted with a
  * fresh AES-256-GCM key, and that key is sealed with an RSA public key
  * held on this server. The matching PRIVATE key is not on this server
- * and must never be put on it — it lives on John's machine, inside
- * tmf-application-tool.html. Someone who steals this whole account gets
+ * and must never be put on it — it lives in John's own browser, wrapped
+ * in a passphrase, and is unwrapped there to read an application (see
+ * admin.php). tmf-application-tool.html is the offline fallback and
+ * generates the pair. Someone who steals this whole account gets
  * ciphertext and no way to read it.
  *
  * FAIL CLOSED
@@ -120,10 +122,21 @@ function sealEnvelope(string $plaintext, string $publicKeyPem): ?array
         sodium_memzero($aesKey);
     }
 
+    /* Which key sealed this. Not a secret — it is derived from the PUBLIC
+       key — and it is the answer to the only question that has ever come up
+       when an application would not open: "is this the same key as the
+       others?". Two different key_ids in the inbox mean the server key was
+       changed at some point, and the older files need the older private key. */
+    $details = openssl_pkey_get_details($key);
+    $keyId = is_array($details) && isset($details['key'])
+        ? substr(hash('sha256', (string) $details['key']), 0, 16)
+        : '';
+
     return [
         'v'          => 1,
         'alg'        => 'RSA-OAEP-SHA1 + AES-256-GCM',
         'created'    => date('c'),
+        'key_id'     => $keyId,
         'sealed_key' => base64_encode($sealedKey),
         'iv'         => base64_encode($iv),
         'tag'        => base64_encode($tag),
@@ -488,12 +501,13 @@ if ($notifyTo !== '' && filter_var($notifyTo, FILTER_VALIDATE_EMAIL)) {
         'Received:    ' . date('D j M Y, H:i T'),
         'Statements:  ' . (count($saved) ?: 'none attached'),
         '',
-        'The full application is encrypted on the server at:',
-        '  ' . $dir . '/application.enc.json',
+        'To read it: open https://tmfus.com/admin.php, sign in, press Unlock and',
+        'type your passphrase. The application opens in your browser.',
         '',
-        'To read it: download that file in cPanel File Manager and open it in',
-        'tmf-application-tool.html on your own machine. Nothing in this email',
-        'contains the applicant\'s personal details, on purpose.',
+        'The encrypted file itself is on the server at:',
+        '  ' . $dir . '/application.enc.json',
+        'It cannot be read without the private key, which is not on the server.',
+        'Nothing in this email contains the applicant\'s personal details, on purpose.',
     ];
     if ($rejected !== []) {
         $lines[] = '';

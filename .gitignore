@@ -17,3 +17,18 @@ api/figure-errors.log
 # Applicant bank statements written by api/application.php.
 # Customer financial documents — never commit these.
 api/uploads/
+
+# Key material. The private key that decrypts applications belongs on
+# John's machine and NOWHERE else. If one is ever committed, regenerate the
+# pair and re-key every application — assume the old one is compromised.
+*.pem
+*.key
+*.p12
+*.pfx
+tmf-private-key*
+
+# Encrypted applications and chat transcripts, if application_dir was ever
+# pointed somewhere inside the repo.
+*.enc.json
+chats/
+leads/

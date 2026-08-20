@@ -502,6 +502,14 @@ header('Content-Type: text/html; charset=utf-8');
   .bad{color:var(--danger);white-space:pre-wrap}
   .ok{color:var(--accent)}
   .hide{display:none!important}
+  .keystate{display:inline-block;padding:6px 13px;border-radius:999px;font-size:.82rem;
+    border:1px solid var(--line);color:var(--muted);margin-right:8px}
+  .keystate.on{border-color:var(--accent);color:var(--accent)}
+  /* Sensitive values are covered until asked for. Somebody standing behind
+     John, or a screen he shares, should not read an SSN by accident. */
+  .veil{border:none;background:var(--panel-2);color:var(--muted);font:inherit;font-size:.85rem;
+    border-radius:6px;padding:3px 10px;cursor:pointer}
+  .veil:hover{color:var(--fg)}
   .mono-label{font-family:ui-monospace,Menlo,monospace;font-size:.7rem;letter-spacing:.14em;
     text-transform:uppercase;color:var(--muted)}
   .warn{border-left:3px solid var(--accent);background:rgba(52,211,153,.07);
@@ -549,17 +557,83 @@ header('Content-Type: text/html; charset=utf-8');
       <p class="muted" style="margin:2px 0 0;font-size:.92rem">TMF Team</p>
     </div>
     <div class="noprint">
-      <label class="file">
-        <input type="file" id="privFile" accept=".pem,.txt">
-        <span id="privLabel">Load your private key</span>
-      </label>
+      <span class="keystate" id="keyState">Locked</span>
+      <button class="ghost" id="btnVault">Unlock</button>
       <a class="btn ghost" href="admin.php?action=logout">Sign out</a>
     </div>
   </div>
 
+  <!-- ============================================================
+       The key vault.
+
+       The old way was a file: find tmf-private-key.pem, click Load,
+       every single time, on every computer. In practice that means the
+       key ends up living in Downloads for ever, which is the one place
+       it must not.
+
+       Now the key is stored in this browser, wrapped in a passphrase
+       only John knows, and unlocked by typing that passphrase. The
+       server still never sees the key and still cannot decrypt
+       anything — that invariant is untouched. What changes is that the
+       file can go back in the safe.
+       ============================================================ -->
+  <div class="card noprint" id="vault">
+    <div class="top" style="margin-bottom:0">
+      <span class="mono-label" id="vaultTitle">Unlock the encrypted applications</span>
+      <button class="ghost" id="vaultClose" style="padding:6px 12px;font-size:.85rem">Close</button>
+    </div>
+
+    <!-- Everyday path: the key is already on this device. -->
+    <div id="vaultUnlock" class="hide" style="margin-top:14px">
+      <p class="muted" style="margin:0 0 10px;font-size:.92rem">
+        Type your passphrase to open applications on this computer.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="password" id="vaultPass" placeholder="Your passphrase"
+               autocomplete="current-password" style="flex:1;min-width:220px">
+        <button class="primary" id="btnUnlock">Unlock</button>
+      </div>
+      <p class="bad hide" id="vaultUnlockErr"></p>
+      <p style="margin-top:12px">
+        <button class="ghost" id="btnForget" style="padding:7px 13px;font-size:.85rem">Forget the key on this computer</button>
+      </p>
+    </div>
+
+    <!-- First time on a device, or after Forget. -->
+    <div id="vaultSetup" class="hide" style="margin-top:14px">
+      <p class="muted" style="margin:0 0 12px;font-size:.92rem">
+        One time only. Choose your private key file, pick a passphrase, and this
+        computer remembers the key from then on — you will only ever type the
+        passphrase again. Keep the key file itself somewhere safe and offline;
+        it is the only copy and nobody can replace it.
+      </p>
+      <label class="file">
+        <input type="file" id="privFile" accept=".pem,.txt">
+        <span id="privLabel">Choose your private key file</span>
+      </label>
+      <div style="display:grid;gap:8px;margin-top:12px;max-width:420px">
+        <input type="password" id="setupPass" placeholder="Choose a passphrase (12 characters or more)" autocomplete="new-password">
+        <input type="password" id="setupPass2" placeholder="Type the passphrase again" autocomplete="new-password">
+        <button class="primary" id="btnStore">Remember this key on this computer</button>
+      </div>
+      <p class="bad hide" id="vaultSetupErr"></p>
+      <div class="warn" style="margin-top:14px">
+        <b>There is no reset.</b> If you forget the passphrase, nothing is lost as
+        long as you still have the key file — click <i>Forget the key on this
+        computer</i> and set it up again. If you lose the key file as well, every
+        application already received becomes permanently unreadable, by design.
+      </div>
+      <p style="margin-top:12px">
+        <button class="ghost" id="btnOnce" style="padding:7px 13px;font-size:.85rem">Just use the file this once, do not remember it</button>
+      </p>
+    </div>
+  </div>
+
   <div class="warn noprint">
-    Your private key is read in this browser and never sent anywhere. Without it
-    you can still see who applied — you just cannot open the encrypted half.
+    Your private key is unwrapped in this browser and never sent anywhere. The
+    server does not have it and cannot open an application for you — that is the
+    point. Without it you can still see who applied; you just cannot read the
+    encrypted half.
   </div>
 
   <div class="tabs noprint">
@@ -646,7 +720,28 @@ header('Content-Type: text/html; charset=utf-8');
   var privKey = null;          // CryptoKey, memory only
   var apps = [], leads = [];
 
-  /* ---------- key handling ---------- */
+  /* ============================================================
+     KEY VAULT
+
+     What the server knows: nothing. It stores ciphertext and serves
+     ciphertext. Everything below happens in this browser.
+
+     What is kept on this device (localStorage, key tmf_admin_key_v2):
+     the PKCS#8 private key, encrypted with AES-256-GCM under a key
+     derived from John's passphrase by PBKDF2-SHA256 at 310,000
+     iterations with a random 16-byte salt. Without the passphrase that
+     blob is useless; with a weak passphrase it is only as strong as the
+     passphrase, which is why setup insists on 12 characters.
+
+     The unwrapped CryptoKey lives in the `privKey` variable and nowhere
+     else — it is imported non-extractable, so even this page's own code
+     cannot read the bytes back out, and it is dropped on lock, on
+     inactivity and on page close.
+     ============================================================ */
+  var VAULT_KEY   = 'tmf_admin_key_v2';
+  var PBKDF2_ITER = 310000;
+  var IDLE_MS     = 20 * 60 * 1000;      // re-lock after 20 quiet minutes
+
   function fromPem(pem) {
     var b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
     var bin = atob(b64), out = new Uint8Array(bin.length);
@@ -658,6 +753,155 @@ header('Content-Type: text/html; charset=utf-8');
     for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
     return out;
   }
+  function bufToB64(buf) {
+    var b = new Uint8Array(buf), s = '';
+    for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s);
+  }
+
+  /* The private key as a CryptoKey. Non-extractable: once it is in, the
+     bytes cannot come back out of the browser. */
+  function importPrivate(pkcs8) {
+    return subtle.importKey('pkcs8', pkcs8, { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt']);
+  }
+
+  function deriveWrapKey(passphrase, salt) {
+    return subtle.importKey('raw', new TextEncoder().encode(passphrase),
+                            { name: 'PBKDF2' }, false, ['deriveKey'])
+      .then(function (base) {
+        return subtle.deriveKey(
+          { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITER, hash: 'SHA-256' },
+          base,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      });
+  }
+
+  function storedVault() {
+    try { return JSON.parse(localStorage.getItem(VAULT_KEY) || 'null'); } catch (_) { return null; }
+  }
+
+  function wrapAndStore(pkcs8, passphrase) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv   = crypto.getRandomValues(new Uint8Array(12));
+    return deriveWrapKey(passphrase, salt)
+      .then(function (wk) { return subtle.encrypt({ name: 'AES-GCM', iv: iv }, wk, pkcs8); })
+      .then(function (ct) {
+        localStorage.setItem(VAULT_KEY, JSON.stringify({
+          v: 2,
+          iter: PBKDF2_ITER,
+          salt: bufToB64(salt),
+          iv: bufToB64(iv),
+          data: bufToB64(ct),
+          at: new Date().toISOString()
+        }));
+      });
+  }
+
+  function unwrap(passphrase) {
+    var v = storedVault();
+    if (!v) return Promise.reject(new Error('nothing stored on this device'));
+    return deriveWrapKey(passphrase, b64ToBuf(v.salt))
+      .then(function (wk) {
+        return subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(v.iv) }, wk, b64ToBuf(v.data));
+      })
+      .then(importPrivate);
+  }
+
+  /* ---------- lock state ---------- */
+  var idleTimer = null;
+
+  function setLocked(locked) {
+    if (locked) privKey = null;
+    $('keyState').textContent = locked ? 'Locked' : 'Unlocked';
+    $('keyState').className = 'keystate' + (locked ? '' : ' on');
+    $('btnVault').textContent = locked ? 'Unlock' : 'Lock';
+    if (locked && idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+    if (!locked) touchIdle();
+  }
+
+  function touchIdle() {
+    if (!privKey) return;
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      setLocked(true);
+      showVault(true);
+      $('vaultTitle').textContent = 'Locked again after 20 quiet minutes';
+    }, IDLE_MS);
+  }
+  ['click', 'keydown'].forEach(function (ev) {
+    document.addEventListener(ev, touchIdle, true);
+  });
+
+  /* ---------- the panel ---------- */
+  function showVault(show) {
+    var have = !!storedVault();
+    $('vault').classList.toggle('hide', !show);
+    if (!show) return;
+    $('vaultUnlock').classList.toggle('hide', !have);
+    $('vaultSetup').classList.toggle('hide', have);
+    $('vaultTitle').textContent = have
+      ? 'Unlock the encrypted applications'
+      : 'Set this computer up, once';
+    if (have) setTimeout(function () { $('vaultPass').focus(); }, 50);
+  }
+
+  function vaultErr(id, msg) {
+    var el = $(id);
+    el.textContent = msg || '';
+    el.classList.toggle('hide', !msg);
+  }
+
+  $('btnVault').addEventListener('click', function () {
+    if (privKey) { setLocked(true); showVault(false); return; }
+    showVault($('vault').classList.contains('hide'));
+  });
+  $('vaultClose').addEventListener('click', function () { showVault(false); });
+
+  /* ---------- unlock ---------- */
+  function doUnlock() {
+    var pass = $('vaultPass').value;
+    if (!pass) return;
+    vaultErr('vaultUnlockErr', '');
+    $('btnUnlock').disabled = true;
+    $('btnUnlock').textContent = 'Unlocking…';
+    unwrap(pass).then(
+      function (k) {
+        privKey = k;
+        $('vaultPass').value = '';
+        $('btnUnlock').disabled = false;
+        $('btnUnlock').textContent = 'Unlock';
+        setLocked(false);
+        showVault(false);
+      },
+      function () {
+        $('btnUnlock').disabled = false;
+        $('btnUnlock').textContent = 'Unlock';
+        vaultErr('vaultUnlockErr',
+          'That passphrase does not open the key stored on this computer. ' +
+          'If you have forgotten it, click "Forget the key on this computer" and set it up ' +
+          'again from your key file.');
+      }
+    );
+  }
+  $('btnUnlock').addEventListener('click', doUnlock);
+  $('vaultPass').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); doUnlock(); }
+  });
+
+  $('btnForget').addEventListener('click', function () {
+    if (!confirm('Remove the stored key from this computer?\n\n' +
+                 'You will need your key file to set it up again. Nothing on the ' +
+                 'server changes and no application is lost.')) return;
+    localStorage.removeItem(VAULT_KEY);
+    setLocked(true);
+    showVault(true);
+  });
+
+  /* ---------- setup ---------- */
+  var pendingPkcs8 = null;       // the chosen key file, not yet stored
 
   $('privFile').addEventListener('change', function () {
     var f = this.files && this.files[0];
@@ -666,15 +910,65 @@ header('Content-Type: text/html; charset=utf-8');
     r.onload = function () {
       var text = String(r.result);
       if (text.indexOf('PRIVATE KEY') === -1) {
-        $('privLabel').textContent = 'That is not a private key';
+        pendingPkcs8 = null;
+        $('privLabel').textContent = 'That file is not a private key';
         return;
       }
-      subtle.importKey('pkcs8', fromPem(text), { name: 'RSA-OAEP', hash: 'SHA-1' }, false, ['decrypt'])
-        .then(function (k) { privKey = k; $('privLabel').textContent = 'Key loaded ✓'; })
-        .catch(function (e) { $('privLabel').textContent = 'Key could not be read'; console.error(e); });
+      var pkcs8;
+      try { pkcs8 = fromPem(text); } catch (_) {
+        pendingPkcs8 = null;
+        $('privLabel').textContent = 'That key could not be read';
+        return;
+      }
+      // Prove it is a usable key before offering to remember it.
+      importPrivate(pkcs8).then(
+        function () { pendingPkcs8 = pkcs8; $('privLabel').textContent = 'Key file read ✓'; },
+        function () { pendingPkcs8 = null; $('privLabel').textContent = 'That key could not be read'; }
+      );
     };
     r.readAsText(f);
   });
+
+  $('btnStore').addEventListener('click', function () {
+    var a = $('setupPass').value, b = $('setupPass2').value;
+    vaultErr('vaultSetupErr', '');
+    if (!pendingPkcs8)   return vaultErr('vaultSetupErr', 'Choose your private key file first.');
+    if (a.length < 12)   return vaultErr('vaultSetupErr', 'Please use a passphrase of at least 12 characters. Three or four unrelated words is ideal.');
+    if (a !== b)         return vaultErr('vaultSetupErr', 'The two passphrases do not match.');
+
+    $('btnStore').disabled = true;
+    $('btnStore').textContent = 'Saving…';
+    wrapAndStore(pendingPkcs8, a)
+      .then(function () { return importPrivate(pendingPkcs8); })
+      .then(function (k) {
+        privKey = k;
+        pendingPkcs8 = null;
+        $('setupPass').value = $('setupPass2').value = '';
+        $('btnStore').disabled = false;
+        $('btnStore').textContent = 'Remember this key on this computer';
+        setLocked(false);
+        showVault(false);
+      })
+      .catch(function (e) {
+        $('btnStore').disabled = false;
+        $('btnStore').textContent = 'Remember this key on this computer';
+        vaultErr('vaultSetupErr', 'That could not be saved on this computer. ' + (e.message || e));
+      });
+  });
+
+  /* Escape hatch: a borrowed computer, where remembering the key would be
+     exactly the wrong thing to do. */
+  $('btnOnce').addEventListener('click', function () {
+    if (!pendingPkcs8) return vaultErr('vaultSetupErr', 'Choose your private key file first.');
+    importPrivate(pendingPkcs8).then(function (k) {
+      privKey = k;
+      pendingPkcs8 = null;
+      setLocked(false);
+      showVault(false);
+    });
+  });
+
+  setLocked(true);
 
   /* ---------- tabs ---------- */
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) {
@@ -790,15 +1084,47 @@ header('Content-Type: text/html; charset=utf-8');
             .replace(/\bein\b/i, 'EIN').replace(/\bpct\b/i, '%')
             .replace(/^./, function (c) { return c.toUpperCase(); });
   }
+  /* Sensitive values are rendered covered. The value is in the DOM either
+     way — it has already been decrypted at this point — but it is not on
+     the screen until somebody asks for it, which is the difference between
+     a colleague walking past and a colleague reading an SSN. */
   function rows(obj, keys) {
     var html = '';
     keys.forEach(function (k) {
       if (!(k in obj) || obj[k] === '' || k === 'owner_signature') return;
-      html += '<tr><td class="k">' + pretty(k) + '</td><td' +
-              (SENSITIVE.test(k) ? ' class="ok"' : '') + '>' + esc(obj[k]) + '</td></tr>';
+      var cell;
+      if (SENSITIVE.test(k)) {
+        cell = '<td class="ok"><button type="button" class="veil" data-veil>Show</button>' +
+               '<span class="hide" data-veiled>' + esc(obj[k]) + '</span></td>';
+      } else {
+        cell = '<td>' + esc(obj[k]) + '</td>';
+      }
+      html += '<tr><td class="k">' + pretty(k) + '</td>' + cell + '</tr>';
     });
     return html ? '<table>' + html + '</table>' : '';
   }
+
+  function revealAll(on) {
+    Array.prototype.forEach.call($('viewBody').querySelectorAll('[data-veil]'), function (b) {
+      b.classList.toggle('hide', on);
+    });
+    Array.prototype.forEach.call($('viewBody').querySelectorAll('[data-veiled]'), function (v) {
+      v.classList.toggle('hide', !on);
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-veil]') : null;
+    if (!b) return;
+    b.classList.add('hide');
+    var v = b.parentNode.querySelector('[data-veiled]');
+    if (v) v.classList.remove('hide');
+  });
+
+  // Printing a half-covered application would be useless, so everything
+  // is uncovered for the print and covered again afterwards.
+  window.addEventListener('beforeprint', function () { revealAll(true); });
+  window.addEventListener('afterprint', function () { revealAll(false); });
 
   function openApplication(folder) {
     var dlg = $('viewer');
@@ -809,15 +1135,18 @@ header('Content-Type: text/html; charset=utf-8');
 
     if (!privKey) {
       $('viewBody').innerHTML = '';
-      $('viewErr').textContent = 'Load your private key first — the button at the top right. ' +
+      $('viewErr').textContent = 'Unlock first — the Unlock button at the top right. ' +
         'The server cannot open this for you; it does not have the key, on purpose.';
       $('viewErr').classList.remove('hide');
       return;
     }
 
+    var sealedWith = '';
+
     fetch('admin.php?action=envelope&folder=' + encodeURIComponent(folder), { credentials: 'same-origin' })
       .then(function (r) { if (!r.ok) throw new Error('could not fetch it'); return r.json(); })
       .then(function (env) {
+        sealedWith = env.key_id || '';
         return subtle.decrypt({ name: 'RSA-OAEP' }, privKey, b64ToBuf(env.sealed_key))
           .then(function (raw) { return subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['decrypt']); })
           .then(function (aes) {
@@ -831,8 +1160,14 @@ header('Content-Type: text/html; charset=utf-8');
       .catch(function (e) {
         $('viewBody').innerHTML = '';
         $('viewErr').textContent = 'Could not open this application.\n\n' +
-          'The usual cause is that this private key does not match the public key that was on the ' +
-          'server when this application came in.\n\nTechnical detail: ' + (e.message || e);
+          'The usual cause is that this private key does not match the public key that was on ' +
+          'the server when this application came in.' +
+          (sealedWith
+            ? '\n\nThis one was sealed with key ' + sealedWith + '. Open an application that ' +
+              'does work and compare the code: if they differ, the key on the server was ' +
+              'changed at some point and this file needs the older private key.'
+            : '') +
+          '\n\nTechnical detail: ' + (e.message || e);
         $('viewErr').classList.remove('hide');
       });
   }

@@ -15,7 +15,12 @@ deployment:
     - /bin/cp -f sba-loans.html          $DEPLOYPATH/
     - /bin/cp -f mca.html                $DEPLOYPATH/
     - /bin/cp -f 404.html                $DEPLOYPATH/
+    - /bin/cp -f terms.html              $DEPLOYPATH/
+    - /bin/cp -f privacy.html            $DEPLOYPATH/
     - /bin/cp -f admin.php               $DEPLOYPATH/
+    - /bin/cp -f robots.txt              $DEPLOYPATH/
+    - /bin/cp -f llms.txt                $DEPLOYPATH/
+    - /bin/cp -f sitemap.xml             $DEPLOYPATH/
     - /bin/cp -f .htaccess               $DEPLOYPATH/
     - /bin/cp -Rf assets/.               $DEPLOYPATH/assets/
     # Server-side API. Files are copied individually on purpose: api/config.php

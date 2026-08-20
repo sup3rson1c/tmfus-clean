@@ -3,7 +3,7 @@
 Written for whoever picks this up next, human or AI, with **no prior context**.
 Everything needed to continue is in this file and the repository beside it.
 
-**Last updated: 18 August 2026 — assets at `?v=27`.**
+**Last updated: 18 August 2026 — assets at `?v=28`.**
 **v22 is a big one: TMF now collects the whole application itself, encrypted.
 Signet is out of the site entirely. See §5.3, which was rewritten. v21 was the
 real industry multipliers (§4). Neither is committed — this work arrived as a
@@ -93,10 +93,10 @@ Every HTML file references assets as `styles.css?v=N` and `app.js?v=N`.
 **Bump N on every CSS or JS change, in every HTML file:**
 
 ```bash
-sed -i 's/styles\.css?v=27/styles.css?v=28/g; s/app\.js?v=27/app.js?v=28/g' *.html
+sed -i 's/styles\.css?v=28/styles.css?v=29/g; s/app\.js?v=28/app.js?v=29/g' *.html
 ```
 
-Currently at **v27**. Forget this and John sees no change, reports the site is
+Currently at **v28**. Forget this and John sees no change, reports the site is
 broken, and you will waste a round trip proving the server is fine.
 
 ---
@@ -407,6 +407,34 @@ phone numbers, never SSNs. Nothing prunes them.
 
 **`api/chat.php` is in `.cpanel.yml`.** Fifth file this session needing it.
 
+## 6D. Search and AI visibility — added 18 Aug 2026
+
+Full detail in `SETUP-SEO.md`. Built: `robots.txt` (none existed; explicitly
+allows GPTBot, PerplexityBot, ClaudeBot and friends, disallows `admin.php` and
+`/api/`), `sitemap.xml` (none existed), canonicals (none existed), Open Graph
+and Twitter cards, and JSON-LD — Organization/FinancialService/WebSite on the
+home page, WebPage everywhere, Service on product pages, FAQPage on the three
+accordion pages with 15 real Q&A pairs.
+
+**A real bug was fixed:** every internal link pointed at `foo.html`, which
+`.htaccess` 301s to `/foo`. Every click and every crawl paid a redirect hop.
+Links now go straight to the clean URL.
+
+`seo-inject.py` generates all of it from the pages themselves and is
+idempotent — re-run it after changing a title, description or FAQ so the schema
+cannot drift from the visible text. It is a build tool, not deployed.
+
+**Organization schema deliberately has no `telephone` or `address`.** There is
+still no phone number for this business — §6.2, now raised in six sessions.
+Fake NAP data is worse than none because it propagates, so the hole was left
+open. This is the single biggest thing blocking search visibility: no phone
+means no Google Business Profile, which means no local results at all.
+
+**llms.txt exists but expect nothing from it.** Ahrefs found 97% of llms.txt
+files get zero requests from anything; Google says it has no effect on Search;
+neither OpenAI nor Anthropic endorses it. `robots.txt` is the file that actually
+decides whether AI crawlers can read the site.
+
 ## 7. Tunable knobs
 
 All at the top of their sections in `assets/app.js`:
@@ -569,4 +597,5 @@ at the handoff.
 | `SETUP-FIGURE-API.md` | Figure integration and the 500 |
 | `SETUP-APPLICATION.md` | The application, encryption, the inbox |
 | `SETUP-CHAT.md` | Live chat, the agent, and taking over |
+| `SETUP-SEO.md` | Search, structured data, AI citations |
 | `google-apps-script.gs` | The script behind the leads sheet |

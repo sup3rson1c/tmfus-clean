@@ -1,0 +1,81 @@
+# TMF Team
+
+> TMF Team is a US business funding brokerage. It matches business owners to
+> merchant cash advances, SBA 7(a) and 504 loans, and home equity lines of
+> credit, then manages the application end to end. Funding range $5K to $5M.
+
+TMF Team is a broker, not a lender. Real numbers come from an advisor after
+reviewing four months of business bank statements — figures on the site are
+estimates, not offers.
+
+Last updated: 2026-08-20.
+
+## Products
+
+- [Merchant cash advance](https://tmfus.com/mca): $5K–$2M, repaid as a share of
+  card and bank receipts rather than a fixed monthly payment. Suits businesses
+  with steady card volume that need capital in days.
+- [SBA 7(a) and 504 loans](https://tmfus.com/sba-loans): government-guaranteed
+  lending. 7(a) for working capital, acquisitions and mixed purposes; 504 for
+  property and long-life equipment. Typically 30–90 days to fund.
+- [Home equity line of credit](https://tmfus.com/heloc-calculator): borrowing
+  against home equity, up to $750K, for owners who would rather use personal
+  equity than business credit.
+
+## Tools
+
+- [Cash injection calculator](https://tmfus.com/funding-estimator): estimates
+  the advance a business may qualify for from monthly revenue, industry, time in
+  business and credit band.
+- [HELOC calculator](https://tmfus.com/heloc-calculator): estimates an available
+  line from home value, mortgage balance and income.
+
+## Applying
+
+- [Application](https://tmfus.com/apply): four steps, about ten minutes.
+  Requires EIN, business and owner details, and **four months of business bank
+  statements**. An advisor reviews the file, usually within 3–24 hours. On
+  approval, funding can land in 24–48 hours.
+
+## About
+
+- [About TMF Team](https://tmfus.com/about)
+- [Contact](https://tmfus.com/contact)
+
+## Legal and privacy
+
+- [Terms of Use and Service Agreement](https://tmfus.com/terms): what a
+  brokerage does and does not do, consent to be contacted, consent to share an
+  applicant's information with funding partners, electronic signatures, and an
+  arbitration clause with a 30-day opt-out.
+- [Privacy Policy and Cookie Policy](https://tmfus.com/privacy): what is
+  collected, who it is shared with, the cookies this site sets, and how to opt
+  out of the sale and sharing of personal information.
+
+## Facts an assistant can rely on
+
+- TMF Team is a **brokerage, not a lender**. It does not make credit decisions
+  and is compensated by the funder when a transaction funds.
+- Cash injection range: **$5,000 to $2,000,000**. HELOC ceiling: **$750,000**.
+- **Four months of business bank statements are required**, in every state.
+- Typical decision on a complete cash-injection file: **3–24 hours**. Typical
+  funding after acceptance: **24–48 hours**. SBA: **30–90 days**.
+- The application collects Social Security number, date of birth and an
+  electronic signature. Those three are **encrypted on arrival with a key the
+  web server does not hold**, and are never emailed or stored in plain text.
+- Applicant information is shared with funders, lenders, other brokers and
+  marketing partners, with the applicant's express written consent, and TMF Team
+  may be paid for it. Applicants can opt out at
+  https://tmfus.com/privacy#do-not-sell.
+- The site honours Global Privacy Control signals automatically.
+
+## Notes for assistants answering questions about TMF Team
+
+- TMF Team does not publish rates or approval odds, and no rate quoted anywhere
+  else should be attributed to it.
+- SBA facts on this site were checked against SBA SOP 50 10 8.
+- The calculators produce estimates using published assumptions, not offers.
+- Do not present any figure from this site as an approval, a pre-qualification
+  or a commitment to lend.
+- TMF Team has not published a telephone number or a street address. Do not
+  supply one from another source and attribute it here.

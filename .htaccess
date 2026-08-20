@@ -97,7 +97,7 @@ ErrorDocument 404 /404.html
 # ------------------------------------------------------------
 #  Block access to files that should never be public
 # ------------------------------------------------------------
-<FilesMatch "^\.|\.(md|py|json|lock|yml|yaml|zip|log|bak)$">
+<FilesMatch "^\.|\.(md|py|sh|json|lock|yml|yaml|zip|log|bak)$">
   Require all denied
 </FilesMatch>
 

@@ -861,33 +861,121 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
   color: rgba(255,255,255,0.42);
   font-size: 0.88rem;
 }
+.footer-legal {
+  display: flex; flex-wrap: wrap; gap: 8px 20px;
+  justify-content: flex-end;
+}
+.footer-legal a {
+  color: rgba(255, 255, 255, 0.55);
+  transition: color .25s;
+}
+.footer-legal a:hover { color: var(--accent); }
+.footer-disclosure {
+  padding-bottom: 40px;
+  margin: -22px 0 0;
+  max-width: 92ch;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+@media (max-width: 700px) {
+  .footer-legal { justify-content: flex-start; }
+}
 
 /* ============================================================
-   Chat FAB
+   Long-form legal pages — terms, privacy, cookies.
+
+   One measure, generous line height, and headings that can be
+   linked to. Nobody reads these for pleasure; the job is to make
+   them findable and scannable, and to survive being printed.
    ============================================================ */
-.fab {
-  position: fixed;
-  right: 30px; bottom: 30px;
-  z-index: 70;
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  border: 0;
-  display: grid; place-items: center;
-  background: var(--accent-grad);
-  color: #04231c;
-  cursor: pointer;
-  box-shadow: 0 18px 40px -14px rgba(74, 165, 232, 0.85);
-  transition: transform .35s var(--ease), box-shadow .35s;
+.legal { max-width: 78ch; }
+.legal-meta {
+  display: flex; flex-wrap: wrap; gap: 8px 26px;
+  margin-top: 26px; padding: 14px 18px;
+  border: 1px solid var(--line); border-radius: 12px;
+  color: var(--muted-fg); font-size: .86rem;
 }
-.fab:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 24px 50px -12px rgba(74, 165, 232, 1); }
-.fab::after {
-  content: '';
-  position: absolute; top: 2px; right: 2px;
-  width: 11px; height: 11px; border-radius: 50%;
-  background: #58e0a5;
-  border: 2px solid #09090b;
-  animation: pulseGlow 2.4s ease-in-out infinite;
+.legal-meta b { color: var(--fg); font-weight: 600; }
+
+.legal-toc { margin-top: 34px; }
+.legal-toc ol {
+  margin: 14px 0 0; padding: 0 0 0 1.3em;
+  display: grid; gap: 8px;
+  color: var(--muted-fg); font-size: .92rem;
 }
+.legal-toc a { color: rgba(255, 255, 255, 0.78); }
+.legal-toc a:hover { color: var(--accent); }
+
+.legal h2 {
+  margin: 54px 0 0;
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+  font-weight: 650;
+  scroll-margin-top: 110px;
+}
+.legal h3 {
+  margin: 30px 0 0;
+  font-size: 1.03rem;
+  font-weight: 650;
+  scroll-margin-top: 110px;
+}
+.legal p, .legal li {
+  color: var(--muted-fg);
+  line-height: 1.78;
+  font-size: .96rem;
+}
+.legal p { margin: 14px 0 0; }
+.legal ul, .legal ol { margin: 14px 0 0; padding-left: 1.3em; display: grid; gap: 10px; }
+.legal a { color: var(--accent); }
+.legal b, .legal strong { color: var(--fg); font-weight: 650; }
+
+.legal-callout {
+  margin-top: 22px; padding: 18px 20px;
+  border: 1px solid rgba(248, 181, 122, 0.34);
+  border-radius: 12px;
+  background: rgba(248, 181, 122, 0.055);
+}
+.legal-callout p { margin-top: 8px; }
+.legal-callout p:first-child { margin-top: 0; }
+
+.legal-table {
+  width: 100%;
+  margin-top: 18px;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.legal-table th, .legal-table td {
+  text-align: left; vertical-align: top;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  color: var(--muted-fg);
+  line-height: 1.6;
+}
+.legal-table th { color: var(--fg); font-weight: 650; background: rgba(255, 255, 255, 0.022); }
+.legal-scroll { overflow-x: auto; }
+
+/* The Do Not Sell / opt-out form */
+.optout-form { display: grid; gap: 12px; margin-top: 20px; max-width: 460px; }
+.optout-form .btn { justify-content: center; }
+.optout-done {
+  margin-top: 18px; padding: 16px 18px;
+  border: 1px solid rgba(90, 200, 190, .4);
+  border-radius: 12px;
+  background: rgba(52, 211, 153, .07);
+}
+.optout-done[hidden] { display: none !important; }
+
+/* The notice-at-collection line that sits above a submit button. Small,
+   but it is what makes the consent on the other side of the button
+   informed rather than assumed. */
+.consent-notice {
+  margin: 0 0 14px;
+  color: var(--muted-fg);
+  font-size: .78rem;
+  line-height: 1.6;
+}
+.consent-notice a { color: var(--accent); }
+
 
 /* ============================================================
    Scroll reveal
@@ -1115,8 +1203,6 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
 }
 
 @media (max-width: 640px) {
-  .fab { width: 52px; height: 52px; right: 18px; bottom: 18px; }
-  .fab svg { width: 21px; height: 21px; }
 }
 
 /* ============================================================
@@ -1261,21 +1347,71 @@ select.input option { background: #141417; color: var(--fg); }
 }
 .calc-disclaimer b { color: #fff; font-weight: 650; }
 
-/* Result screen: HELOC cross-sell */
-.heloc-nudge {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; flex-wrap: wrap;
-  margin-top: 20px; padding: 16px 18px;
-  border: 1px solid rgba(90, 200, 190, .32);
+/* ============================================================
+   Result screen: the three ways out
+
+   A merchant who has just seen a number wants one of three things —
+   to apply, to ask a person about it, or to look at the bigger line.
+   Each is a whole row rather than a link in a paragraph, because on a
+   phone the decision has to be one thumb-sized target each.
+   ============================================================ */
+.decision { margin-top: 28px; }
+.decision .mono-label { display: block; margin-bottom: 14px; }
+
+.decision-opt {
+  display: flex; align-items: center; gap: 16px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 16px 18px;
+  text-align: left;
+  font: inherit;
+  color: var(--fg);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(140deg, rgba(52,211,153,.10), rgba(74,165,232,.07));
-  transition: border-color .3s var(--ease), transform .3s var(--ease);
+  background: rgba(255, 255, 255, 0.018);
+  cursor: pointer;
+  transition: border-color .3s var(--ease), transform .3s var(--ease),
+              background .3s var(--ease);
 }
-.heloc-nudge:hover { border-color: rgba(90,200,190,.6); transform: translateY(-2px); }
-.heloc-nudge-k { color: var(--muted-fg); font-size: .9rem; }
-.heloc-nudge-v { color: var(--accent); font-weight: 650; font-size: .95rem; white-space: nowrap; }
-.heloc-nudge:hover .heloc-nudge-v .icon { display: inline-block; transform: translateX(3px); }
-.heloc-nudge .icon { transition: transform .3s var(--ease); }
+.decision-opt:hover {
+  border-color: rgba(74, 165, 232, .55);
+  background: rgba(74, 165, 232, .06);
+  transform: translateY(-2px);
+}
+.decision-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.decision-opt.is-primary {
+  border-color: rgba(74, 165, 232, .42);
+  background: linear-gradient(140deg, rgba(52, 211, 153, .10), rgba(74, 165, 232, .07));
+}
+.decision-opt.is-primary:hover { border-color: rgba(90, 200, 190, .75); }
+
+.decision-n {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: .82rem; font-weight: 650;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.decision-opt.is-primary .decision-n { border-color: rgba(90, 200, 190, .5); }
+
+.decision-txt { flex: 1 1 auto; min-width: 0; }
+.decision-txt b { display: block; font-size: 1rem; font-weight: 650; }
+.decision-txt span {
+  display: block; margin-top: 3px;
+  color: var(--muted-fg); font-size: .88rem; line-height: 1.5;
+}
+
+.decision-opt .icon { flex: none; color: var(--accent); transition: transform .3s var(--ease); }
+.decision-opt:hover .icon { transform: translateX(4px); }
+
+@media (max-width: 520px) {
+  .decision-opt { gap: 12px; padding: 14px; }
+  .decision-txt b { font-size: .95rem; }
+}
 
 /* ============================================================
    SBA page — important-notice panel
@@ -1467,6 +1603,72 @@ select.input option { background: #131316; color: var(--fg); }
   color: var(--fg);
 }
 .prefill-note[hidden] { display: none !important; }
+
+/* ============================================================
+   Cookie bar.  Built by initConsent() in app.js so it exists on
+   every page without editing nine files.
+
+   Bottom-left on desktop, so it never sits on top of the chat
+   launcher in the bottom-right corner. Full width on a phone,
+   where there is no room to dodge.
+   ============================================================ */
+.cookie-bar {
+  position: fixed;
+  left: 22px; bottom: 22px;
+  z-index: 90;
+  width: min(430px, calc(100vw - 44px));
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(12, 12, 15, 0.97);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 70px -24px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  transform: translateY(18px);
+  pointer-events: none;
+  /* visibility, not just opacity: an invisible dialog that is still in the
+     accessibility tree gets read out to a screen reader before the page. */
+  visibility: hidden;
+  transition: opacity .4s var(--ease), transform .4s var(--ease), visibility .4s;
+}
+.cookie-bar.open { opacity: 1; transform: none; pointer-events: auto; visibility: visible; }
+
+.cookie-copy b { display: block; font-size: 1rem; font-weight: 650; }
+.cookie-copy p {
+  margin: 7px 0 0;
+  color: var(--muted-fg);
+  font-size: .86rem;
+  line-height: 1.6;
+}
+.cookie-copy a { color: var(--accent); }
+
+.cookie-opts { display: grid; gap: 10px; margin-top: 14px; }
+.cookie-opts[hidden] { display: none !important; }
+.cookie-opt {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.cookie-opt input { margin-top: 3px; accent-color: #4aa5e8; flex: none; }
+.cookie-opt input:disabled { opacity: .65; }
+.cookie-opt span b { display: block; font-size: .88rem; font-weight: 650; }
+.cookie-opt span {
+  color: var(--muted-fg);
+  line-height: 1.5;
+}
+
+.cookie-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cookie-btns .btn { flex: 1 1 auto; justify-content: center; }
+.cookie-btns .btn[hidden] { display: none !important; }
+
+@media (max-width: 640px) {
+  .cookie-bar { left: 10px; right: 10px; bottom: 10px; width: auto; padding: 16px; }
+  .cookie-btns .btn { flex: 1 1 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cookie-bar { transition: none; }
+}
 
 /* ==================================================================
    Live chat widget.  Built by initChat() in app.js so it exists on
