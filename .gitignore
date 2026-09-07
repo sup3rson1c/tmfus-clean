@@ -27,6 +27,15 @@ api/uploads/
 *.pfx
 tmf-private-key*
 
+# The bundled Obsidian notes the chat assistant reads. Produced by
+# scripts/bundle-vault.py, uploaded by hand to the protected folder outside
+# public_html. They are John's own notes about how TMF works and who it deals
+# with — the repo is public, so they must never land in it.
+tmf-knowledge.md
+*-knowledge.md
+knowledge.md
+knowledge.txt
+
 # Encrypted applications and chat transcripts, if application_dir was ever
 # pointed somewhere inside the repo.
 *.enc.json

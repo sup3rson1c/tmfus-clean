@@ -130,6 +130,37 @@ else
   fail "chat.php no longer strips SSN-shaped text"
 fi
 
+# The Obsidian notes are APPENDED to the built-in prompt. If they ever
+# replace it, the rules that stop the assistant quoting a rate, claiming
+# an approval, or asking for an SSN go with them.
+if grep -q 'DEFAULT_SYSTEM_PROMPT' api/chat.php &&    grep -q 'buildSystemPrompt' api/chat.php &&    grep -A6 'function buildSystemPrompt' api/chat.php | grep -q 'DEFAULT_SYSTEM_PROMPT'; then
+  pass "the knowledge file is added to the chat rules, not swapped for them"
+else
+  fail "buildSystemPrompt no longer falls back to DEFAULT_SYSTEM_PROMPT — the chat guardrails can be dropped"
+fi
+
+# A relative knowledge path resolves inside api/, which is inside the web
+# root, which publishes John's notes at a guessable URL. Same mistake that
+# was already made once with application_dir.
+if grep -A6 'function loadKnowledge' api/chat.php | grep -q "0\] !== '/'" ||    grep -q "chat_knowledge_file is relative" api/chat.php; then
+  pass "a relative chat_knowledge_file is refused, not resolved into the web root"
+else
+  fail "loadKnowledge no longer refuses a relative path — the notes could end up public"
+fi
+
+# The bundled notes are John's own material and the repo is public.
+if [ -f .gitignore ] && grep -q 'knowledge' .gitignore; then
+  pass "bundled Obsidian notes are gitignored"
+else
+  fail "nothing in .gitignore stops the bundled notes being committed to a PUBLIC repo"
+fi
+
+if ls ./*knowledge*.md >/dev/null 2>&1 || ls ./api/*knowledge* >/dev/null 2>&1; then
+  fail "a knowledge file is sitting in the working tree — it belongs outside public_html, not here"
+else
+  pass "no knowledge file loose in the tree"
+fi
+
 if grep -q 'application_pubkey' api/application.php && \
    grep -q 'fail(503' api/application.php; then
   pass "application.php still fails closed without an encryption key"

@@ -832,6 +832,86 @@
     };
   }
 
+  /* Change an element's contents without its height snapping.
+
+     John reported the calculator "jumping", and measuring it showed why:
+     step 1 to step 2 resizes the card by 547px in a single frame, picking
+     a position adds another 163px, and the product column beside it loses
+     213px at the same moment. Everything below moves at once. On a phone
+     the page appears to lurch out from under your thumb.
+
+     So: measure, make the change, measure again, animate between the two.
+     The inline height is only ever held for the length of the animation —
+     nothing here can leave an element stuck at a fixed height, which is
+     the usual way this technique breaks.
+
+     `apply` always runs, even when there is nothing to animate on. That
+     ordering matters: an early return that skipped it would silently stop
+     the content updating at all. */
+  function resizeSmoothly(el, apply) {
+    if (typeof apply !== 'function') return;
+
+    /* Animate only where it can actually be seen.
+
+       The visibility check is not a nicety. A hidden tab freezes frames, so
+       an animation started in one sits at its FIRST keyframe forever: the
+       element renders at its old height and never advances. In testing that
+       collapsed the whole product column to 0px and left it there. Falling
+       back to an instant change in a hidden tab is both safe and correct —
+       there is nobody watching it move. */
+    if (!el || reduced || typeof el.animate !== 'function' ||
+        document.visibilityState !== 'visible') {
+      apply();
+      return;
+    }
+
+    const from = el.getBoundingClientRect().height;
+    apply();
+    const to = el.getBoundingClientRect().height;
+
+    /* `from < 1` is the first render, where the element is empty and about
+       to be filled. Animating that is a reveal nobody asked for, and it is
+       what made the product column fly open on page load. */
+    if (from < 1 || Math.abs(to - from) < 2) return;
+
+    // A second change mid-flight replaces the first rather than stacking.
+    if (el._resizeAnim) el._resizeAnim.cancel();
+
+    const prevOverflow = el.style.overflow;
+    el.style.overflow = 'hidden';
+
+    let settled = false;
+    const restore = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(guard);
+      el.style.overflow = prevOverflow;
+      if (el._resizeAnim === anim) el._resizeAnim = null;
+    };
+
+    /* Belt and braces. `finish` never fires if the visitor switches tabs
+       partway through: frames stop, the animation sits at its first
+       keyframe, and it goes on holding the element at its OLD height while
+       overflow:hidden clips the dropdown menus inside it.
+
+       So the guard cancels as well as restores. Cancelling drops the
+       animation's hold and the element snaps to the height it should
+       already have — which is exactly the instant resize this function
+       exists to avoid, but as a worst case rather than a stuck panel. */
+    const guard = setTimeout(() => {
+      if (anim && anim.playState === 'running') anim.cancel();
+      restore();
+    }, 900);
+
+    const anim = el.animate(
+      [{ height: from + 'px' }, { height: to + 'px' }],
+      { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
+    );
+    anim.addEventListener('finish', restore);
+    anim.addEventListener('cancel', restore);
+    el._resizeAnim = anim;
+  }
+
   function renderMatches(host, profile) {
     if (!host) return;
     const list = matchProducts(profile);
@@ -913,17 +993,40 @@
       if (!show && balanceInput) balanceInput.value = '';
     };
 
-    const paint = () => {
-      panes.forEach((p, i) => p.classList.toggle('active', i === step));
-      bars.forEach((b, i) => b.classList.toggle('done', i <= step));
-      if (stepLabel) stepLabel.textContent = `STEP ${step + 1} / 3`;
-      if (titleEl) titleEl.innerHTML = titles[step];
-      if (errEl) errEl.textContent = '';
+    /* The three panes differ in height by hundreds of pixels, and the card is
+       taller than a phone screen either way. Swapping one pane for another
+       leaves the new pane's heading above the fold, so the page looks as if it
+       scrolled itself and the visitor has to scroll back up to carry on.
+       Put the card top back under the fixed header on every move. */
+    const revealCard = () => {
+      const headerH = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--header-h')
+      ) || 0;
+      const top = root.getBoundingClientRect().top + window.scrollY - headerH - 16;
+      window.scrollTo({ top: Math.max(0, top), behavior: reduced ? 'auto' : 'smooth' });
     };
 
+    const paint = (move) => {
+      // The panes differ by hundreds of pixels. Grow the card into the new
+      // one rather than letting it snap.
+      resizeSmoothly(root, () => {
+        panes.forEach((p, i) => p.classList.toggle('active', i === step));
+        bars.forEach((b, i) => b.classList.toggle('done', i <= step));
+        if (stepLabel) stepLabel.textContent = `STEP ${step + 1} / 3`;
+        if (titleEl) titleEl.innerHTML = titles[step];
+        if (errEl) errEl.textContent = '';
+      });
+      // Never on the first paint: that would yank the page on load.
+      if (move) revealCard();
+    };
+
+    /* Both halves move when the visitor reports a position: the card grows
+       to fit the balance question and the product column shrinks as the
+       matches change. Animating only one of them would look worse than
+       animating neither, so they go together. */
     const sync = () => {
-      syncBalance();
-      renderMatches(matchesHost, profile());
+      resizeSmoothly(root, syncBalance);
+      resizeSmoothly(matchesHost, () => renderMatches(matchesHost, profile()));
     };
 
     root.addEventListener('change', sync);
@@ -975,9 +1078,9 @@
         const msg = validate();
         if (msg) { if (errEl) errEl.textContent = msg; return; }
         step = Math.min(step + 1, panes.length - 1);
-        paint();
+        paint(true);
       }
-      if (back) { step = Math.max(step - 1, 0); paint(); }
+      if (back) { step = Math.max(step - 1, 0); paint(true); }
       if (submit) {
         const msg = validate();
         if (msg) { if (errEl) errEl.textContent = msg; return; }
@@ -1048,7 +1151,7 @@
     let optionNo = 0;
     const n = () => ++optionNo;
 
-    card.innerHTML = `
+    const resultHtml = `
       <div class="calc-head">
         <span class="calc-kicker eyebrow">Your result</span>
         <span class="calc-step">COMPLETE</span>
@@ -1113,7 +1216,18 @@
         </a>` : ''}
       </div>
     `;
-    card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+
+    // The result is ~324px taller than the form it replaces.
+    resizeSmoothly(card, () => { card.innerHTML = resultHtml; });
+    /* Top, not centre. The result card is taller than a phone screen, so
+       centring it puts "Your result" above the fold. */
+    const headerH = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--header-h')
+    ) || 0;
+    window.scrollTo({
+      top: Math.max(0, card.getBoundingClientRect().top + window.scrollY - headerH - 16),
+      behavior: reduced ? 'auto' : 'smooth'
+    });
   }
 
   /* ---------------------------------------------------------

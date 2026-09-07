@@ -723,7 +723,12 @@ h1, h2, h3, h4 { margin: 0; font-weight: 800; letter-spacing: -0.03em; line-heig
 .calc-title { font-size: clamp(1.3rem, 2.1vw, 1.65rem); font-weight: 600; letter-spacing: -0.025em; margin-top: 14px; }
 .calc-title b { font-weight: 800; }
 
-.step-pane { display: none; }
+/* Swapping panes changes the card height, and Chrome's scroll anchoring
+   answers that by shifting the scroll position on its own — measured at
+   ~100px down between step 2 and step 3 on a 375px viewport. The card
+   places itself after every move, so opt out of the browser's guess. */
+[data-calc="funding"] { overflow-anchor: none; }
+.step-pane { display: none; overflow-anchor: none; }
 .step-pane.active { display: block; animation: stepIn .45s var(--ease); }
 @keyframes stepIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 

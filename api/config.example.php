@@ -132,7 +132,56 @@ return [
     // replace it — those rules are there for a reason.
     'chat_system_prompt' => '',
 
-    // Emailed when a visitor asks to speak to a person. Falls back to
-    // application_notify if left empty.
+    // ---------------------------------------------------------------
+    // WHAT THE ASSISTANT KNOWS  (your Obsidian notes)
+    //
+    // Bundle the PUBLIC part of your vault with
+    //   python3 scripts/bundle-vault.py "path/to/vault/public"
+    // then upload the file it produces to the SAME protected folder your
+    // applications live in — the one application_dir points at, outside
+    // public_html — and put its full path here.
+    //
+    // It must be an absolute path starting with a slash. A relative one
+    // is refused, because it would resolve inside api/ and turn your
+    // notes into a public web address.
+    //
+    // Never put the notes inside public_html, and never commit them: the
+    // repo is public.
+    'chat_knowledge_file' => '',
+
+    // A few lines you want the assistant to know without maintaining a
+    // file for them. Added before the file, if both are set.
+    'chat_knowledge' => '',
+
+    // Safety valve. Notes longer than this are truncated rather than sent,
+    // because an oversized prompt fails in ways that are hard to read.
+    // Roughly 120,000 characters is 30,000 tokens is about 60 pages.
+    'chat_knowledge_max_chars' => 120000,
+
+    // Emailed the moment somebody starts waiting in chat — whether they
+    // pressed "Talk to a person" or the assistant failed to answer them.
+    // Falls back to application_notify if left empty.
     'chat_notify' => '',
+
+    // ---------------------------------------------------------------
+    // PHONE PUSH  (optional, and the difference between answering in two
+    // minutes and answering tomorrow)
+    //
+    // Email is not a notification. This sends the same alert to Telegram on
+    // your phone, where it arrives in about a second and buzzes.
+    //
+    // To set it up, on your phone:
+    //   1. Install Telegram.
+    //   2. Search for @BotFather, press Start, send:  /newbot
+    //   3. Give it any name. It replies with a token that looks like
+    //      123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxx  — paste it below.
+    //   4. Search for the bot you just made, open it, press Start,
+    //      and send it the word  hello
+    //   5. Open this address in a browser, with YOUR token in it:
+    //      https://api.telegram.org/botYOUR_TOKEN/getUpdates
+    //      Find  "chat":{"id":123456789  — that number is your chat id.
+    //
+    // Leave both empty and nothing happens; the email still goes.
+    'chat_push_telegram_token'   => '',
+    'chat_push_telegram_chat_id' => '',
 ];

@@ -33,6 +33,48 @@ const LOGIN_PER_HOUR   = 10;     // attempts per IP
 const FOLDER_PATTERN   = '/^\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]+_[A-F0-9]{6}$/';
 const STATEMENT_PATTERN = '/^\d{2}_[A-Za-z0-9._-]+\.(pdf|jpg|png)$/';
 
+/* ============================================================
+   READY REPLIES  —  EDIT THESE, THEY ARE MEANT TO BE EDITED
+
+   The openers that appear as buttons above the reply box in the Live chat
+   tab. Clicking one drops the text into the box; it does NOT send. Read it,
+   change it, then press Send. That is deliberate — a broker who fires a
+   canned line at a merchant sounds like a broker who fires canned lines at
+   merchants.
+
+   To change one: edit the text between the quotes below.
+   To add one:    copy a whole line and change both parts.
+   The short label before => is what the button says. Keep it to a few words
+   or the row wraps.
+
+   Nothing here quotes a rate, a factor or an approval, and nothing should.
+   ============================================================ */
+const READY_REPLIES = [
+    'Say hello' =>
+        "Hi, this is John at TMF Team. I saw your question come through — what are you trying to get done?",
+
+    'Ask the three numbers' =>
+        "To point you somewhere useful I need three things: roughly what the business does in monthly revenue, how long it has been open, and whether there are any advances still being paid off.",
+
+    'What we need' =>
+        "The short version: four months of business bank statements, your EIN, and the owner details. That is genuinely it to get looked at. The statements are the part people forget.",
+
+    'Existing positions' =>
+        "Good that you mentioned it. Open positions do not rule you out, and being upfront about them helps — funders see them on the statements anyway, and a file that left one out is the one that gets declined.",
+
+    'Timeline' =>
+        "An advisor reviews the file, usually within 3 to 24 hours. If it is approved, funding commonly lands 24 to 48 hours after you accept. SBA is a different animal, 30 to 90 days.",
+
+    'No numbers yet' =>
+        "I would rather not guess at a number before seeing the statements — anything I said now would just be a number you would hold me to. Send those over and you will get a real answer, not an estimate.",
+
+    'Get their number' =>
+        "What is the best number to reach you on, and when suits? Easier to sort this in five minutes on the phone than back and forth here.",
+
+    'Coming back later' =>
+        "I have to step away for a bit. Leave me your number and I will come back to you today — I do not want this sitting here unanswered.",
+];
+
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
@@ -739,6 +781,15 @@ header('Content-Type: text/html; charset=utf-8');
         </div>
         <div id="chatLog" style="background:#08080a;border:1px solid var(--line);border-radius:var(--radius);
              padding:14px;height:390px;overflow:auto;display:flex;flex-direction:column;gap:10px"></div>
+        <!-- Ready replies. Clicking one fills the box; it never sends.
+             Edit the list in READY_REPLIES at the top of this file. -->
+        <div id="readyReplies" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:12px">
+<?php foreach (READY_REPLIES as $label => $text): ?>
+          <button type="button" class="ghost ready" data-text="<?= htmlspecialchars($text, ENT_QUOTES) ?>"
+                  style="padding:7px 12px;font-size:.82rem"><?= htmlspecialchars($label) ?></button>
+<?php endforeach; ?>
+        </div>
+
         <div style="display:flex;gap:8px;margin-top:10px">
           <input type="search" id="chatText" placeholder="Type a reply — this takes the conversation over"
                  style="flex:1;font:inherit;background:#08080a;color:var(--fg);border:1px solid var(--line);
@@ -1272,6 +1323,12 @@ header('Content-Type: text/html; charset=utf-8');
      has wandered off does not. */
   var current = null, chatSeen = 0, chats = [];
 
+  /* Declared here, above loadChats, on purpose: `var` hoists as undefined,
+     and the first poll writing an undefined baseTitle put the literal word
+     "undefined" in the browser tab. */
+  var lastWaiting = null, alertsArmed = false, audioCtx = null;
+  var baseTitle = document.title;
+
   function loadChats() {
     return fetch('admin.php?action=chats', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
@@ -1282,6 +1339,11 @@ header('Content-Type: text/html; charset=utf-8');
         badge.textContent = waiting ? ' ' + waiting + ' waiting' : '';
         badge.classList.toggle('hide', !waiting);
         badge.style.color = '#f87171';
+
+        // Only on the way UP, and never on the first load of the page.
+        if (typeof lastWaiting === 'number' && waiting > lastWaiting) announceWaiting(waiting);
+        if (!waiting) document.title = baseTitle;
+        lastWaiting = waiting;
 
         if (!rows.length) {
           $('chatsEmpty').textContent = 'No conversations yet.';
@@ -1362,6 +1424,72 @@ header('Content-Type: text/html; charset=utf-8');
   });
   $('chatText').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); $('chatSend').click(); }
+  });
+
+  /* ---------- ready replies ----------
+     Fill the box, never send. The point is to save typing, not to make it
+     easy to fire a canned line at somebody without reading it. */
+  Array.prototype.forEach.call(document.querySelectorAll('#readyReplies .ready'), function (b) {
+    b.addEventListener('click', function () {
+      var box = $('chatText');
+      var text = b.getAttribute('data-text') || '';
+      box.value = box.value.trim() ? (box.value.trim() + ' ' + text) : text;
+      box.focus();
+      box.setSelectionRange(box.value.length, box.value.length);
+    });
+  });
+
+  /* ---------- being told someone is waiting ----------
+     The email and the phone push go out from chat.php. This is the third
+     line: if the inbox is already open in a tab, make that tab noticeable
+     rather than making John spot a small red badge.
+
+     Browsers refuse to play audio until the page has been clicked, so the
+     first click anywhere arms it. Nothing here nags: it fires only when the
+     number waiting goes UP. */
+  document.addEventListener('click', function armAlerts() {
+    alertsArmed = true;
+    document.removeEventListener('click', armAlerts);
+    if (window.Notification && Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch (_) {}
+    }
+  }, { once: true });
+
+  function beep() {
+    if (!alertsArmed) return;
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      // Two short notes. Built from an oscillator so there is no audio file
+      // to add to .cpanel.yml and forget.
+      [0, 0.18].forEach(function (offset, i) {
+        var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.frequency.value = i === 0 ? 880 : 1175;
+        gain.gain.setValueAtTime(0.0001, audioCtx.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + offset + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + offset + 0.15);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + offset);
+        osc.stop(audioCtx.currentTime + offset + 0.16);
+      });
+    } catch (_) {}
+  }
+
+  function announceWaiting(n) {
+    beep();
+    document.title = '(' + n + ') someone is waiting — TMF';
+    try {
+      if (window.Notification && Notification.permission === 'granted') {
+        var note = new Notification('Someone is waiting in chat', {
+          body: n + (n === 1 ? ' conversation needs' : ' conversations need') + ' an answer.',
+          tag: 'tmf-chat-waiting'
+        });
+        note.onclick = function () { window.focus(); note.close(); };
+      }
+    } catch (_) {}
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') document.title = baseTitle;
   });
 
   loadChats();

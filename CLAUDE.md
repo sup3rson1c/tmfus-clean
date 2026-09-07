@@ -62,10 +62,10 @@ Every page references `styles.css?v=N` and `app.js?v=N`. **Bump N in all eleven
 HTML files on every CSS or JS change:**
 
 ```bash
-sed -i 's/styles\.css?v=30/styles.css?v=31/g; s/app\.js?v=30/app.js?v=31/g' *.html
+sed -i 's/styles\.css?v=31/styles.css?v=32/g; s/app\.js?v=31/app.js?v=32/g' *.html
 ```
 
-Currently **v30**. Forget it and John sees no change, reports the site broken,
+Currently **v31**. Forget it and John sees no change, reports the site broken,
 and you waste a round trip proving the server is fine.
 
 ### 2. `.cpanel.yml` lists files individually
@@ -146,7 +146,24 @@ These are not style preferences. Each one is load-bearing.
   application success pane appears only after the server confirms storage.
 - **Chat messages render with `textContent`, never `innerHTML`.** The text comes
   from a language model and from strangers.
+- **The chat knowledge file is appended to `DEFAULT_SYSTEM_PROMPT`, never
+  substituted for it** (`buildSystemPrompt()` in `api/chat.php`). Those rules
+  are what stop the assistant quoting a rate, claiming an approval or asking
+  for an SSN, and a knowledge file is not a reason to lose them. The notes are
+  also framed as reference material rather than instructions, so a note that
+  reads like a command does not become one.
+- **`chat_knowledge_file` must be absolute and outside `public_html`.** A
+  relative path resolves inside `api/` and publishes John's notes at a
+  guessable URL — the same failure `application_dir` already had once. The
+  bundled notes are gitignored: the repo is public and those notes describe
+  funders, process and pricing.
 - **API keys stay server-side.** The chat widget knows one URL: `/api/chat.php`.
+- **Every path that sets `waiting = true` must call `notifyWaiting()`**
+  (`api/chat.php`). There are two: the "talk to a person" button, and the
+  fallback when the agent cannot be reached. The second one was silent until
+  20 Aug 2026 — the visitor was told an advisor would pick it up and nobody
+  was told to pick it up, so every conversation that hit a bad key was lost
+  quietly. It fires once per conversation via `$t['notified']`.
 
 ---
 
@@ -168,11 +185,13 @@ assets/styles.css        Whole design system, tokens in :root
 assets/app.js            Every interaction, both calculators, chat widget
 api/application.php      Application intake, encrypts at rest, ?selftest=1
 api/lead.php             Every submission stored server-side + monthly CSV
-api/chat.php             Live chat proxy to John's Hermes agent
+api/chat.php             Live chat proxy to John's agent, ?selftest=1
+                         + the Obsidian knowledge file
 api/figure-heloc.php     Figure HELOC API proxy, ?selftest=1
 api/config.example.php   Template. Real config.php lives ONLY on the server
 scripts/verify.sh        Invariant checker — run before finishing
 scripts/crypto-chain-test.mjs  Seal → wrap → unlock → decrypt, for real
+scripts/bundle-vault.py  Obsidian vault -> one knowledge file for the chat
 seo-inject.py            Canonicals, robots, schema AND sitemap.xml
 ```
 
@@ -183,6 +202,7 @@ seo-inject.py            Canonicals, robots, schema AND sitemap.xml
 ```
 https://tmfus.com/api/application.php?selftest=1
 https://tmfus.com/api/figure-heloc.php?selftest=1
+https://tmfus.com/api/chat.php?selftest=1
 ```
 
 Plain-English reports. Neither reveals a key, a path, or applicant data.
@@ -253,6 +273,16 @@ range      = projection ± 15%
   `<span>`.
 - **A stale Playwright bounding box.** Three "signature failed" results were the
   test measuring a canvas that had moved. Re-measure immediately before drawing.
+- **A hidden tab freezes Web Animations too — and a frozen one HOLDS its
+  element at the first keyframe.** `resizeSmoothly()` in `app.js` animates
+  the calculator card's height so it does not snap hundreds of pixels in one
+  frame. Started in a hidden tab it never advances, so the element sits at its
+  OLD height with `overflow: hidden` clipping the dropdowns inside it. During
+  testing that collapsed the whole product column to 0px. Hence two guards
+  there: it refuses to animate unless `document.visibilityState === 'visible'`,
+  and a 900ms timeout cancels the animation and restores overflow if `finish`
+  never fires. **Do not remove either.** Also: never animate up from a height
+  of 0 — that is a first render, and animating it is a reveal nobody asked for.
 - **A hidden tab freezes CSS transitions too, not just rAF.** Measuring the
   cookie bar in a background tab reported it stuck at `opacity: 0` and 18px
   off-position, because the transition never advances. The class was applied
@@ -309,14 +339,20 @@ about it.
    That means the limitation of liability protects nothing — he has been told.)*
 7. **`privacy@tmfus.com` and `legal@tmfus.com` do not exist yet.** Both are
    quoted throughout the legal pages. He creates them in cPanel.
-8. **A lawyer has not read the terms or the privacy policy.** They are written
+8. **Whether the chat agent is actually configured.** `chat_enabled` can be
+   true with no working key, and the widget then greets every visitor, fails,
+   and marks them waiting. That now notifies rather than failing silently, but
+   it is a fallback, not a chat. Check
+   `https://tmfus.com/api/chat.php?selftest=1` before assuming the assistant
+   is answering anybody.
+9. **A lawyer has not read the terms or the privacy policy.** They are written
    to industry standard and are specific to what TMF does, but nobody
    qualified has reviewed them. Say so whenever they come up. This matters more
    now that the documents authorise selling SSNs and dates of birth.
-9. **`admin.php` is password-only, no second factor.** The FTC Safeguards Rule
+10. **`admin.php` is password-only, no second factor.** The FTC Safeguards Rule
    expects MFA for anyone reaching customer information, and this is the real
    authentication gap — not the key handling, which is stronger than most.
    Offered to John 20 Aug 2026, not yet asked for.
-10. **No PHP on the machine used on 20 Aug 2026.** `admin.php` and
+11. **No PHP on the machine used on 20 Aug 2026.** `admin.php` and
    `api/application.php` were edited and their JavaScript was checked, but the
    PHP itself was never linted. First thing to do somewhere with `php`.

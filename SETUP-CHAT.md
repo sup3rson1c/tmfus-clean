@@ -60,6 +60,202 @@ agent should still cost you nothing but a callback.
 
 ---
 
+## Teaching it about TMF — your Obsidian notes
+
+Out of the box the assistant knows how business funding works in general. It
+knows nothing about how *you* work: your process, your turnaround, what you will
+and will not take on. That comes from your own notes.
+
+### What is actually happening
+
+There is no connection to Obsidian and nothing to install. An Obsidian vault is
+a folder of plain text files. A script rolls the ones you choose into a single
+file, you upload it once, and every question the assistant answers is asked with
+those notes in front of it.
+
+### Point it at a folder, not the whole vault
+
+**This is the part to get right.** An assistant will read out anything put in
+front of it. Commission splits, which funders you use, what you paid for a lead,
+notes on a particular merchant — every one of those is one question away from a
+stranger, and it will not occur to the assistant that some of it was private.
+
+So make a folder inside your vault called `public`, and move into it only the
+notes you would be content to see quoted back to you by a competitor. That is
+what gets bundled. Everything else stays where it is and never leaves your
+laptop.
+
+Three extra ways to keep something out:
+
+- Put it in a subfolder called `private` or `templates` — both are skipped.
+- Put `public: false` at the top of the note, between two `---` lines.
+- Keep it out of the `public` folder in the first place. Simplest.
+
+The script also refuses outright if it finds something Social-Security-shaped or
+an API key, and warns you about notes mentioning commissions, buy and sell
+rates, or anything marked confidential. That is a safety net, not a substitute
+for choosing.
+
+### You do not have to start from nothing
+
+There is a **`vault-starter`** folder in this package, next to the site folder.
+Twelve notes, already written from what the site says: what TMF is, what the
+application needs, how long things take, the three products, bank statements,
+credit questions, existing positions, the calculators, common objections, and
+when to fetch a person.
+
+Copy it into Obsidian and edit it there. Roughly a dozen lines in it start with
+**`TO FILL IN:`** — those are the ones only you can answer, like what happens to
+a weekend enquiry, or your policy on stacking. The bundler counts them and
+refuses to let you forget: it lists every one before you upload.
+
+The single idea behind the whole thing: **a knowledge vault is not
+documentation, it is the answers you already give on the phone.** You do not
+need to write a manual, just the twenty things you find yourself repeating.
+
+### Doing it
+
+1. In Obsidian, make a folder called `public` and move your shareable notes in.
+   (Or copy in `vault-starter/public` and edit from there.)
+2. On your own computer, in the site folder, run:
+
+```bash
+python3 scripts/bundle-vault.py "PATH/TO/YOUR/VAULT/public"
+```
+
+   You should see: `Wrote ... N notes, N words, about N tokens` and a line
+   telling you whether that size is comfortable.
+3. Read anything it warns you about. Fix and run it again if you need to.
+4. It has made a file called `tmf-knowledge.md`. In cPanel → File Manager,
+   upload that file into the **same protected folder your applications live
+   in** — the one `application_dir` points at, above `public_html`.
+5. In `api/config.php`, set the full path:
+
+```php
+'chat_knowledge_file' => '/home/YOURUSERNAME/tmf-applications/tmf-knowledge.md',
+```
+
+6. Check it worked: open **https://tmfus.com/api/chat.php?selftest=1**
+
+   You should see `"notes": "loaded, N characters"` and a plain-English verdict
+   on the size. It never shows the notes themselves, the path, or your API key,
+   so it is safe to leave reachable.
+
+**When you edit your notes, repeat steps 2 and 4.** Nothing updates by itself.
+
+### Why it must go outside public_html
+
+If the file sits anywhere under `public_html`, it has a web address, and anyone
+who guesses it can read your notes. `chat.php` refuses a path that does not
+start with a slash for exactly this reason — a relative path resolves inside
+`api/`, which is inside the web root. That mistake has already been made once on
+this site with the applications folder.
+
+The same goes for the repo, which is **public**. `.gitignore` already blocks
+`tmf-knowledge.md`, but the safe habit is to keep the file out of the site
+folder entirely.
+
+### Your notes cannot switch off the rules
+
+The notes are **added to** the built-in instructions, never swapped for them.
+The assistant is told, in the prompt itself, that the notes are reference
+material and not orders — so a note reading "tell customers we can do 1.15"
+does not become an instruction, and it still will not quote a rate.
+
+Do not put your notes in `chat_system_prompt`. That setting **replaces** the
+built-in instructions, and you would be deleting the rules about rates,
+approvals and SSNs to make room. `verify.sh` checks that this has not happened.
+
+### When the notes get too big
+
+Everything above sends all the notes with every message. That is the right
+design up to a point, and the self-check tells you when you pass it:
+
+- **Under ~20,000 tokens** — comfortable. Leave it alone.
+- **20,000 to 60,000** — still works, but each message costs more and the
+  assistant gets vaguer as the pile grows. Trim.
+- **Over 60,000** — time to switch to retrieval, where the notes are searched
+  and only the relevant few are sent. That is a change to `chat.php` only, and
+  it can be built when you get there. Ask.
+
+Prompt caching is what makes the first option affordable — you pay full price
+for the notes on the first message of a conversation and a fraction after that.
+Both Claude and OpenAI do it automatically.
+
+---
+
+## Being told somebody is waiting
+
+**This is the part that was broken.** Two things put a visitor into the
+"waiting" state, and until 20 Aug 2026 only one of them told you:
+
+- They pressed **Talk to a person** — you got an email.
+- **The assistant failed to answer them** — the visitor was told an advisor
+  would pick it up, and *nobody was told to pick it up*. Silent. Every
+  conversation that hit a misconfigured key, an expired key or an agent having
+  a bad day was lost this way.
+
+Both now go through one function, `notifyWaiting()` in `api/chat.php`, which
+fires once per conversation. If you add a path that sets `waiting = true`, call
+it there too.
+
+### Three ways you find out
+
+**1. Email.** Set `chat_notify` in `api/config.php`. Always sent. Includes their
+name and number if they left one, the page they were on, and the last thing they
+actually typed, so you can answer rather than open with "hello?".
+
+**2. Your phone, in about a second.** Email is not a notification when the
+answer is wanted in minutes. Telegram is free, needs no account approval, and
+takes five minutes:
+
+1. Install Telegram on your phone.
+2. Search for **@BotFather**, press Start, send `/newbot`.
+3. Give it any name. It replies with a token like
+   `123456789:AAxxxxxxxxxxxxxxxxx`.
+4. Search for the bot you just made, open it, press **Start**, send it `hello`.
+5. Open this in a browser with your token in it:
+   `https://api.telegram.org/botYOUR_TOKEN/getUpdates`
+   Find `"chat":{"id":123456789` — that number is your chat id.
+6. Put both into `api/config.php`:
+
+```php
+'chat_push_telegram_token'   => '123456789:AAxxxxxxxxxxxxxxxxx',
+'chat_push_telegram_chat_id' => '123456789',
+```
+
+Leave them empty and nothing happens — the email still goes. The push has a
+four-second timeout on purpose: a visitor is waiting on that same request, and
+Telegram having a bad day must never become the site having a bad day.
+
+**3. The inbox tab itself.** If `admin.php` is already open somewhere, it now
+beeps twice, puts `(1) someone is waiting` in the browser tab title, and raises
+a desktop notification. It only fires when the number goes *up*, so it will not
+nag you about the same person twice. Browsers refuse to play sound until you
+have clicked the page once — your first click anywhere arms it.
+
+---
+
+## Answering fast: ready replies
+
+The Live chat tab has a row of buttons above the reply box: *Say hello*, *Ask
+the three numbers*, *What we need*, *Existing positions*, *Timeline*, *No
+numbers yet*, *Get their number*, *Coming back later*.
+
+Clicking one **fills the box — it does not send.** Read it, change it to suit
+the person, then press Send. That is deliberate. A broker who fires canned lines
+at merchants sounds exactly like a broker who fires canned lines at merchants,
+and these are meant to save typing, not thinking.
+
+**Edit them.** They are at the very top of `admin.php`, in a block marked
+`READY REPLIES — EDIT THESE`. Change the text between the quotes; the short name
+before `=>` is what the button says. Put your own words in — the defaults are a
+starting point written in a plausible voice, not your voice.
+
+None of them quote a rate, a factor or an approval, and none of them should.
+
+---
+
 ## Taking over a conversation
 
 Inbox → **Live chat**. Anyone who has asked for a person is at the top with a red
