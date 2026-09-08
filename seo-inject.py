@@ -76,7 +76,7 @@ CRUMBS = {
     '/contact': 'Contact',
     '/apply': 'Apply',
     '/funding-estimator': 'Cash injection calculator',
-    '/heloc-calculator': 'HELOC calculator',
+    '/heloc-calculator': 'Home equity',
     '/sba-loans': 'SBA loans',
     '/mca': 'Merchant cash advance',
     '/terms': 'Terms of Use',
@@ -87,7 +87,7 @@ CRUMBS = {
 SERVICES = {
     'mca.html': ('Merchant Cash Advance', 'Revenue-based business funding from $5K to $2M with remittances aligned to card and bank receipts.'),
     'sba-loans.html': ('SBA 7(a) and 504 Loans', 'SBA-guaranteed business lending: 7(a) for working capital and acquisitions, 504 for property and long-life equipment.'),
-    'heloc-calculator.html': ('Home Equity Line of Credit', 'HELOC estimation for business owners borrowing against home equity, up to $750K.'),
+    'heloc-calculator.html': ('Home Equity Line of Credit', 'A line secured against home equity for business owners, up to $750K, valued without an appraisal appointment.'),
     'funding-estimator.html': ('Business Funding Estimate', 'A three-step estimate of the cash injection a business may qualify for, based on revenue, time in business and credit.'),
 }
 

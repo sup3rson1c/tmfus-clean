@@ -713,7 +713,7 @@
       id: 'heloc',
       name: 'HELOC',
       range: '$25K – $750K',
-      blurb: 'Leverage your home equity for business capital with competitive rates.',
+      blurb: 'Borrow against the equity in your home. Valued by AI, offer inside the hour.',
       term: '10 – 30 years',
       speed: '2 – 4 weeks',
       href: 'heloc-calculator.html',
@@ -1240,8 +1240,8 @@
         <a class="decision-opt" href="/heloc-calculator">
           <span class="decision-n">${n()}</span>
           <span class="decision-txt">
-            <b>Looking for more?</b>
-            <span>Try our HELOC calculator — up to $750K against the equity in your home.</span>
+            <b>Own your home?</b>
+            <span>Use your home equity — up to $750K, with an offer inside the hour.</span>
           </span>
           <span class="icon">&rarr;</span>
         </a>` : ''}
@@ -1876,25 +1876,68 @@
       const ctx = pad.getContext('2d');
       let drawing = false;
 
-      const size = () => {
-        const dpr = window.devicePixelRatio || 1;
-        const w = pad.clientWidth || 400;
-        pad.width = w * dpr;
-        pad.height = 150 * dpr;
-        ctx.scale(dpr, dpr);
+      /* ---- why this is more careful than it looks ----
+         The pad lives in step 4, and every pane but the active one is
+         display:none. So at page load clientWidth is 0, the old code fell
+         back to a 400px backing store, and the browser then stretched that
+         across the pane's real width once step 4 opened. Every stroke landed
+         to the RIGHT of the pointer, by roughly the difference — about 100px
+         on a desktop form. Two independent fixes, because either alone still
+         leaves a way to get it wrong:
+           1. re-size when the pad is actually visible, not just on resize
+           2. map pointer coords through the live rect, so the drawing lands
+              under the cursor even if the backing store is momentarily stale */
+      const dpr = () => window.devicePixelRatio || 1;
+      let padCssW = 0;
+
+      const paint = () => {
         ctx.lineWidth = 2.2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.strokeStyle = '#fafafa';
       };
+
+      const size = () => {
+        const d = dpr();
+        const w = Math.round(pad.getBoundingClientRect().width) || pad.clientWidth;
+        if (!w || w === padCssW) return;      // hidden, or unchanged — keep any drawing
+        padCssW = w;
+        pad.width = Math.round(w * d);        // this also resets the context
+        pad.height = Math.round(150 * d);
+        ctx.setTransform(d, 0, 0, d, 0, 0);
+        paint();
+        sigDrawn = false;
+        if (wrap) wrap.classList.remove('signed');
+      };
+
+      // A first pass so the canvas is never zero-sized, then let the observer
+      // correct it the moment step 4 is shown and the pad has a real width.
+      pad.width = 400 * dpr();
+      pad.height = 150 * dpr();
+      ctx.setTransform(dpr(), 0, 0, dpr(), 0, 0);
+      paint();
       size();
-      window.addEventListener('resize', () => { size(); sigDrawn = false; if (wrap) wrap.classList.remove('signed'); });
+
+      if (window.ResizeObserver) {
+        new ResizeObserver(size).observe(pad);
+      } else {
+        window.addEventListener('resize', size);
+      }
 
       const pt = (e) => {
         const r = pad.getBoundingClientRect();
-        return { x: e.clientX - r.left, y: e.clientY - r.top };
+        const d = dpr();
+        const sx = r.width ? (pad.width / d) / r.width : 1;
+        const sy = r.height ? (pad.height / d) / r.height : 1;
+        return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
       };
       pad.addEventListener('pointerdown', (e) => {
+        /* Last line of defence. ResizeObserver is the tidy way to catch step 4
+           opening, but it does not fire in every embedded/offscreen renderer,
+           and this pad only has to be right at one moment: the instant
+           somebody touches it. Cheap, and it no-ops once the width settles.
+           Guarded on sigDrawn so a mid-signature reflow cannot wipe the pad. */
+        if (!sigDrawn) size();
         drawing = true;
         pad.setPointerCapture(e.pointerId);
         const p = pt(e);
@@ -2590,6 +2633,21 @@
   const CHAT_ENDPOINT = '/api/chat.php';
   const CHAT_SESSION_KEY = 'tmf_chat_session';
   const CHAT_POLL_MS = 4000;
+  /* How long the widget promises a merchant will wait. Ninety seconds is a
+     promise, not a decoration: it is only true while somebody is actually
+     watching the Telegram alert. If that stops being true, lower it or take
+     it out — a countdown that runs out is worse than never having shown one,
+     which is why expiry has its own honest state rather than just vanishing. */
+  const CHAT_WAIT_MS = 90000;
+  const CHAT_WAIT_KEY = 'tmf_chat_wait';
+  const CHAT_WAIT_SPENT_KEY = 'tmf_chat_wait_spent';
+
+  /* A working-hours gate used to live here and hide the countdown overnight.
+     Removed 2026-09-08: John asked for the timer back, everywhere, so the
+     clock now runs whenever the chat is opened, at any hour. What carries the
+     honesty is the expiry state further down — at zero it stops promising and
+     asks for a number instead. Outside working hours every visitor reaches
+     that state. Known, and accepted. */
 
   function initChat() {
     if ($('[data-chat-panel]')) return;           // never twice
@@ -2624,6 +2682,14 @@
         '<div><b>TMF Team</b><span data-chat-status><i class="dot"></i>Assistant &mdash; an advisor can join</span></div>' +
         '<button class="chat-close" type="button" aria-label="Close chat">&times;</button>' +
       '</div>' +
+      '<div class="chat-wait" data-chat-wait hidden>' +
+        '<div class="chat-wait-row">' +
+          '<span class="chat-wait-txt" data-chat-wait-txt>A rep will be with you in less than</span>' +
+          '<span class="chat-wait-clock" data-chat-wait-clock>1:30</span>' +
+        '</div>' +
+        '<p class="chat-wait-sub" data-chat-wait-sub>If you need to go, just leave your name and number below.</p>' +
+        '<div class="chat-wait-bar"><i data-chat-wait-fill></i></div>' +
+      '</div>' +
       '<div class="chat-log" data-chat-log aria-live="polite"></div>' +
       '<div class="chat-foot">' +
         '<div class="chat-row">' +
@@ -2656,6 +2722,11 @@
     const sendBtn = $('[data-chat-send]', panel);
     const status = $('[data-chat-status]', panel);
     const capture = $('[data-chat-capture]', panel);
+    const waitBox = $('[data-chat-wait]', panel);
+    const waitTxt = $('[data-chat-wait-txt]', panel);
+    const waitClock = $('[data-chat-wait-clock]', panel);
+    const waitFill = $('[data-chat-wait-fill]', panel);
+    const waitSub = $('[data-chat-wait-sub]', panel);
 
     /* ---- rendering ---- */
     function bubble(role, text) {
@@ -2718,6 +2789,108 @@
       }
     }
 
+    /* ---- the wait promise ----
+       Starts the moment a message actually reaches the server, because that
+       is the moment the Telegram alert fires. Not on open: promising a reply
+       to somebody who has not said anything yet is a promise to nobody.
+
+       It survives a page change on purpose. The chat session already does,
+       and a merchant who opens the pricing page mid-wait should not have the
+       clock silently restart at ninety seconds. */
+    let waitEnd = 0;
+    let waitTick = null;
+    /* Once a countdown has run out, this visit does not get another one.
+       Re-opening the widget and being promised ninety seconds a second time,
+       having already been let down once, is worse than showing nothing. */
+    let waitSpent = false;
+    try { waitSpent = sessionStorage.getItem(CHAT_WAIT_SPENT_KEY) === '1'; } catch (_) {}
+
+    function fmt(ms) {
+      const t = Math.max(0, Math.ceil(ms / 1000));
+      return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    }
+
+    function drawWait() {
+      const left = waitEnd - Date.now();
+      if (left <= 0) return expireWait();
+      waitClock.textContent = fmt(left);
+      waitFill.style.width = (100 - (left / CHAT_WAIT_MS) * 100).toFixed(1) + '%';
+    }
+
+    function startWait() {
+      if (human) return;                       // already answered, nothing to promise
+      if (waitSpent) return expireWait();      // already promised once and missed it
+      if (waitEnd > Date.now()) return;        // already running, do not restart it
+      waitEnd = Date.now() + CHAT_WAIT_MS;
+      try { sessionStorage.setItem(CHAT_WAIT_KEY, String(waitEnd)); } catch (_) {}
+      runWait();
+    }
+
+
+    function runWait() {
+      waitBox.hidden = false;
+      waitBox.classList.remove('over');
+      waitTxt.textContent = 'A rep will be with you in less than';
+      waitSub.textContent = 'If you need to go, just leave your name and number below.';
+      waitClock.hidden = false;
+      drawWait();
+      if (waitTick) clearInterval(waitTick);
+      waitTick = setInterval(drawWait, 1000);
+      /* The strip says "below", so below has to be there. This is the ONE
+         place the widget asks for a number. Every other mention was removed:
+         saying it in four places reads as nagging, and not one of those places
+         was next to the box you actually type it into. */
+      openCapture();
+    }
+
+    /* Running out is a state, not a disappearance. The merchant watched the
+       number reach zero; pretending it never happened is how a site loses
+       someone. Ask for the number instead — that is the thing that still
+       reaches them after they close the tab. */
+    function expireWait() {
+      if (waitTick) { clearInterval(waitTick); waitTick = null; }
+      waitEnd = 0;
+      waitSpent = true;
+      try {
+        sessionStorage.removeItem(CHAT_WAIT_KEY);
+        sessionStorage.setItem(CHAT_WAIT_SPENT_KEY, '1');
+      } catch (_) {}
+      waitBox.hidden = false;
+      waitBox.classList.add('over');
+      waitTxt.textContent = 'Still getting a rep to you.';
+      waitSub.textContent = 'Leave your name and number below and we will call you straight back.';
+      waitClock.hidden = true;
+      waitFill.style.width = '100%';
+      openCapture();
+    }
+
+    function openCapture() {
+      if (!capture.hasAttribute('hidden')) return;
+      capture.removeAttribute('hidden');
+      const v = readVisitor();
+      const nameEl = $('[data-chat-name]', panel);
+      const phoneEl = $('[data-chat-phone]', panel);
+      if (nameEl && !nameEl.value) {
+        nameEl.value = [v.first || v.firstName || '', v.last || v.lastName || ''].join(' ').trim();
+      }
+      if (phoneEl && !phoneEl.value) phoneEl.value = v.phone || '';
+    }
+
+    function stopWait() {
+      if (waitTick) { clearInterval(waitTick); waitTick = null; }
+      waitEnd = 0;
+      try { sessionStorage.removeItem(CHAT_WAIT_KEY); } catch (_) {}
+      waitBox.hidden = true;
+      waitBox.classList.remove('over');
+    }
+
+    // Pick a countdown back up after a page change.
+    try {
+      const saved = parseInt(sessionStorage.getItem(CHAT_WAIT_KEY) || '0', 10);
+      if (saved > Date.now()) { waitEnd = saved; runWait(); }
+      else if (saved) { sessionStorage.removeItem(CHAT_WAIT_KEY); }
+    } catch (_) {}
+
     /* ---- one place that knows which mode the chat is in ----
        Four things have to agree: the header, the input placeholder, the
        opening line, and the calculator's result screen - which sits outside
@@ -2779,6 +2952,7 @@
           human = !!j.human;
           waiting = !!j.waiting;
           if (human && !wasHuman) note('An advisor has joined the conversation.');
+          if (human) stopWait();
           setStatus();
           (j.messages || []).forEach(function (m) {
             if (m.role === 'visitor') return;      // already on screen
@@ -2818,7 +2992,8 @@
           human = !!j.human;
           setStatus();
           (j.messages || []).forEach(function (m) { bubble(m.role, m.text); seen++; });
-          if (human) note('An advisor is reading this.');
+          if (human) { note('An advisor is reading this.'); stopWait(); }
+          else startWait();
         })
         .catch(function (e) {
           typing(false);
@@ -2842,16 +3017,9 @@
         .then(function () {
           waiting = true;
           setStatus();
-          note('We have let an advisor know. Leave your name and number and we will reach you even if you close this.');
-          capture.removeAttribute('hidden');
-          // Pre-fill from anything they have already told us elsewhere.
-          const v = readVisitor();
-          const nameEl = $('[data-chat-name]', panel);
-          const phoneEl = $('[data-chat-phone]', panel);
-          if (nameEl && !nameEl.value) {
-            nameEl.value = [v.first || v.firstName || '', v.last || v.lastName || ''].join(' ').trim();
-          }
-          if (phoneEl && !phoneEl.value) phoneEl.value = v.phone || '';
+          startWait();
+          note('We have let an advisor know.');
+          openCapture();
         })
         .catch(function () { note('Could not reach us just now. Please use the contact page.'); });
     });
@@ -2889,19 +3057,33 @@
             /* A greeting handed in from the page says what just happened. The
                invitation after it is the chat's to write, because only the
                chat knows whether there is anything here that can answer. */
-            const invite = mode === 'message'
-              ? 'Tell us what you would like to know and the best number to reach you on — ' +
-                'an advisor will come back to you, usually the same day.'
-              : 'Ask me anything about that number, what it would cost, or what we need from you — ' +
-                'and I can bring a funding advisor into this conversation whenever you want one.';
-            bubble('assistant',
-              (typeof greeting === 'string' && greeting) ? greeting + ' ' + invite :
-              mode === 'message'
-                ? 'Leave a message here and an advisor will come back to you — usually the same day. ' +
-                  'Tell us what you are trying to do, and the best number to reach you on.'
-                : 'Hello — I can answer questions about funding, what we need from you, and how long it takes. ' +
-                  'What are you trying to do?');
+            /* One question, and nothing else. "How much are you looking for?"
+               is the house opener — see the discovery ladder in the vault —
+               and it works because it is short enough to answer without
+               thinking. Everything that used to follow it (give me a number,
+               and the best phone, and a rep will pick this up) is the widget
+               explaining itself, which is not the visitor's problem. The wait
+               strip directly above already says a rep is coming, and the
+               capture form asks for the phone at the moment it is needed.
+
+               `greeting` is a line handed in by whatever opened the chat. It
+               is spoken by the assistant, so it must be written in the
+               assistant's voice — "you have just run the calculator", never
+               "I am looking at home equity". A button that needs to tell us
+               something about the visitor should not do it through this. */
+            const ASK = 'How much are you looking for?';
+            const lead = (typeof greeting === 'string' && greeting.trim())
+              ? greeting.trim() + ' ' + ASK
+              : 'Hey, ' + ASK.charAt(0).toLowerCase() + ASK.slice(1);
+            bubble('assistant', lead);
           }
+          /* The clock starts with the question, not with the answer. John
+             asked for it here on purpose: opening the widget is the intent,
+             and making somebody type before the promise begins reads as a
+             trick. Note the honest gap — chat.php pages the phone on `send`,
+             not on `start`, so a visitor who opens and never types runs the
+             clock down without anybody being told. */
+          if (mode === 'message') startWait();
           return pump();
         })
         .catch(function () {

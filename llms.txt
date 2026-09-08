@@ -27,8 +27,10 @@ Last updated: 2026-08-20.
 - [Cash injection calculator](https://tmfus.com/funding-estimator): estimates
   the advance a business may qualify for from monthly revenue, industry, time in
   business and credit band.
-- [HELOC calculator](https://tmfus.com/heloc-calculator): estimates an available
-  line from home value, mortgage balance and income.
+- [Home equity intake](https://tmfus.com/heloc-calculator): the instant estimator
+  is being rebuilt. The page now takes a property address and returns an
+  indicative offer within the hour, using an automated valuation model rather
+  than an appraisal appointment. An indication is not a commitment to lend.
 
 ## Applying
 

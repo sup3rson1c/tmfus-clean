@@ -1,0 +1,35 @@
+WHAT IS IN HERE
+===============
+
+Every file changed in the 8 September 2026 session, with its path relative to
+the repository root (C:\Knowledge Work\tmfus-site).
+
+YOU PROBABLY DO NOT NEED THIS FILE.
+These same files are already saved in your repo folder. GitHub Desktop can see
+them right now. This zip is a backup, and a way to upload by hand if the cPanel
+git deploy is ever unavailable.
+
+WHAT CHANGED
+============
+
+  assets/app.js        chat opener, the 90-second timer, the signature fix
+  assets/styles.css    bigger chat panel, the countdown strip, the crane
+  api/chat.php         copy only - two places that asked for a phone number
+  heloc-calculator.html  rebuilt: crane, construction notice, links to /apply
+  the other 11 .html   asset version bumped to ?v=43, link text "Home equity"
+  scripts/preview.py   NEW - run the site locally with a working chat
+  scripts/live-check.sh  NEW CHECK - proves the opt-out storage is configured
+  seo-inject.py, llms.txt  descriptions updated for the new HELOC page
+
+THE ONE THING TO WATCH
+======================
+
+api/chat.php is server-side. Its two copy changes do nothing until the site is
+deployed - they cannot be tested locally, because there is no PHP on your
+machine.
+
+IF YOU UPLOAD BY HAND INSTEAD OF DEPLOYING
+==========================================
+
+Never let api/config.php be overwritten. It is not in this zip and it is not in
+the repo. It holds every credential you have and exists only on the server.

@@ -785,8 +785,7 @@ if (!empty($t['closed']) || count($t['messages']) > MAX_TURNS) {
         'ok' => true,
         'messages' => [[
             'role' => 'assistant',
-            'text' => 'This conversation has gone on a while — an advisor will pick it up from here. '
-                    . 'If you leave your name and number we will call you back.',
+            'text' => 'This conversation has gone on a while — a rep will pick it up from here.',
             'at'   => date('c'),
         ]],
     ]);
@@ -836,10 +835,8 @@ if ($answer['ok']) {
        telling the visitor something went wrong would be a lie that makes TMF
        look broken. */
     $fallback = ($cfg['chat_endpoint'] ?? '') === ''
-        ? 'Thanks — that has reached us and an advisor will come back to you, usually the same day. '
-          . 'Leave the best number to reach you on and we will use that.'
-        : 'I am having trouble reaching our system just now. An advisor can pick this up — '
-          . 'leave your name and number and we will come back to you shortly.';
+        ? 'Thanks — that has reached us and a rep is being paged now.'
+        : 'I am having trouble reaching our system just now. A rep can pick this up.';
     $t['messages'][] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];
     $t['waiting'] = true;
     $out[] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];

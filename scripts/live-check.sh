@@ -159,6 +159,19 @@ case "$unsub" in
   *)       fail "the opt-out endpoint returned $unsub — the unsubscribe link in a live campaign is broken, and that is a CAN-SPAM violation per email" ;;
 esac
 
+# A deployed endpoint is not a working one. unsubscribe_dir lives in
+# api/config.php, which is not in this repo, so the only way to know it is set
+# is to ask the server. POST a deliberately malformed address: the storage
+# check runs BEFORE the address is validated, so 400 proves storage is
+# configured and 503 proves it is not. Nothing is written either way.
+unsubcfg=$($CURL -o /dev/null -w '%{http_code}' -X POST "$SITE/api/unsubscribe.php" -H 'Content-Type: application/json' --data '{"email":"not-an-address"}')
+case "$unsubcfg" in
+  400) pass "opt-out storage is configured (a bad address is rejected, not refused)" ;;
+  503) fail "the opt-out endpoint is live but unsubscribe_dir is unset on the server - every opt-out is being turned away. See SETUP-UNSUBSCRIBE.md" ;;
+  429) warn "opt-out storage not checked - rate limited (429). Wait an hour or check by hand" ;;
+  *)   fail "the opt-out endpoint answered $unsubcfg to a POST - expected 400 when configured" ;;
+esac
+
 # ---------------------------------------------------------------
 printf '\n'
 if [ $FAIL -eq 0 ]; then
