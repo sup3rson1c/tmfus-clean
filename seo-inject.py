@@ -48,6 +48,7 @@ PAGES = {
     'mca.html': '/mca',
     'terms.html': '/terms',
     'privacy.html': '/privacy',
+    'unsubscribe.html': None,  # reachable from email, never indexed, never in the sitemap
     '404.html': None,          # never indexed, never in the sitemap
 }
 

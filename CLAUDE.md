@@ -5,7 +5,7 @@ brokerage. Live at https://tmfus.com.
 
 Read this file first. `TMF-WEBSITE-HANDOFF.md` has the full history; the
 `SETUP-*.md` files have the detail on each subsystem — including
-`SETUP-LEGAL.md` for the terms, the privacy policy and the cookie banner. This
+`SETUP-LEGAL.md` for the terms, the privacy policy and the cookie banner. `SETUP-UNSUBSCRIBE.md` covers the opt-out page and endpoint. This
 file is what you need before touching anything.
 
 ---
@@ -13,11 +13,18 @@ file is what you need before touching anything.
 ## Before you say you are finished
 
 ```bash
-./scripts/verify.sh
+./scripts/verify.sh        # is the code in this folder correct?
+./scripts/live-check.sh    # is that code the code actually running?
 ```
 
-Every check in it exists because something broke once. Exit 0 or the work is not
-done.
+Every check in them exists because something broke once. Exit 0 on both or the
+work is not done.
+
+They answer different questions and the second one is the one that gets skipped.
+On 8 September 2026 `verify.sh` was green while `api/unsubscribe.php` was not on
+the server at all: the opt-out page rendered, its form posted into nothing, and
+nothing on the site looked wrong. **A working site is not evidence that the
+deploy is current.**
 
 ---
 
@@ -58,15 +65,17 @@ Design tokens live in `:root` at the top of `assets/styles.css`. Changing
 
 ### 1. Cache busting
 
-Every page references `styles.css?v=N` and `app.js?v=N`. **Bump N in all eleven
-HTML files on every CSS or JS change:**
+Every page references `styles.css?v=N` and `app.js?v=N`. **Bump N in all twelve
+HTML files on every CSS or JS change** — twelve, not eleven; `unsubscribe.html`
+is the one people miss:
 
 ```bash
-sed -i 's/styles\.css?v=31/styles.css?v=32/g; s/app\.js?v=31/app.js?v=32/g' *.html
+sed -i 's/styles\.css?v=33/styles.css?v=34/g; s/app\.js?v=33/app.js?v=34/g' *.html
 ```
 
-Currently **v31**. Forget it and John sees no change, reports the site broken,
-and you waste a round trip proving the server is fine.
+Currently **v34 in this folder, v33 on the server.** Forget the bump and John
+sees no change, reports the site broken, and you waste a round trip proving the
+server is fine.
 
 ### 2. `.cpanel.yml` lists files individually
 
@@ -87,8 +96,23 @@ No session so far has had it — the GitHub App is not installed on the repo and
 pushes return 403. Commit your work and **tell John it still needs pushing** via
 GitHub Desktop. Do not assume it reached GitHub.
 
-Repo: `https://github.com/sup3rson1c/tmfus-clean`, branch `tmf-team-rebrand`.
-**It is PUBLIC. Never commit a credential.**
+Repo: `https://github.com/sup3rson1c/tmfus-clean`. **It is PUBLIC. Never commit
+a credential.**
+
+The branch this file used to name, `tmf-team-rebrand`, **has never existed on
+the remote** — `git ls-remote --heads` returns `master` and nothing else. It was
+presumably local to a machine that no longer has the checkout. The live line of
+work is `master`, which stopped at **v31** while the server went to v33.
+
+The folder also lost its `.git` at some point, so v32, v33 and the whole opt-out
+system existed only on disk. Restored 8 Sep 2026 by cloning the repo and moving
+its `.git` into the working folder; the drift then commits as an ordinary
+change. Do that again rather than re-initialising, which would orphan the
+history.
+
+`core.autocrlf` is `true` and there is no `.gitattributes`, so 13 files always
+show as modified when they differ only in line endings. `git diff
+--ignore-cr-at-eol --name-only` is the list that actually changed.
 
 ---
 
@@ -130,7 +154,7 @@ These are not style preferences. Each one is load-bearing.
   Currently `tmf-auth-2026-08c`. Change a word of that wording and you must
   change the id, or you lose the ability to prove what somebody agreed to.
 - **SSN, DOB and signature go to the whole funding industry, by John's
-  instruction of 20 Aug 2026** — funders, lenders, brokers, ISOs, syndicators,
+  instruction of 8 Sep 2026** — funders, lenders, brokers, ISOs, syndicators,
   buyers, servicers, verification services — and TMF may be paid for it. The
   documents say so plainly. What they still do not do is offer those three
   fields to advertising platforms or general data brokers, because consent does
@@ -158,10 +182,18 @@ These are not style preferences. Each one is load-bearing.
   bundled notes are gitignored: the repo is public and those notes describe
   funders, process and pricing.
 - **API keys stay server-side.** The chat widget knows one URL: `/api/chat.php`.
+- **The chat launcher is hidden until `GET /api/chat.php?status=1` says
+  `enabled`.** John ran the selftest on 8 Sep 2026 with `chat_enabled` false
+  and every visitor was getting a chat button that opened onto an error, with
+  nothing recorded — no transcript, no lead, no notification. Three states now:
+  off means no button at all; on with no `chat_endpoint` is **message mode**,
+  where the widget says so honestly, stores the conversation and pages John;
+  on with an endpoint is the full assistant. Do not draw the launcher on
+  anything less than an explicit yes.
 - **Every path that sets `waiting = true` must call `notifyWaiting()`**
   (`api/chat.php`). There are two: the "talk to a person" button, and the
   fallback when the agent cannot be reached. The second one was silent until
-  20 Aug 2026 — the visitor was told an advisor would pick it up and nobody
+  8 Sep 2026 — the visitor was told an advisor would pick it up and nobody
   was told to pick it up, so every conversation that hit a bad key was lost
   quietly. It fires once per conversation via `$t['notified']`.
 
@@ -190,6 +222,7 @@ api/chat.php             Live chat proxy to John's agent, ?selftest=1
 api/figure-heloc.php     Figure HELOC API proxy, ?selftest=1
 api/config.example.php   Template. Real config.php lives ONLY on the server
 scripts/verify.sh        Invariant checker — run before finishing
+scripts/live-check.sh    Deploy-drift checker — is the server running this code?
 scripts/crypto-chain-test.mjs  Seal → wrap → unlock → decrypt, for real
 scripts/bundle-vault.py  Obsidian vault -> one knowledge file for the chat
 seo-inject.py            Canonicals, robots, schema AND sitemap.xml
@@ -220,7 +253,7 @@ projection = monthly_revenue × industry_multiplier × credit_multiplier
 range      = projection ± 15%
 ```
 
-- `PROJECTION_TRIM = 0.90` — a flat 10% haircut, his instruction 20 Aug 2026.
+- `PROJECTION_TRIM = 0.90` — a flat 10% haircut, his instruction 8 Sep 2026.
   Applied to the **gross**, before the balance deduction. Applying it after
   would also shrink the penalty for what a merchant already owes, which is a
   more generous answer, not a smaller one.
@@ -291,6 +324,17 @@ range      = projection ± 15%
 - **There is no `php` on every machine.** `verify.sh` now skips the PHP lint
   with a warning rather than reporting six failures for one missing binary.
   A PHP change made on such a machine has NOT been syntax-checked — say so.
+- **A missing `.php` under `/api/` answers 500, not 404.** At the web root a
+  missing `.php` 404s correctly, but inside `/api/` LiteSpeed returns
+  `500 Internal Server Error`. That reads as "the code is broken" and sends you
+  into the source looking for a fatal error that is not there. **The tell is the
+  `x-powered-by` header**: PHP sets it the moment it handles a request, even for
+  a fatal, so a 500 *without* it means PHP never ran and the file is simply not
+  deployed. `live-check.sh` encodes this.
+- **`curl … | wc -c` against the local file is a false alarm on CRLF files.**
+  `assets/styles.css` is CRLF here and LF on the server, so a raw byte count
+  reports it 1,766 bytes stale on every run while being identical character for
+  character. Compare with `diff --strip-trailing-cr`, not with byte counts.
 
 ---
 
@@ -299,7 +343,8 @@ range      = projection ± 15%
 There is no test suite. What exists:
 
 ```bash
-./scripts/verify.sh                 # invariants
+./scripts/verify.sh                 # invariants, local
+./scripts/live-check.sh             # what the server is actually serving
 php -l api/*.php && node --check assets/app.js
 php -S 127.0.0.1:8080 -t .          # local server (no .htaccess, so no clean URLs)
 ```
@@ -334,7 +379,7 @@ about it.
    `privacy.html`. **`verify.sh` fails on this on purpose** and will keep
    failing until he answers; do not "fix" it by inventing values or by deleting
    the check. See `SETUP-LEGAL.md`.
-   *(Answered 20 Aug 2026: there is no registered company. The documents now
+   *(Answered 8 Sep 2026: there is no registered company. The documents now
    say TMF Team is a trading name and the agreement is with the individual.
    That means the limitation of liability protects nothing — he has been told.)*
 7. **`privacy@tmfus.com` and `legal@tmfus.com` do not exist yet.** Both are
@@ -352,7 +397,7 @@ about it.
 10. **`admin.php` is password-only, no second factor.** The FTC Safeguards Rule
    expects MFA for anyone reaching customer information, and this is the real
    authentication gap — not the key handling, which is stronger than most.
-   Offered to John 20 Aug 2026, not yet asked for.
-11. **No PHP on the machine used on 20 Aug 2026.** `admin.php` and
+   Offered to John 8 Sep 2026, not yet asked for.
+11. **No PHP on the machine used on 8 Sep 2026.** `admin.php` and
    `api/application.php` were edited and their JavaScript was checked, but the
    PHP itself was never linted. First thing to do somewhere with `php`.

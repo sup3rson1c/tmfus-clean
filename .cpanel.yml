@@ -17,6 +17,7 @@ deployment:
     - /bin/cp -f 404.html                $DEPLOYPATH/
     - /bin/cp -f terms.html              $DEPLOYPATH/
     - /bin/cp -f privacy.html            $DEPLOYPATH/
+    - /bin/cp -f unsubscribe.html        $DEPLOYPATH/
     - /bin/cp -f admin.php               $DEPLOYPATH/
     - /bin/cp -f robots.txt              $DEPLOYPATH/
     - /bin/cp -f llms.txt                $DEPLOYPATH/
@@ -31,4 +32,5 @@ deployment:
     - /bin/cp -f api/application.php     $DEPLOYPATH/api/
     - /bin/cp -f api/lead.php            $DEPLOYPATH/api/
     - /bin/cp -f api/chat.php            $DEPLOYPATH/api/
+    - /bin/cp -f api/unsubscribe.php     $DEPLOYPATH/api/
     - /bin/cp -f api/config.example.php  $DEPLOYPATH/api/

@@ -187,7 +187,7 @@ Both Claude and OpenAI do it automatically.
 ## Being told somebody is waiting
 
 **This is the part that was broken.** Two things put a visitor into the
-"waiting" state, and until 20 Aug 2026 only one of them told you:
+"waiting" state, and until 8 Sep 2026 only one of them told you:
 
 - They pressed **Talk to a person** — you got an email.
 - **The assistant failed to answer them** — the visitor was told an advisor

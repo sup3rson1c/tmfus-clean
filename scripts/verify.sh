@@ -387,6 +387,45 @@ fi
 
 # ---------------------------------------------------------------
 printf '\n'
+head "Unsubscribe"
+
+# A GET that unsubscribes gets the list emptied by link-prefetching mail
+# scanners, quietly, with no way to tell it happened. RFC 8058 allows a
+# page on GET and action only on POST.
+if grep -q "=== 'GET'" api/unsubscribe.php && grep -q "POST only" api/unsubscribe.php; then
+  pass "unsubscribe.php acts on POST only, GET just shows the page"
+else
+  fail "unsubscribe.php no longer refuses to act on a GET"
+fi
+
+# A relative unsubscribe_dir resolves against api/ and publishes a list of
+# email addresses inside public_html. Same failure that bit application_dir.
+if grep -q "dir\[0\] !== '/'" api/unsubscribe.php; then
+  pass "a relative unsubscribe_dir is refused rather than silently used"
+else
+  fail "unsubscribe.php will write the suppression list wherever it is told"
+fi
+
+# Telling a caller whether an address was already on the list turns this into
+# a free membership oracle. Every well-formed request gets the same answer.
+if grep -q "respond(200, \['ok' => true\]);" api/unsubscribe.php; then
+  pass "the response does not reveal whether the address was on a list"
+else
+  fail "unsubscribe.php response may now leak list membership"
+fi
+
+if grep -q "api/unsubscribe.php" unsubscribe.html; then
+  pass "the unsubscribe page posts to the endpoint"
+else
+  fail "unsubscribe.html is not wired to api/unsubscribe.php"
+fi
+
+if grep -q "'unsubscribe_dir' => ''" api/config.example.php; then
+  pass "config.example.php ships unsubscribe_dir empty, so it must be set on purpose"
+else
+  fail "config.example.php has a default unsubscribe_dir - it would land in the web root"
+fi
+
 if [ $FAIL -eq 0 ]; then
   printf '\033[32mAll invariants hold.\033[0m\n'
 else

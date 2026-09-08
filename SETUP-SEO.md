@@ -44,7 +44,7 @@ All of this was missing entirely before.
 | Internal links fixed | Every internal link pointed at `foo.html`, which `.htaccess` then 301-redirected to `/foo`. Every click and every crawl was paying a redirect hop. They now point straight at the clean URL. |
 | `llms.txt` | Present, with a caveat — see below. Now carries a "facts an assistant can rely on" block and an explicit instruction not to attribute a phone number from elsewhere. |
 
-Added 20 Aug 2026:
+Added 8 Sep 2026:
 
 | Added | Why it matters |
 |-------|----------------|

@@ -171,6 +171,117 @@ function loadKnowledge(array $cfg): array
 }
 
 /**
+ * What the visitor typed into the funding calculator. It arrives from the
+ * browser and is therefore never trusted: whitelist the fields, coerce the
+ * types, cap the lengths, drop everything else. A new field on the calculator
+ * has to be added here deliberately rather than becoming an unbounded write.
+ */
+function cleanCalc($raw): array
+{
+    if (!is_array($raw)) {
+        return [];
+    }
+    $num = static function ($v) {
+        if (!is_numeric($v)) {
+            return null;
+        }
+        $n = (float) $v;
+        return ($n >= 0 && $n < 1000000000) ? $n : null;
+    };
+    $str = static fn($v) => is_string($v) ? substr(stripSensitive(trim($v)), 0, 120) : '';
+
+    $out = [
+        'revenue'   => $num($raw['revenue']   ?? null),
+        'credit'    => $num($raw['credit']    ?? null),
+        'positions' => $num($raw['positions'] ?? null),
+        'tib'       => $num($raw['tib']       ?? null),
+        'balance'   => $num($raw['balance']   ?? null),
+        'industry'  => $str($raw['industry']  ?? ''),
+        'matched'   => $str($raw['matched']   ?? ''),
+        'estimate'  => $str($raw['estimate']  ?? ''),
+        'at'        => $str($raw['at']        ?? ''),
+        'contact'   => [],
+    ];
+
+    /* The last calculator step asks for a name and a number. Same scrubbing as
+       the chat's own details action, so something sensitive typed into the
+       wrong box is gone before it is ever written to disk. */
+    $c = is_array($raw['contact'] ?? null) ? $raw['contact'] : [];
+    foreach (['name', 'business', 'phone', 'email'] as $k) {
+        $v = $str($c[$k] ?? '');
+        if ($v !== '') {
+            $out['contact'][$k] = $v;
+        }
+    }
+
+    /* An untouched calculator is the same as nothing sent. */
+    foreach ($out as $v) {
+        if ($v !== null && $v !== '' && $v !== []) {
+            return $out;
+        }
+    }
+    return [];
+}
+
+/**
+ * The calculator answers as flat text. One formatter, used by the phone alert,
+ * the email, the inbox and - the day an agent endpoint is configured - the
+ * system prompt, so the four can never drift apart.
+ */
+function calcSummary(array $calc): string
+{
+    if ($calc === []) {
+        return '';
+    }
+    $money = static fn($n) => $n === null ? null : '$' . number_format((float) $n);
+    $int   = static fn($n) => $n === null ? null : (string) (int) $n;
+
+    $rows = [
+        'Monthly revenue'  => $money($calc['revenue'] ?? null),
+        'Credit score'     => $int($calc['credit'] ?? null),
+        'Open positions'   => $int($calc['positions'] ?? null),
+        'Balance owed'     => $money($calc['balance'] ?? null),
+        'Time in business' => ($calc['tib'] ?? null) !== null ? $int($calc['tib']) . ' months' : null,
+        'Industry'         => ($calc['industry'] ?? '') !== '' ? $calc['industry'] : null,
+        'Matched products' => ($calc['matched'] ?? '') !== '' ? $calc['matched'] : null,
+    ];
+    $c = (array) ($calc['contact'] ?? []);
+    foreach (['name' => 'Name', 'business' => 'Business', 'phone' => 'Phone', 'email' => 'Email'] as $k => $label) {
+        if (($c[$k] ?? '') !== '') {
+            $rows[$label] = $c[$k];
+        }
+    }
+
+    $lines = [];
+    foreach ($rows as $label => $v) {
+        if ($v !== null && $v !== '') {
+            $lines[] = str_pad($label . ':', 18) . $v;
+        }
+    }
+    return implode("\n", $lines);
+}
+
+/**
+ * The same answers, framed for an agent. Kept separate from calcSummary so the
+ * framing can never leak into the phone alert. This is the whole of what a
+ * future bot needs: set chat_endpoint and it starts every conversation already
+ * knowing the numbers, with no further change to this file.
+ */
+function calcBlock(array $transcript): string
+{
+    $text = calcSummary((array) ($transcript['calc'] ?? []));
+    if ($text === '') {
+        return '';
+    }
+    return "\n\nWHAT THIS VISITOR ALREADY TOLD THE CALCULATOR\n"
+        . "Information only, typed by the visitor and not verified. Do not read it\n"
+        . "back to them line by line, and it does not license you to quote a rate,\n"
+        . "a factor or an approval figure. Use it so they do not have to repeat\n"
+        . "themselves.\n"
+        . $text;
+}
+
+/**
  * The instructions the agent gets: the rules, then the notes.
  *
  * The notes are APPENDED. They never replace the rules — those are what
@@ -180,10 +291,11 @@ function loadKnowledge(array $cfg): array
  * because a note that happens to read like a command ("tell customers
  * we can do 1.15") should not become one.
  */
-function buildSystemPrompt(array $cfg): string
+function buildSystemPrompt(array $cfg, array $transcript = []): string
 {
     $system = trim((string) ($cfg['chat_system_prompt'] ?? '')) ?: DEFAULT_SYSTEM_PROMPT;
     [$knowledge] = loadKnowledge($cfg);
+    $system .= calcBlock($transcript);
 
     if ($knowledge === '') {
         return $system;
@@ -247,6 +359,12 @@ function notifyWaiting(array $cfg, array &$t, string $why): void
         'Email: ' . $val('email'),
         'Page:  ' . (string) ($t['page'] ?? ''),
     ];
+    $calcText = calcSummary((array) ($t['calc'] ?? []));
+    if ($calcText !== '') {
+        $lines[] = '';
+        $lines[] = 'From the calculator:';
+        $lines[] = $calcText;
+    }
     if ($last !== '') {
         $lines[] = '';
         $lines[] = 'They said: ' . substr($last, 0, 300);
@@ -363,7 +481,7 @@ function askAgent(array $cfg, array $transcript, string $latest): array
     $key      = (string) ($cfg['chat_api_key'] ?? '');
     $format   = (string) ($cfg['chat_format'] ?? 'openai');
     $model    = (string) ($cfg['chat_model'] ?? '');
-    $system   = buildSystemPrompt($cfg);
+    $system   = buildSystemPrompt($cfg, $transcript);
 
     if ($endpoint === '') {
         return ['ok' => false, 'error' => 'no chat_endpoint configured'];
@@ -493,6 +611,32 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['selftest'])) {
     ]);
 }
 
+/* Status:  GET /api/chat.php?status=1
+
+   The widget asks this once per visit, before it shows its button. Three
+   answers, and each one is a different widget:
+
+     enabled false          -> the button is not drawn at all. A chat button
+                               that opens onto an error is worse than no chat
+                               button, and that is what visitors were getting.
+     enabled, mode=message  -> "leave a message" — no agent configured, but
+                               the conversation is stored and John is paged.
+     enabled, mode=assistant-> the full thing.
+
+   It reveals only whether chat is switched on. No key, no endpoint, no path. */
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['status'])) {
+    $cfg = is_readable(__DIR__ . '/config.php') ? (require __DIR__ . '/config.php') : [];
+    if (!is_array($cfg)) {
+        $cfg = [];
+    }
+    header('Cache-Control: public, max-age=300');
+    respond(200, [
+        'ok'      => true,
+        'enabled' => !empty($cfg['chat_enabled']),
+        'mode'    => ($cfg['chat_endpoint'] ?? '') !== '' ? 'assistant' : 'message',
+    ]);
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     fail(405, 'POST only.');
 }
@@ -539,6 +683,7 @@ if ($action !== 'poll') {
    --------------------------------------------------------------- */
 if ($action === 'start') {
     $session = bin2hex(random_bytes(16));
+    $calc = cleanCalc($in['calc'] ?? null);
     $t = [
         'session'  => $session,
         'created'  => date('c'),
@@ -550,13 +695,19 @@ if ($action === 'start') {
         'waiting'  => false,
         'closed'   => false,
         'visitor'  => ['name' => '', 'phone' => '', 'email' => ''],
+        'calc'      => $calc,
+        'calc_text' => calcSummary($calc),
         'messages' => [],
     ];
     if (!saveTranscript($baseDir, $t)) {
         error_log('chat.php: could not write a transcript into ' . $baseDir . '/chats');
         fail(500, 'Chat is unavailable right now.');
     }
-    respond(200, ['ok' => true, 'session' => $session]);
+    respond(200, [
+        'ok'      => true,
+        'session' => $session,
+        'mode'    => ($cfg['chat_endpoint'] ?? '') !== '' ? 'assistant' : 'message',
+    ]);
 }
 
 /* Everything below needs a real session. */
@@ -607,6 +758,15 @@ if ($action === 'details') {
     foreach (['name', 'phone', 'email'] as $k) {
         if (isset($in[$k]) && is_string($in[$k])) {
             $t['visitor'][$k] = substr(stripSensitive(trim($in[$k])), 0, 120);
+        }
+    }
+    /* The calculator can be filled in after the chat was opened, so the
+       answers are accepted here too and simply replace what is stored. */
+    if (array_key_exists('calc', $in)) {
+        $calc = cleanCalc($in['calc']);
+        if ($calc !== []) {
+            $t['calc'] = $calc;
+            $t['calc_text'] = calcSummary($calc);
         }
     }
     saveTranscript($baseDir, $t);
@@ -668,17 +828,31 @@ if ($answer['ok']) {
     $t['messages'][] = ['role' => 'assistant', 'text' => $reply, 'at' => date('c')];
     $out[] = ['role' => 'assistant', 'text' => $reply, 'at' => date('c')];
 } else {
-    /* Say something true rather than nothing. A dead widget reads as a
-       broken site; an honest one still captures the lead. */
-    $fallback = 'I am having trouble reaching our system just now. An advisor can pick this up — '
-              . 'leave your name and number and we will come back to you shortly.';
+    /* Say something true rather than nothing. A dead widget reads as a broken
+       site; an honest one still captures the lead.
+
+       Two different truths, though. With no agent configured this is not a
+       failure at all — it is a message box working exactly as intended, and
+       telling the visitor something went wrong would be a lie that makes TMF
+       look broken. */
+    $fallback = ($cfg['chat_endpoint'] ?? '') === ''
+        ? 'Thanks — that has reached us and an advisor will come back to you, usually the same day. '
+          . 'Leave the best number to reach you on and we will use that.'
+        : 'I am having trouble reaching our system just now. An advisor can pick this up — '
+          . 'leave your name and number and we will come back to you shortly.';
     $t['messages'][] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];
     $t['waiting'] = true;
     $out[] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];
     /* This used to be silent. The visitor was told an advisor would pick it
        up and nobody was told to pick it up, so every conversation that hit a
        misconfigured or unreachable agent was lost quietly. */
-    notifyWaiting($cfg, $t, 'The assistant could not answer, so this visitor is waiting.');
+    notifyWaiting(
+        $cfg,
+        $t,
+        ($cfg['chat_endpoint'] ?? '') === ''
+            ? 'Somebody left a message in the chat.'
+            : 'The assistant could not answer, so this visitor is waiting.'
+    );
 }
 
 saveTranscript($baseDir, $t);

@@ -281,6 +281,30 @@ function leadRecords(string $storeDir, int $limit = 400): array
     return $out;
 }
 
+/**
+ * A one-line version of the calculator answers for the inbox list, so the
+ * queue can be triaged without opening every conversation. The full text
+ * lives on the transcript as calc_text and is rendered inside the panel.
+ */
+function calcLine(array $calc): string
+{
+    if ($calc === []) {
+        return '';
+    }
+    $bits = [];
+    if (($calc['revenue'] ?? null) !== null) {
+        $bits[] = '$' . number_format((float) $calc['revenue']) . '/mo';
+    }
+    if (($calc['credit'] ?? null) !== null) {
+        $bits[] = 'FICO ' . (int) $calc['credit'];
+    }
+    if (($calc['positions'] ?? null) !== null) {
+        $n = (int) $calc['positions'];
+        $bits[] = $n === 1 ? '1 position' : $n . ' positions';
+    }
+    return implode(' | ', $bits);
+}
+
 /* ---------------------------------------------------------------
    Live chat. Transcripts are written by api/chat.php; this side reads
    them and can write operator turns into them.
@@ -352,6 +376,7 @@ function chatList(string $storeDir, int $limit = 80): array
                 'phone'   => (string) ($v['phone'] ?? ''),
                 'turns'   => count($msgs),
                 'last'    => mb_substr($last, 0, 90),
+                'calcline' => calcLine((array) ($t['calc'] ?? [])),
             ];
         }
     }
@@ -1362,6 +1387,8 @@ header('Content-Type: text/html; charset=utf-8');
             tag + '<span class="muted">' + esc(when(c.updated)) + '</span></div>' +
             '<div style="font-size:.9rem;margin-top:4px"><b>' + esc(c.name || 'Visitor') + '</b>' +
             (c.phone ? ' <span class="muted">' + esc(c.phone) + '</span>' : '') + '</div>' +
+            (c.calcline ? '<div style="font-size:.8rem;margin-top:2px;color:#34d399">' +
+              esc(c.calcline) + '</div>' : '') +
             '<div class="muted" style="font-size:.82rem;margin-top:2px">' + esc(c.last || '') + '</div>' +
             '</div>';
         }).join('');
@@ -1384,6 +1411,17 @@ header('Content-Type: text/html; charset=utf-8');
         $('btnRelease').classList.toggle('hide', !t.human);
 
         var log = $('chatLog');
+        /* Everything the merchant put into the calculator, pinned above the
+           first message so the conversation starts from the numbers. */
+        if (chatSeen === 0 && t.calc_text) {
+          var calcBox = document.createElement('div');
+          calcBox.style.cssText = 'align-self:stretch;padding:10px 12px;border-radius:12px;' +
+            'font-size:.82rem;white-space:pre-wrap;line-height:1.5;' +
+            'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;' +
+            'background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.28)';
+          calcBox.textContent = 'From the calculator\n' + t.calc_text;
+          log.appendChild(calcBox);
+        }
         (t.messages || []).slice(chatSeen).forEach(function (m) {
           var el = document.createElement('div');
           var mine = m.role === 'operator';

@@ -99,6 +99,39 @@ return [
     'admin_password_hash' => '',
 
     // ---------------------------------------------------------------
+    // UNSUBSCRIBE  (api/unsubscribe.php, page at /unsubscribe)
+    //
+    // Where opt-outs are recorded. This is the legal record that someone
+    // asked to be left alone, so it has to survive and it must not be
+    // readable from the web.
+    // ---------------------------------------------------------------
+
+    // ABSOLUTE path, OUTSIDE public_html. A relative path would resolve
+    // inside the web root and publish a list of email addresses to anyone
+    // who guesses the filename. The endpoint refuses to write rather than
+    // do that, so opt-outs would fail — set this before going live.
+    // Example: '/home/YOURACCOUNT/tmf-suppression'
+    'unsubscribe_dir' => '',
+
+    // A long random string. It signs the token in unsubscribe links so a
+    // URL cannot be edited into somebody else's address, and so the raw
+    // address never travels in a link that ends up in server logs and
+    // referrer headers. Generate one with:
+    //   php -r "echo bin2hex(random_bytes(32));"
+    // Changing it invalidates every link already sent, so set it once.
+    'unsubscribe_secret' => '',
+
+    // Where to be told about each opt-out. Recording it here does NOT stop
+    // the mail — the sending platform is what sends, so somebody has to add
+    // the address to the global block list there. This email is the prompt
+    // to go and do that. Leave empty to switch the notifications off.
+    'unsubscribe_notify' => '',
+
+    // The From: address on that notification. Must be a domain this server
+    // is allowed to send as, or the mail is silently dropped.
+    'unsubscribe_from' => 'no-reply@tmfus.com',
+
+    // ---------------------------------------------------------------
     // LIVE CHAT  (api/chat.php, widget on every page, takeover in admin)
     //
     // The visitor's browser never sees any of this. It talks only to

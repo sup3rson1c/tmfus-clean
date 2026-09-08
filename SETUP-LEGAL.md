@@ -1,6 +1,6 @@
 # Terms, privacy, cookies — what exists and what you still have to do
 
-Added 20 Aug 2026. Two new pages, a cookie banner, and consent wording on every
+Added 8 Sep 2026. Two new pages, a cookie banner, and consent wording on every
 form that collects anything.
 
 **Read the section "What only you can do" first.** Until those are done
@@ -39,7 +39,7 @@ agree with each other:
    signs, so the permission is captured with a signature, a timestamp, an IP
    address and the id of the exact wording — `tmf-auth-2026-08c`.
 
-**Updated 20 Aug 2026 on John's instruction.** The permission now covers the
+**Updated 8 Sep 2026 on John's instruction.** The permission now covers the
 **complete file including date of birth, Social Security number and signature**,
 shared with and sold to funders, lenders, banks, other brokers, ISOs,
 syndicators, participants, buyers of receivables, servicers, collection agents,
@@ -81,7 +81,7 @@ version somebody agreed to.
 deliberate: a privacy policy with a blank where the address goes is not a
 privacy policy.
 
-1. ~~Your registered legal entity name.~~ **Answered 20 Aug 2026: there is no
+1. ~~Your registered legal entity name.~~ **Answered 8 Sep 2026: there is no
    registered company.** The documents now say TMF Team is a trading name and
    the agreement is with the individual operating it, which is accurate and
    enforceable. **Be aware of what that means:** with no company, the limitation

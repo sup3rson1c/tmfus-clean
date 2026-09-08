@@ -766,7 +766,7 @@
      1.0 = the full balance. */
   const BALANCE_DEDUCTION_RATE = 1.0;
 
-  /* A flat haircut on the projection. John's instruction, 20 Aug 2026:
+  /* A flat haircut on the projection. John's instruction, 8 Sep 2026:
      "lower the calculator projections by 10 percent". 0.90 = 10% lower.
 
      It is applied to the GROSS figure, before the outstanding balance is
@@ -978,6 +978,27 @@
       industry: root.querySelector('[data-field="industry"]')?.dataset.value || null
     });
 
+    /* Everything the visitor types here is kept for the chat widget, so an
+       advisor opens a conversation already knowing the numbers instead of
+       asking for them a second time. sessionStorage, so it dies with the tab
+       and never leaves this origin except inside a chat the visitor started.
+
+       Empty answers are deleted rather than merged, or moving from one
+       calculator to another would blank what the first one collected. */
+    const CALC_STORE_KEY = 'tmf_calc';
+    const saveCalc = (extra) => {
+      try {
+        const p = profile();
+        Object.keys(p).forEach((k) => {
+          if (p[k] === null || p[k] === '') delete p[k];
+        });
+        const prev = JSON.parse(sessionStorage.getItem(CALC_STORE_KEY) || '{}');
+        sessionStorage.setItem(CALC_STORE_KEY, JSON.stringify(
+          Object.assign({}, prev, p, extra || {}, { at: new Date().toISOString() })
+        ));
+      } catch (_) {}
+    };
+
     /* The balance question only makes sense once positions > 0. Show it
        then, and clear it when they go back to "None" so a stale figure
        can never quietly reduce someone's offer. */
@@ -1078,6 +1099,7 @@
         const msg = validate();
         if (msg) { if (errEl) errEl.textContent = msg; return; }
         step = Math.min(step + 1, panes.length - 1);
+        saveCalc();
         paint(true);
       }
       if (back) { step = Math.max(step - 1, 0); paint(true); }
@@ -1092,6 +1114,7 @@
         try { lead.estimate = JSON.stringify(estimateAdvance(p)); } catch (_) {}
         try { lead.matched = matchProducts(p).map((x) => x.name || x.id).join(', '); } catch (_) {}
         sendLead('funding-calculator', lead).catch(() => {});
+        saveCalc({ contact: lead, estimate: lead.estimate || '', matched: lead.matched || '' });
 
         showAnswer(root, p);
       }
@@ -1125,16 +1148,24 @@
     const est = estimateAdvance(profile);
     const card = root.closest('.panel') || root;
 
-    /* The opening line the advisor's chat shows if they pick option 2. It
-       carries the result across, so the merchant does not have to explain
-       what they just did. Escaped: it is going into an HTML attribute. */
+    /* The opening line the chat shows if they pick option 2. It carries the
+       result across, so the merchant does not have to explain what they just
+       did - and it stops there. What happens next depends on whether an agent
+       is configured, which only the chat widget knows, so the invitation is
+       appended by openChat() rather than promised here. Escaped: it is going
+       into an HTML attribute. */
     const range = est && est.viable !== false ? usd(est.low) + ' – ' + usd(est.high) : '';
     const chatGreeting = attrEscape(
       'You have just run the cash injection calculator' +
-      (range ? ' and it projected ' + range + '.' : '.') +
-      ' Ask me anything about that number, what it would cost, or what we need from you — ' +
-      'and I can bring a funding advisor into this conversation whenever you want one.'
+      (range ? ' and it projected ' + range + '.' : '.')
     );
+
+    /* Same problem one level up: the button's own description promised
+       somebody to ask. <html data-chat-mode> is set by the chat widget from
+       ?status=1 at boot, long before anyone finishes the calculator. */
+    const chatBlurb = document.documentElement.getAttribute('data-chat-mode') === 'message'
+      ? 'Opens the chat here on this page. Leave a message and an advisor comes back to you.'
+      : 'Opens the chat here on this page. Ask anything; an advisor can join it.';
 
     /* The third option is only offered from 650 up. A HELOC is priced off
        the personal credit score, so pointing someone at 580 to it wastes
@@ -1200,7 +1231,7 @@
           <span class="decision-n">${n()}</span>
           <span class="decision-txt">
             <b>I am not sure yet — talk with us</b>
-            <span>Opens the chat here on this page. Ask anything; an advisor can join it.</span>
+            <span>${chatBlurb}</span>
           </span>
           <span class="icon">&rarr;</span>
         </button>
@@ -2564,6 +2595,7 @@
     if ($('[data-chat-panel]')) return;           // never twice
 
     let session = null;
+    let mode = 'assistant';     // 'assistant' | 'message' — set by the server
     let seen = 0;
     let open = false;
     let human = false;
@@ -2611,6 +2643,11 @@
           'Please do not type your Social Security number in chat.</p>' +
       '</div>';
 
+    /* Hidden until the server confirms chat is switched on. A button that
+       opens onto "chat is not available right now" is worse than no button,
+       and that is exactly what visitors were getting while chat_enabled was
+       false. Asked once per visit, then remembered for the session. */
+    launch.hidden = true;
     document.body.appendChild(launch);
     document.body.appendChild(panel);
 
@@ -2674,24 +2711,68 @@
         status.innerHTML = '<i class="dot"></i>An advisor has joined';
       } else if (waiting) {
         status.innerHTML = '<i class="dot"></i>Getting an advisor for you';
+      } else if (mode === 'message') {
+        status.innerHTML = '<i class="dot"></i>Leave a message &mdash; an advisor replies';
       } else {
         status.innerHTML = '<i class="dot"></i>Assistant &mdash; an advisor can join';
       }
     }
 
+    /* ---- one place that knows which mode the chat is in ----
+       Four things have to agree: the header, the input placeholder, the
+       opening line, and the calculator's result screen - which sits outside
+       this closure and so reads the mode off <html>. While they disagreed the
+       widget greeted a visitor as an assistant and then answered like a
+       message box, which reads as a fault rather than as the leave-a-message
+       box it actually is. */
+    function setMode(m) {
+      if (m !== 'assistant' && m !== 'message') return;
+      mode = m;
+      document.documentElement.setAttribute('data-chat-mode', mode);
+      input.placeholder = mode === 'message' ? 'Type your message…' : 'Ask a question…';
+      setStatus();
+    }
+
+    /* ---- what the calculator already knows ----
+       The funding calculator leaves its answers in sessionStorage. They ride
+       along with the conversation so the advisor - and, the day an endpoint is
+       configured, a bot - sees the numbers without anyone asking twice. */
+    function readCalc() {
+      try { return JSON.parse(sessionStorage.getItem('tmf_calc') || 'null'); }
+      catch (_) { return null; }
+    }
+
+    /* The calculator is often filled in after the chat was opened, so this
+       re-sends on change. The signature guard means an unchanged calculator
+       costs nothing, however often the poll loop runs. */
+    var calcSent = '';
+    function syncCalc() {
+      var c = readCalc();
+      if (!c || !session) return;
+      var sig = JSON.stringify(c);
+      if (sig === calcSent) return;
+      calcSent = sig;
+      post({ action: 'details', session: session, calc: c }).catch(function () {});
+    }
+
     /* ---- session ---- */
     function ensureSession() {
       if (session) return Promise.resolve(session);
-      return post({ action: 'start', page: location.pathname }).then(function (j) {
-        session = j.session;
-        try { sessionStorage.setItem(CHAT_SESSION_KEY, session); } catch (_) {}
-        return session;
-      });
+      var startCalc = readCalc();
+      return post({ action: 'start', page: location.pathname, calc: startCalc })
+        .then(function (j) {
+          session = j.session;
+          calcSent = startCalc ? JSON.stringify(startCalc) : '';
+          if (j.mode) setMode(j.mode);
+          try { sessionStorage.setItem(CHAT_SESSION_KEY, session); } catch (_) {}
+          return session;
+        });
     }
 
     /* ---- polling for anything the advisor sends ---- */
     function pump() {
       if (!session) return Promise.resolve();
+      syncCalc();
       return post({ action: 'poll', session: session, since: seen })
         .then(function (j) {
           const wasHuman = human;
@@ -2805,10 +2886,21 @@
       ensureSession()
         .then(function () {
           if (!log.children.length) {
+            /* A greeting handed in from the page says what just happened. The
+               invitation after it is the chat's to write, because only the
+               chat knows whether there is anything here that can answer. */
+            const invite = mode === 'message'
+              ? 'Tell us what you would like to know and the best number to reach you on — ' +
+                'an advisor will come back to you, usually the same day.'
+              : 'Ask me anything about that number, what it would cost, or what we need from you — ' +
+                'and I can bring a funding advisor into this conversation whenever you want one.';
             bubble('assistant',
-              (typeof greeting === 'string' && greeting) ? greeting :
-              'Hello — I can answer questions about funding, what we need from you, and how long it takes. ' +
-              'What are you trying to do?');
+              (typeof greeting === 'string' && greeting) ? greeting + ' ' + invite :
+              mode === 'message'
+                ? 'Leave a message here and an advisor will come back to you — usually the same day. ' +
+                  'Tell us what you are trying to do, and the best number to reach you on.'
+                : 'Hello — I can answer questions about funding, what we need from you, and how long it takes. ' +
+                  'What are you trying to do?');
           }
           return pump();
         })
@@ -2844,6 +2936,34 @@
       if (open) { input.focus(); return; }
       openChat(trigger.getAttribute('data-open-chat') || '');
     });
+
+    /* Ask once per visit whether chat is switched on, and only then draw the
+       button. Cached in sessionStorage so this costs one small request per
+       visit rather than one per page. Anything other than an explicit yes
+       leaves the button hidden — if chat.php is unreachable, no chat button
+       is the honest outcome. */
+    (function revealIfAvailable() {
+      var CACHE = 'tmf_chat_status';
+      var cached = null;
+      try { cached = JSON.parse(sessionStorage.getItem(CACHE) || 'null'); } catch (_) {}
+
+      if (cached) { apply(cached); return; }
+
+      fetch(CHAT_ENDPOINT + '?status=1', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j) return;
+          try { sessionStorage.setItem(CACHE, JSON.stringify(j)); } catch (_) {}
+          apply(j);
+        })
+        .catch(function () { /* leave the button hidden */ });
+
+      function apply(j) {
+        if (!j || !j.enabled) return;
+        if (j.mode) setMode(j.mode);
+        if (!open) launch.hidden = false;
+      }
+    }());
 
     // A conversation already under way should resume itself, so an advisor's
     // reply is not lost because the visitor changed page.
