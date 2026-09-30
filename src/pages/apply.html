@@ -31,6 +31,20 @@
             <p class="prefill-note" data-prefill-note hidden></p>
             <div class="form-stack">
               <div class="field">
+                <label class="label field-label" for="ap-product">Product interested in *</label>
+                <select class="input" id="ap-product" data-field="product" required>
+                  <option value="Not sure yet">Not sure yet</option>
+                  <option value="HELOC">Home equity line of credit (HELOC)</option>
+                  <option value="MCA">Merchant cash advance (MCA)</option>
+                  <option value="SBA loan">SBA loan</option>
+                  <option value="Business line of credit">Business line of credit</option>
+                  <option value="Equipment financing">Equipment financing</option>
+                  <option value="Term loan">Term loan</option>
+                  <option value="Other">Other</option>
+                </select>
+                <span class="field-hint">We may have selected this from the page you came from. You can change it.</span>
+              </div>
+              <div class="field">
                 <label class="label field-label" for="ap-legal">Business legal name *</label>
                 <input class="input" id="ap-legal" data-field="business_legal_name" autocomplete="organization" placeholder="Acme Logistics LLC" required>
               </div>
@@ -538,6 +552,25 @@
   /* The calculator's projection, if this visitor just ran it (sessionStorage,
      this tab only). Shown as context, never sent with the application. */
   (function () {
+    var product = document.querySelector("#ap-product");
+    var sourceProducts = {
+      "/heloc-calculator": "HELOC",
+      "/mca": "MCA",
+      "/sba-loans": "SBA loan"
+    };
+    var requested = new URLSearchParams(location.search).get("product") || "";
+    var referred = "";
+    try {
+      var referrerUrl = new URL(document.referrer);
+      if (referrerUrl.origin === location.origin) {
+        referred = sourceProducts[referrerUrl.pathname.replace(/\.html$/, "")] || "";
+      }
+    } catch (_) {}
+    var preset = requested || referred;
+    if (product && Array.prototype.some.call(product.options, function (option) { return option.value === preset; })) {
+      product.value = preset;
+    }
+
     try {
       var e = JSON.parse(sessionStorage.getItem("tmf-estimate") || "null");
       if (!e || e.over || !e.low || !e.high) return;

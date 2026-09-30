@@ -190,6 +190,24 @@ else
   fail "application.php no longer fails closed without a key"
 fi
 
+# Product intent has to survive the whole application path. The form owns an
+# editable field, HELOC links preset it, and the ordinary non-sensitive record
+# plus notification email carry it without touching the encryption boundary.
+if grep -q 'data-field="product"' src/pages/apply.html && \
+   [ "$(grep -c 'href="/apply?product=HELOC"' src/pages/heloc-calculator.html)" -eq 2 ] && \
+   grep -q 'URLSearchParams(location.search)' src/pages/apply.html && \
+   grep -q 'document.referrer' src/pages/apply.html; then
+  pass "application product is editable and HELOC intent is preset from its source page"
+else
+  fail "application product field or HELOC source-page preset is missing"
+fi
+
+if grep -q "'Product:[[:space:]]*' . \$product" api/application.php; then
+  pass "application notifications identify the selected product"
+else
+  fail "application.php does not include the selected product in its notification"
+fi
+
 if grep -A12 'function bubble' assets/js/engine.js | grep -q 'el.textContent = text'; then
   pass "chat messages are rendered with textContent, not innerHTML"
 else
@@ -308,10 +326,12 @@ else
   fail "a live deep-link target (#solutions or #mca) is missing"
 fi
 
-if grep -qE 'href="/apply\?(product|from)=' ./*.html; then
-  fail "an apply link carries an inert product/from query that the application discards"
+if grep -qE 'href="/apply\?from=' ./*.html; then
+  fail "an apply link carries an inert from query that the application discards"
+elif grep -qE 'href="/apply\?product=' ./*.html && ! grep -q 'URLSearchParams(location.search)' apply.html; then
+  fail "an apply link carries product intent but the application does not read it"
 else
-  pass "application links do not pretend to preserve intent they discard"
+  pass "application links only carry intent the form consumes"
 fi
 
 [ -f robots.txt ] && pass "robots.txt present" || fail "robots.txt missing"

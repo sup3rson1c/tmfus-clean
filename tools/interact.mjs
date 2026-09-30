@@ -110,8 +110,18 @@ async function testCalculator() {
 }
 
 async function testApplication() {
-  const page = await open("/apply");
+  const page = await open("/heloc-calculator");
   try {
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: "networkidle0", timeout: 60000 }),
+      click(page, '.page-hero__actions a[href^="/apply"]'),
+    ]);
+    const productPreset = await page.$eval("#ap-product", (node) => node.value);
+    check("HELOC page presets the application product", productPreset === "HELOC", productPreset);
+    await page.select("#ap-product", "MCA");
+    check("application product remains editable", await page.$eval("#ap-product", (node) => node.value === "MCA"));
+    await page.select("#ap-product", "HELOC");
+
     await click(page, '[data-pane="1"] [data-next]');
     const stepOneError = await page.$eval('[data-pane="1"] [data-err]', (node) => node.textContent.trim());
     check("application blocks an empty first step", Boolean(stepOneError), stepOneError);
@@ -183,6 +193,10 @@ async function testApplication() {
     await page.mouse.move(rect.x + rect.width * 0.7, rect.y + rect.height * 0.7, { steps: 8 });
     await page.mouse.up();
     check("application records a drawn signature", await page.$eval(".sig-wrap", (node) => node.classList.contains("signed")));
+    const submittedProduct = await page.evaluate(() =>
+      window.TMFEngine.collectFields(document.querySelector("[data-application]")).product,
+    );
+    check("application payload carries the product", submittedProduct === "HELOC", submittedProduct);
 
     await click(page, "[data-submit]");
     await page.waitForFunction(() => document.querySelector('[data-step-label]')?.textContent.trim() === "Complete", { timeout: 15000 });

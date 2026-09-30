@@ -361,6 +361,10 @@ if (($full['business_legal_name'] ?? '') === '' || ($full['owner_name'] ?? '') =
 }
 
 $business = $clean['business_legal_name'] ?? 'Unknown business';
+$product = trim((string) preg_replace('/[\r\n]+/', ' ', (string) ($clean['product'] ?? '')));
+if ($product === '') {
+    $product = 'Not specified';
+}
 $slug = strtolower((string) preg_replace('/[^a-z0-9]+/i', '-', $business));
 $slug = trim(substr($slug, 0, 40), '-') ?: 'applicant';
 
@@ -498,6 +502,7 @@ if ($notifyTo !== '' && filter_var($notifyTo, FILTER_VALIDATE_EMAIL)) {
         '',
         'Reference:   ' . $reference,
         'Business:    ' . $business,
+        'Product:     ' . $product,
         'Received:    ' . date('D j M Y, H:i T'),
         'Statements:  ' . (count($saved) ?: 'none attached'),
         '',
