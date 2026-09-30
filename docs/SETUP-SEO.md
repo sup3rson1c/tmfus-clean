@@ -37,10 +37,10 @@ All of this was missing entirely before.
 | Added | Why it matters |
 |-------|----------------|
 | `robots.txt` | There was none. It points to the sitemap and **explicitly allows AI crawlers** — GPTBot, PerplexityBot, ClaudeBot, OAI-SearchBot, Google-Extended and others. Blocking them is the fastest way to be invisible in AI answers. `admin.php` and `/api/` are disallowed. |
-| `sitemap.xml` | There was none. Ten indexable URLs, in clean form, **generated** by `seo-inject.py` from one list rather than kept by hand. |
+| `sitemap.xml` | There was none. Ten indexable URLs, in clean form, **generated** by `build.mjs` from one list rather than kept by hand. |
 | Canonical URLs | There were none. Every page now declares its one true address. |
 | Open Graph + Twitter cards | Links to the site in messages, Slack and social now show a title, description and logo instead of a bare URL. |
-| JSON-LD structured data | Organization + FinancialService + WebSite on the home page, WebPage on all, Service on the four product pages, **FAQPage wherever there is an accordion** — now 26 question/answer pairs across five pages. |
+| JSON-LD structured data | Organization + FinancialService + WebSite on the home page, WebPage on all, Service on the four product pages, **FAQPage wherever there is an accordion** — now 31 question/answer pairs across five pages. |
 | Internal links fixed | Every internal link pointed at `foo.html`, which `.htaccess` then 301-redirected to `/foo`. Every click and every crawl was paying a redirect hop. They now point straight at the clean URL. |
 | `llms.txt` | Present, with a caveat — see below. Now carries a "facts an assistant can rely on" block and an explicit instruction not to attribute a phone number from elsewhere. |
 
@@ -50,18 +50,18 @@ Added 8 Sep 2026:
 |-------|----------------|
 | `robots` meta with **`max-snippet:-1`** | The default caps how much of a page Google will show, and answer engines inherit that limit. Without it, the good long answers on the FAQ pages get truncated at roughly 160 characters before anyone can quote them. This is the single highest-leverage tag added. |
 | `max-image-preview:large` | Large thumbnails in results and in AI answers rather than a favicon-sized one. |
-| `BreadcrumbList` on every page but the home page | Google draws these under the result instead of a raw URL, and an assistant uses them to work out where a page sits rather than guessing from the path. |
-| `LoanOrCredit` on the three product pages | Declares each product with a real `MonetaryAmount` range — $5K–$2M, $50K–$5M, $25K–$750K. This is the shape an engine reasons about when somebody asks "how much can I get". **No rate, factor or term is declared anywhere**, because none is knowable before underwriting and a wrong number in schema becomes a wrong number in somebody's AI answer. |
+| `BreadcrumbList` on every indexable page but the home page | Google draws these under the result instead of a raw URL, and an assistant uses them to work out where a page sits rather than guessing from the path. The noindex 404 and unsubscribe pages intentionally omit it. |
+| `LoanOrCredit` on the three product pages | Declares each product with only the visible amount bounds: $5K–$2M for MCA, up to $5.5M for SBA, and $25K–$750K for HELOC. This is the shape an engine reasons about when somebody asks "how much can I get". **No rate, factor or term is declared anywhere**, because none is knowable before underwriting and a wrong number in schema becomes a wrong number in somebody's AI answer. |
 | `HowTo` on the application | Four steps and four required supplies, matching the real form exactly. This is what gets quoted when somebody asks an assistant what they need to apply for business funding. |
 | `AboutPage` / `ContactPage` types | More specific than plain `WebPage`, which is what those two pages are. |
-| `datePublished` / `dateModified` | Freshness signal. A constant in `seo-inject.py`, not `date.today()` — claiming every page changed today, every time the script runs, is a signal engines learn to ignore. |
+| `datePublished` / `dateModified` | Freshness signal. Constants in `build.mjs`, not `new Date()` — claiming every page changed today, every time the builder runs, is a signal engines learn to ignore. |
 | `hreflang` en-us and x-default | Cheap, and removes an ambiguity for a US-only site. |
-| FAQ sections on the home page and the estimator | Six and five questions. These two pages had no accordion, so they contributed nothing to the FAQ schema and nothing quotable. Now they do. |
+| FAQ sections on the home page and the estimator | Seven and five questions. These two pages had no accordion, so they contributed nothing to the FAQ schema and nothing quotable. Now they do. |
 | `/terms` and `/privacy` | Indexed, low priority. Real legal pages are a trust signal on a finance site, and their absence is one of the things a reviewer notices. |
 | Broker disclosure in the footer of every page | "TMF Team is a business funding brokerage, not a lender." Compliance first, but it also stops an assistant describing TMF as a lender, which is the single most likely thing for one to get wrong. |
 
 The FAQ schema is generated from the accordions on the page, so the structured
-data and the visible text can never drift apart. Re-run `seo-inject.py` from
+data and the visible text can never drift apart. Re-run `node build.mjs` from
 inside the site folder after changing any FAQ and it regenerates.
 
 ---
@@ -152,26 +152,21 @@ separates sites that rank from sites that do not.
 From inside the site folder:
 
 ```bash
-python3 seo-inject.py
+node build.mjs
 ```
 
-Idempotent — it strips its previous output before writing new output, so running
-it repeatedly is safe. Run it after changing any page title, meta description or
-FAQ. It **does** rewrite `sitemap.xml` now, from the `SITEMAP` dictionary at the
-top of the script.
+The builder rewrites every generated page and `sitemap.xml` from `src/` and the
+metadata tables in `build.mjs`. Run it after changing any source page, title,
+meta description, FAQ or structured-data definition.
 
 **Adding a page takes three edits, and missing any one of them fails silently:**
 
-1. `PAGES` and `SITEMAP` in `seo-inject.py` — otherwise no canonical, no schema,
-   not in the sitemap.
-2. The `clean_links` regex in the same file — otherwise links to it keep paying
-   a 301.
-3. `.cpanel.yml` — otherwise the page never reaches the server at all.
+1. Add `src/pages/<slug>.html` with its meta comment — the builder discovers it and emits the canonical and schema.
+2. Add the clean path to `SITEMAP` (and `CRUMBS` when indexed) in `build.mjs`.
+3. Add the generated top-level page to `.cpanel.yml` — otherwise it never reaches the server.
 
-`verify.sh` catches the third one. Nothing catches the first two but you.
-
-`seo-inject.py` is not deployed to the server — it is a build tool, and
-`.htaccess` blocks `.py` files from being served anyway.
+`verify.sh` checks the deployment list and required structured-data types. Internal
+links must be authored in clean form (`/about`, never `about.html`) in `src/`.
 
 ---
 

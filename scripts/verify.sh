@@ -226,23 +226,135 @@ fi
 if python3 - <<'PY'
 import io, re, json, glob, sys
 bad = []
+required = {
+    'index.html': {'Organization', 'FinancialService', 'WebSite', 'WebPage', 'FAQPage'},
+    'mca.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
+    'sba-loans.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
+    'heloc-calculator.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
+    'funding-estimator.html': {'WebPage', 'BreadcrumbList', 'Service', 'FAQPage'},
+    'apply.html': {'WebPage', 'BreadcrumbList', 'HowTo'},
+    'about.html': {'AboutPage', 'BreadcrumbList'},
+    'contact.html': {'ContactPage', 'BreadcrumbList'},
+    'terms.html': {'WebPage', 'BreadcrumbList'},
+    'privacy.html': {'WebPage', 'BreadcrumbList'},
+}
 for f in glob.glob('*.html'):
     html = io.open(f, encoding='utf-8').read()
-    for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S):
+    blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S)
+    types = set()
+    nodes = []
+    for block in blocks:
         try:
-            json.loads(block)
+            data = json.loads(block)
+            graph = data.get('@graph', [data]) if isinstance(data, dict) else data
+            nodes.extend(node for node in graph if isinstance(node, dict))
+            for node in graph:
+                if not isinstance(node, dict):
+                    continue
+                value = node.get('@type', [])
+                types.update(value if isinstance(value, list) else [value])
         except Exception as e:
             bad.append('%s: %s' % (f, e))
+    missing = required.get(f, set()) - types
+    if missing:
+        bad.append('%s missing JSON-LD types: %s' % (f, ', '.join(sorted(missing))))
+    for node in nodes:
+        def check_urls(value):
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key == 'url' and isinstance(child, str) and child.startswith('https://tmfus.com/') and '#' in child:
+                        target_path, fragment = child.split('#', 1)
+                        target_slug = target_path.removeprefix('https://tmfus.com/').strip('/')
+                        target_file = (target_slug or 'index') + '.html'
+                        try:
+                            target_html = io.open(target_file, encoding='utf-8').read()
+                        except OSError:
+                            bad.append('%s schema URL points to missing %s' % (f, target_file))
+                        else:
+                            if not re.search(r'\bid=["\']%s["\']' % re.escape(fragment), target_html):
+                                bad.append('%s schema URL has missing fragment #%s in %s' % (f, fragment, target_file))
+                    check_urls(child)
+            elif isinstance(value, list):
+                for child in value:
+                    check_urls(child)
+        check_urls(node)
+    if f == 'sba-loans.html':
+        products = [node for node in nodes if node.get('@type') == 'LoanOrCredit']
+        amount = products[0].get('amount', {}) if products else {}
+        if amount.get('minValue') is not None or amount.get('maxValue') != 5500000:
+            bad.append('sba-loans.html schema must state only the visible $5.5M maximum')
+if bad:
+    print('\n'.join(bad))
 sys.exit(1 if bad else 0)
 PY
 then
-  pass "all JSON-LD blocks are valid JSON"
+  pass "all JSON-LD blocks parse and every page has its required schema types"
 else
-  fail "a JSON-LD block does not parse"
+  fail "JSON-LD is invalid or a page-specific schema type is missing"
+fi
+
+missing_cards=$(grep -L 'name="twitter:card" content="summary_large_image"' ./*.html | tr '\n' ' ')
+if grep -q 'property="og:type" content="website"' index.html && \
+   ! grep -q 'property="og:type" content="website"' mca.html && \
+   [ -z "$missing_cards" ]; then
+  pass "social cards keep the live site’s page types and large-image format"
+else
+  fail "Open Graph page types or Twitter large-image cards have regressed"
+fi
+
+if grep -q 'id="solutions"' index.html && grep -q 'id="mca"' sba-loans.html; then
+  pass "legacy #solutions and #mca deep links still resolve"
+else
+  fail "a live deep-link target (#solutions or #mca) is missing"
+fi
+
+if grep -qE 'href="/apply\?(product|from)=' ./*.html; then
+  fail "an apply link carries an inert product/from query that the application discards"
+else
+  pass "application links do not pretend to preserve intent they discard"
 fi
 
 [ -f robots.txt ] && pass "robots.txt present" || fail "robots.txt missing"
 [ -f sitemap.xml ] && pass "sitemap.xml present" || fail "sitemap.xml missing"
+
+if python3 - <<'PY'
+import glob, io, re, sys
+from xml.etree import ElementTree as ET
+expected = set()
+for filename in glob.glob('*.html'):
+    html = io.open(filename, encoding='utf-8').read()
+    if re.search(r'<meta name="robots" content="[^"]*noindex', html):
+        continue
+    match = re.search(r'<link rel="canonical" href="([^"]+)">', html)
+    if match:
+        expected.add(match.group(1))
+root = ET.parse('sitemap.xml').getroot()
+actual = {node.text for node in root.findall('{http://www.sitemaps.org/schemas/sitemap/0.9}url/{http://www.sitemaps.org/schemas/sitemap/0.9}loc')}
+if expected != actual:
+    print('missing from sitemap:', sorted(expected - actual))
+    print('unexpected in sitemap:', sorted(actual - expected))
+    sys.exit(1)
+if len(actual) != 10 or any(re.search(r'\.(html|php)$', url) for url in actual):
+    sys.exit(1)
+PY
+then
+  if grep -q 'Generated by build.mjs' sitemap.xml; then
+    pass "sitemap exactly matches the clean indexable canonical set"
+  else
+    fail "sitemap is not marked as generated by build.mjs"
+  fi
+else
+  fail "sitemap does not exactly match the clean indexable canonical set"
+fi
+
+if grep -q 'RewriteRule \^index/?\$ / \[R=301,L\]' .htaccess && \
+   grep -q 'RewriteRule \^calculator(\\.html)?/?\$ /funding-estimator \[R=301,L\]' .htaccess && \
+   grep -q 'RewriteRule \^cash-injection(\\.html)?/?\$ /mca \[R=301,L\]' .htaccess && \
+   grep -q 'RewriteRule \^home-equity(\\.html)?/?\$ /heloc-calculator \[R=301,L\]' .htaccess; then
+  pass "homepage duplicate and old redesign slugs have one-hop 301 rules"
+else
+  fail ".htaccess is missing a homepage or old-draft-slug redirect"
+fi
 
 # ---------------------------------------------------------------
 head "Chat launcher"
