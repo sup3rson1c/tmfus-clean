@@ -566,6 +566,71 @@ else
   fail "config.example.php has a default unsubscribe_dir - it would land in the web root"
 fi
 
+# ---------------------------------------------------------------
+head "Security hardening (pre-launch review, Oct 2026)"
+# Each line below is an invariant established by the pre-launch security
+# review. If one fails, something that protects applicant data was undone.
+
+sec() { if eval "$2"; then pass "$1"; else fail "$1"; fi; }
+
+# --- secrets ---
+sec "api/config.php is not tracked by git (only config.example.php is)" \
+    '! git ls-files --error-unmatch api/config.php >/dev/null 2>&1'
+sec ".gitignore still lists api/config.php" 'grep -qx "api/config.php" .gitignore'
+
+# --- .htaccess ---
+sec ".htaccess turns directory listing off" 'grep -q "^Options -Indexes" .htaccess'
+sec ".htaccess denies config.php and config.example.php" \
+    'grep -qF "<FilesMatch \"^(config\.php|config\.example\.php)$\">" .htaccess'
+sec ".htaccess denies dotfiles, .json, .log, .sh, .md" \
+    'grep -qF "<FilesMatch \"^\.|\.(md|py|sh|json|lock|yml|yaml|zip|log|bak|mjs|gs)$\">" .htaccess'
+sec ".htaccess denies cPanel's extension-less error_log and csv/jsonl/sql/env/ini leftovers" \
+    'grep -qF "(^error_log$|\.(csv|jsonl|sql|env|ini|" .htaccess'
+sec ".htaccess denies key files and encrypted applications" \
+    'grep -qF "\.(pem|key|crt|p12|pfx)$" .htaccess && grep -qF "\.enc\.json$" .htaccess'
+sec ".htaccess hides /api/uploads (bank statements fallback)" \
+    'grep -qF "RedirectMatch 404 ^/api/uploads(/.*)?$" .htaccess'
+sec ".htaccess hides src/tools/docs/scripts" \
+    'grep -qF "RedirectMatch 404 ^/(src|tools|docs|scripts|node_modules)(/.*)?$" .htaccess'
+
+# --- admin.php session and CSRF ---
+# has <file> <literal text> — plain fixed-string grep, no shell expansion.
+has() { grep -qF -- "$2" "$1"; }
+chk() { if "${@:2}"; then pass "$1"; else fail "$1"; fi; }
+chk "admin session cookie is HttpOnly"                 has admin.php "'httponly' => true,"
+chk "admin session cookie is SameSite=Strict"          has admin.php "'samesite' => 'Strict',"
+chk "admin session cookie is Secure over HTTPS"        has admin.php "'secure'   => \$https,"
+chk "admin session cookie uses the __Host- prefix over HTTPS" has admin.php "'__Host-' . SESSION_NAME"
+chk "admin refuses to run over plain HTTP (except localhost)" has admin.php 'This page needs HTTPS'
+chk "admin uses strict session mode (no adopted session ids)" has admin.php "ini_set('session.use_strict_mode', '1');"
+chk "admin regenerates the session id on login"        has admin.php 'session_regenerate_id(true);'
+chk "admin login is throttled per IP"                  has admin.php 'count($hits) >= LOGIN_PER_HOUR'
+chk "admin logout expires the cookie"                  has admin.php "setcookie(session_name(), ''"
+chk "admin chat actions compare a CSRF token with hash_equals" has admin.php "hash_equals((string) \$_SESSION['csrf'], \$sent)"
+chk "admin chat actions are POST only"                 has admin.php "(\$_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'"
+chk "the admin page sends the CSRF token with chat actions" has admin.php "body.set('csrf', CSRF);"
+chk "admin sends a nonce-based Content-Security-Policy" has admin.php "script-src 'nonce-"
+if grep -qE '<script>|<script [^n>]' admin.php; then fail "admin.php has a <script> without the CSP nonce — it will not run"; else pass "every <script> in admin.php carries the CSP nonce"; fi
+if grep -qE ' on(click|load|error|submit|change|input)=' admin.php; then fail "admin.php has an inline event handler — the CSP blocks it"; else pass "admin.php has no inline event handlers"; fi
+chk "admin escapes field labels as well as values"     has admin.php 'esc(pretty(k))'
+chk "admin only draws a PNG data: URL as the signature" has admin.php 'data:image\/png;base64,'
+
+# --- endpoints ---
+for f in admin.php api/application.php api/lead.php api/unsubscribe.php api/chat.php api/figure-heloc.php; do
+  chk "$f never prints PHP errors to the browser" has "$f" "ini_set('display_errors', '0');"
+done
+if has api/application.php "preg_replace('/[\x00-\x1F\x7F]+/u', ' ', \$business)" && \
+   ! has api/application.php "' — ' . \$business,"; then
+  pass "application.php strips line breaks from the business name before it reaches the mail Subject"
+else
+  fail "application.php may put raw applicant text in a mail header (header injection)"
+fi
+chk "application.php checks upload type from the bytes (finfo), not the name" has api/application.php 'new finfo(FILEINFO_MIME_TYPE)'
+chk "lead.php neutralises spreadsheet formulas in the CSV" has api/lead.php 'return "'"'"'" . $cell;'
+for f in api/application.php api/lead.php api/unsubscribe.php; do
+  chk "$f rate-limits per IP" has "$f" 'RATE_PER_HOUR'
+done
+
 if [ $FAIL -eq 0 ]; then
   printf '\033[32mAll invariants hold.\033[0m\n'
 else

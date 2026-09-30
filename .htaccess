@@ -125,6 +125,20 @@ ErrorDocument 404 /404.html
   Require all granted
 </Files>
 
+# Security review 2026-10. More files that must never be served:
+#  - error_log: cPanel's PHP writes its warnings to a file with exactly this
+#    name, no extension, in the folder of the script that failed (so
+#    api/error_log). The .log rule above does not match it, and it holds
+#    server paths and whatever the endpoints logged.
+#  - data and config shapes nobody should download: csv (the monthly leads
+#    export), jsonl (the opt-out list), sql dumps, env/ini files, editor and
+#    backup leftovers (swp, old, orig, dist, tmp), and PHP source saved under
+#    a name that does not run (inc, phps).
+#  Nothing the site legitimately serves uses any of these.
+<FilesMatch "(^error_log$|\.(csv|jsonl|sql|env|ini|swp|old|orig|dist|tmp|inc|phps)$)">
+  Require all denied
+</FilesMatch>
+
 # ------------------------------------------------------------
 #  Protect API config and logs
 #  figure-heloc.php must stay reachable; everything else in /api

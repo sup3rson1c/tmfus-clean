@@ -15,6 +15,9 @@ declare(strict_types=1);
  * Docs:      https://docs.figure.com/heloc-pre-qualification/api
  */
 
+// Security review 2026-10: never print PHP warnings (they carry server paths).
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
