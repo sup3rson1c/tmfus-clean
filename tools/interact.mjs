@@ -1,228 +1,318 @@
 /*
-  Interaction checks: menus, accordion, calculator flow, form validation,
-  mobile menu, the engraving clock control, the CTA estimate line and
-  reduced motion. Prints PASS/FAIL lines and saves
-  "temporary screenshots/ix-<name>.jpg" for the visual states.
-  Usage: node tools/interact.mjs
+  Local end-to-end checks for every lead-facing interactive flow.
+
+  Run the mock server first:
+    node serve.mjs 3200
+    node tools/interact.mjs
+
+  BASE_URL may point at another local port when 3200 is already occupied.
+  Nothing here calls production: the script refuses any non-local base URL,
+  and serve.mjs answers every /api/*.php request with tools/api-mock.mjs.
 */
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { launch } from "./browser.mjs";
 
-const BASE = "http://localhost:3100";
-const OUT = "temporary screenshots";
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const errors = [];
-let failures = 0;
+const BASE = process.env.BASE_URL || "http://localhost:3200";
+const parsedBase = new URL(BASE);
+if (!["localhost", "127.0.0.1", "::1"].includes(parsedBase.hostname)) {
+  throw new Error(`Refusing to test a non-local server: ${BASE}`);
+}
+
+const failures = [];
+const browserErrors = [];
 const check = (label, ok, detail = "") => {
-  if (!ok) failures++;
-  console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? `  (${detail})` : ""}`);
+  const line = `${ok ? "PASS" : "FAIL"}  ${label}${detail ? `  (${detail})` : ""}`;
+  console.log(line);
+  if (!ok) failures.push(line);
 };
+const wait = (page, selector, options = {}) =>
+  page.waitForSelector(selector, { visible: true, timeout: 10000, ...options });
+const click = async (page, selector) => {
+  await wait(page, selector);
+  await page.$eval(selector, (element) => element.scrollIntoView({ block: "center", inline: "center", behavior: "instant" }));
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  await page.$eval(selector, (element) => element.click());
+};
+const fill = async (page, selector, value) => {
+  await wait(page, selector);
+  await page.$eval(selector, (element) => {
+    element.value = "";
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.type(selector, value);
+};
+const fieldNamed = (message) =>
+  Boolean(message) && !/please fill in (this field|the field)|check this field/i.test(message);
 
 const browser = await launch();
-const open = async (path, w = 1440, h = 900, reduced = false) => {
-  const p = await browser.newPage();
-  await p.setViewport({ width: w, height: h, isMobile: w < 768, hasTouch: w < 768 });
-  if (reduced) await p.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
-  p.on("pageerror", (e) => errors.push(`${path}: ${e}`));
-  p.on("console", (m) => m.type() === "error" && errors.push(`${path}: ${m.text()}`));
-  await p.goto(BASE + path, { waitUntil: "networkidle0", timeout: 60000 });
-  await sleep(1400);
-  return p;
+const fixtureDir = mkdtempSync(join(tmpdir(), "tmfus-interact-"));
+const statementPaths = Array.from({ length: 4 }, (_, index) => {
+  const path = join(fixtureDir, `statement-${index + 1}.pdf`);
+  writeFileSync(path, `%PDF-1.4\n% local test statement ${index + 1}\n%%EOF\n`);
+  return path;
+});
+let pageSequence = 0;
+
+const open = async (path, { keepCookieBanner = false, context = browser } = {}) => {
+  const pageId = ++pageSequence;
+  const page = await context.newPage();
+  await page.setViewport({ width: 1440, height: 1000 });
+  if (!keepCookieBanner) {
+    const consent = encodeURIComponent(JSON.stringify({ v: 1, analytics: false, marketing: false, gpc: false }));
+    await page.setCookie({ name: "tmf_consent", value: consent, url: `${parsedBase.protocol}//${parsedBase.host}/` });
+  }
+  page.on("pageerror", (error) => browserErrors.push(`${path}#${pageId}: ${error.stack || error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") browserErrors.push(`${path}: ${message.text()}`);
+  });
+  await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0", timeout: 60000 });
+  return page;
 };
-const shot = (p, name, clip) =>
-  p.screenshot({ path: `${OUT}/ix-${name}.jpg`, type: "jpeg", quality: 80, ...(clip ? { clip } : {}) });
-const hidden = (p, sel) => p.$eval(sel, (el) => el.hidden);
-const hour = (p) => p.$eval("[data-clock-handle]", (h) => Number(h.getAttribute("aria-valuenow")));
+
+async function testCalculator() {
+  const page = await open("/funding-estimator");
+  try {
+    await click(page, "[data-calc-next]");
+    const firstErrors = await page.$$eval(".calc .error:not([hidden])", (nodes) =>
+      nodes.map((node) => node.textContent.trim()),
+    );
+    check("funding estimator blocks an empty first step", firstErrors.length === 2, firstErrors.join(" | "));
+    check("funding estimator errors name what is missing", firstErrors.every(fieldNamed), firstErrors.join(" | "));
+
+    await fill(page, "#calc-revenue", "45000");
+    await click(page, 'input[name="credit"][value="650"]');
+    await click(page, "[data-calc-next]");
+    await click(page, 'input[name="industry"][value="restaurant"]');
+    await click(page, 'input[name="tib"][value="2"]');
+    await click(page, "[data-calc-next]");
+    await click(page, 'input[name="positions"][value="0"]');
+    await click(page, "[data-calc-next]");
+
+    await fill(page, "#calc-first", "Jordan");
+    await fill(page, "#calc-last", "Lee");
+    await fill(page, "#calc-business", "Lee Freight LLC");
+    await fill(page, "#calc-email", "not-an-email");
+    await click(page, "[data-calc-next]");
+    const badEmail = await page.$eval("#calc-email-err", (node) => node.textContent.trim());
+    check("funding estimator rejects a bad email", badEmail === "Not a valid email address.", badEmail);
+    await fill(page, "#calc-email", "jordan@example.com");
+    await fill(page, "#calc-phone", "3055550188");
+    await click(page, "[data-calc-next]");
+    await page.waitForFunction(() => document.querySelector(".certificate")?.dataset.state === "result", { timeout: 10000 });
+    const result = await page.$eval("[data-calc-status]", (node) => node.textContent.trim());
+    check("funding estimator reaches a projected result", /Projected range/.test(result), result);
+    check("funding estimator saves the estimate for Apply", await page.evaluate(() => Boolean(sessionStorage.getItem("tmf-estimate"))));
+  } finally {
+    await page.close();
+  }
+}
+
+async function testApplication() {
+  const page = await open("/apply");
+  try {
+    await click(page, '[data-pane="1"] [data-next]');
+    const stepOneError = await page.$eval('[data-pane="1"] [data-err]', (node) => node.textContent.trim());
+    check("application blocks an empty first step", Boolean(stepOneError), stepOneError);
+    check("application validation names the missing field", fieldNamed(stepOneError), stepOneError);
+
+    await fill(page, "#ap-legal", "Lee Freight LLC");
+    await fill(page, "#ap-dba", "Lee Freight");
+    await fill(page, "#ap-ein", "123456789");
+    await fill(page, "#ap-start", "01152019");
+    await fill(page, "#ap-baddr", "100 Main Street");
+    await fill(page, "#ap-bcity", "Dallas");
+    await page.select("#ap-bstate", "TX");
+    await fill(page, "#ap-bzip", "75201");
+    await page.select("#ap-industry", "Trucking / Transportation");
+    await click(page, '[data-pane="1"] [data-next]');
+    const stepOneState = await page.evaluate(() => ({
+      active: document.querySelector('[data-pane="2"]')?.classList.contains("active"),
+      error: document.querySelector('[data-pane="1"] [data-err]')?.textContent.trim(),
+      values: Object.fromEntries([...document.querySelectorAll('[data-pane="1"] [data-field]')].map((node) => [node.id, node.value])),
+    }));
+    check(
+      "application advances to owner details",
+      stepOneState.active,
+      stepOneState.active ? "" : `${stepOneState.error} ${JSON.stringify(stepOneState.values)}`,
+    );
+    if (!stepOneState.active) throw new Error(`Application step 1 did not advance: ${stepOneState.error}`);
+
+    await fill(page, "#ap-oname", "Jordan Lee");
+    await fill(page, "#ap-opct", "50");
+    await fill(page, "#ap-oaddr", "100 Main Street");
+    await fill(page, "#ap-ocity", "Dallas");
+    await page.select("#ap-ostate", "TX");
+    await fill(page, "#ap-ozip", "75201");
+    await fill(page, "#ap-oemail", "jordan@example.com");
+    await fill(page, "#ap-ophone", "3055550188");
+    await fill(page, "#ap-amount", "150000");
+    await fill(page, "#ap-odob", "04121979");
+    await fill(page, "#ap-ossn", "123456789");
+    await click(page, '[data-pane="2"] [data-next]');
+    check("application advances to co-owner choice", await page.$eval('[data-pane="3"]', (node) => node.classList.contains("active")));
+
+    await click(page, '[data-co="yes"]');
+    check("application reveals co-owner fields", await page.$eval("[data-coowner-fields]", (node) => !node.hidden));
+    await fill(page, "#ap-cname", "Taylor Lee");
+    await fill(page, "#ap-cpct", "50");
+    await fill(page, "#ap-caddr", "100 Main Street");
+    await fill(page, "#ap-ccity", "Dallas");
+    await page.select("#ap-cstate", "TX");
+    await fill(page, "#ap-czip", "75201");
+    await fill(page, "#ap-cdob", "06151980");
+    await fill(page, "#ap-cssn", "987654321");
+    await click(page, '[data-pane="3"] [data-next]');
+    check("application advances to statements and consent", await page.$eval('[data-pane="4"]', (node) => node.classList.contains("active")));
+
+    const picker = await page.$("[data-files]");
+    await picker.uploadFile(...statementPaths);
+    await page.waitForFunction(() => document.querySelectorAll("[data-file-list] li").length === 4);
+    check("application accepts four local statement files", await page.$$eval("[data-file-list] li", (nodes) => nodes.length) === 4);
+    await page.$$eval('[data-required-check]', (boxes) => boxes.forEach((box) => box.click()));
+
+    const canvas = await page.$("[data-sig-pad]");
+    await page.$eval("[data-sig-pad]", (element) => element.scrollIntoView({ block: "center", behavior: "instant" }));
+    await new Promise((resolve) => setTimeout(resolve, 180));
+    const rect = await canvas.boundingBox();
+    if (!rect) throw new Error("Signature canvas is not visible");
+    await page.mouse.move(rect.x + 40, rect.y + rect.height * 0.6);
+    await page.mouse.down();
+    await page.mouse.move(rect.x + rect.width * 0.4, rect.y + rect.height * 0.3, { steps: 8 });
+    await page.mouse.move(rect.x + rect.width * 0.7, rect.y + rect.height * 0.7, { steps: 8 });
+    await page.mouse.up();
+    check("application records a drawn signature", await page.$eval(".sig-wrap", (node) => node.classList.contains("signed")));
+
+    await click(page, "[data-submit]");
+    await page.waitForFunction(() => document.querySelector('[data-step-label]')?.textContent.trim() === "Complete", { timeout: 15000 });
+    const reference = await page.$eval("[data-reference]", (node) => node.textContent.trim());
+    check("application receives a local mock reference", /^TMF-[A-F0-9]{6}$/.test(reference), reference);
+    check("application shows its success pane", await page.$eval('[data-pane="done"]', (node) => node.classList.contains("active")));
+  } finally {
+    await page.close();
+  }
+}
+
+async function testContact() {
+  const page = await open("/contact");
+  try {
+    await click(page, '.contact__form [type="submit"]');
+    const summary = await page.$$eval(".contact__form [data-error-summary] li", (nodes) =>
+      nodes.map((node) => node.textContent.trim()),
+    );
+    check("contact form lists all empty required fields", summary.length === 4, summary.join(" | "));
+    check("contact form errors name their fields", summary.every(fieldNamed), summary.join(" | "));
+
+    await fill(page, "#c-first", "Jordan");
+    await fill(page, "#c-last", "Lee");
+    await fill(page, "#c-business", "Lee Freight LLC");
+    await fill(page, "#c-email", "bad-address");
+    await click(page, '.contact__form [type="submit"]');
+    const badEmail = await page.$eval("#c-email-err", (node) => node.textContent.trim());
+    check("contact form uses the approved bad-email wording", badEmail === "Not a valid email address.", badEmail);
+    await fill(page, "#c-email", "jordan@example.com");
+    await fill(page, "#c-message", "I would like to discuss funding options.");
+    await click(page, '.contact__form [type="submit"]');
+    await wait(page, "#contact-success");
+    check("contact form shows success only after the local mock confirms", !(await page.$eval("#contact-success", (node) => node.hidden)));
+  } finally {
+    await page.close();
+  }
+}
+
+async function testChat() {
+  const page = await open("/");
+  try {
+    await wait(page, ".chat-launch:not([hidden])");
+    await click(page, ".chat-launch");
+    await page.waitForFunction(() => document.querySelector("[data-chat-panel]")?.classList.contains("open"));
+    check("chat opens in the local mock's leave-a-message mode", await page.$eval("html", (node) => node.dataset.chatMode === "message"));
+    await fill(page, "[data-chat-input]", "I have a funding question.");
+    await click(page, "[data-chat-send]");
+    await page.waitForFunction(() => [...document.querySelectorAll(".chat-msg")].some((node) => /Local mock/.test(node.textContent)), { timeout: 10000 });
+    check("chat sends through the local mock", await page.$$eval(".chat-msg.me", (nodes) => nodes.some((node) => /funding question/.test(node.textContent))));
+    await wait(page, "[data-chat-capture]");
+    await fill(page, "[data-chat-name]", "Jordan Lee");
+    await fill(page, "[data-chat-phone]", "3055550188");
+    await click(page, "[data-chat-save]");
+    await page.waitForFunction(() => [...document.querySelectorAll(".chat-msg.note")].some((node) => /Thank you/.test(node.textContent)));
+    check("chat saves callback details through the local mock", true);
+    await click(page, ".chat-close");
+    check("chat closes and restores its launcher", await page.$eval(".chat-launch", (node) => !node.hidden));
+  } finally {
+    await page.close();
+  }
+}
+
+async function testUnsubscribe() {
+  const page = await open("/unsubscribe");
+  try {
+    await click(page, "#unsubBtn");
+    const error = await page.$eval("#unsubMsg", (node) => node.textContent.trim());
+    check("unsubscribe uses the approved bad-email wording", error === "Not a valid email address.", error);
+    await fill(page, "#unsubEmail", "jordan@example.com");
+    await click(page, "#unsubBtn");
+    await page.waitForFunction(() => document.querySelector("#unsubMsg")?.classList.contains("ok"));
+    const success = await page.$eval("#unsubMsg", (node) => node.textContent.trim());
+    check("unsubscribe confirms the local mock accepted the request", /off the list/i.test(success), success);
+  } finally {
+    await page.close();
+  }
+}
+
+async function testCookies() {
+  const acceptContext = await browser.createBrowserContext();
+  const page = await open("/", { keepCookieBanner: true, context: acceptContext });
+  try {
+    await wait(page, "[data-cookie-bar].open");
+    await click(page, '[data-cookie="all"]');
+    let consent = await page.evaluate(() => decodeURIComponent(document.cookie));
+    check("cookie banner accepts all categories", /\"analytics\":true/.test(consent) && /\"marketing\":true/.test(consent), consent);
+
+    await click(page, "[data-cookie-settings]");
+    await wait(page, "[data-cookie-opts]");
+    await page.$eval('[data-cookie-cat="analytics"]', (box) => { box.checked = false; });
+    await page.$eval('[data-cookie-cat="marketing"]', (box) => { box.checked = false; });
+    await click(page, '[data-cookie="save"]');
+    consent = await page.evaluate(() => decodeURIComponent(document.cookie));
+    check("cookie settings save chosen categories", /\"analytics\":false/.test(consent) && /\"marketing\":false/.test(consent), consent);
+
+  } finally {
+    await page.close();
+    await acceptContext.close();
+  }
+
+  const rejectContext = await browser.createBrowserContext();
+  const rejectPage = await open("/", { keepCookieBanner: true, context: rejectContext });
+  try {
+    await wait(rejectPage, "[data-cookie-bar].open");
+    await click(rejectPage, '[data-cookie="essential"]');
+    const consent = await rejectPage.evaluate(() => decodeURIComponent(document.cookie));
+    check("cookie banner rejects non-essential categories", /\"analytics\":false/.test(consent) && /\"marketing\":false/.test(consent), consent);
+  } finally {
+    await rejectPage.close();
+    await rejectContext.close();
+  }
+}
 
 try {
-  /* Solutions menu: hover, keyboard, Escape */
-  let p = await open("/");
-  check("motion system initialised (html.motion-live, html.sc-ready)", await p.evaluate(() => ["motion-live", "sc-ready"].every((c) => document.documentElement.classList.contains(c))));
-  await p.hover("[data-menu-button]");
-  await sleep(450);
-  check("menu opens on hover", !(await hidden(p, "#solutions-menu")));
-  await shot(p, "menu", { x: 380, y: 0, width: 680, height: 460 });
-  await p.mouse.move(20, 700);
-  await sleep(600);
-  check("menu closes when pointer leaves", await hidden(p, "#solutions-menu"));
-  await p.focus("[data-menu-button]");
-  await p.keyboard.press("Enter");
-  await sleep(250);
-  check("menu opens with keyboard", !(await hidden(p, "#solutions-menu")));
-  await p.keyboard.press("Tab");
-  check("Tab moves into the menu", await p.evaluate(() => !!document.activeElement.closest("#solutions-menu")));
-  await p.keyboard.press("Escape");
-  await sleep(200);
-  check(
-    "Escape closes menu and returns focus",
-    await p.evaluate(() => document.getElementById("solutions-menu").hidden && document.activeElement.matches("[data-menu-button]")),
-  );
-
-  /* Accordion */
-  await p.click("#faq-1-btn");
-  await sleep(350);
-  check("FAQ item expands", !(await hidden(p, "#faq-1")) && (await p.$eval("#faq-1-btn", (b) => b.getAttribute("aria-expanded"))) === "true");
-  await p.close();
-
-  /* Engraving clock: the hand is a slider, and scroll stays the source of truth */
-  p = await open("/");
-  const hoursTop = await p.evaluate(() => document.querySelector("[data-clock]").getBoundingClientRect().top + scrollY);
-  await p.evaluate((y) => window.scrollTo(0, y + 20), hoursTop);
-  await sleep(1000);
-  check("clock greets at hour 0 when the section pins", (await hour(p)) === 0, String(await hour(p)));
-  await p.focus("[data-clock-handle]");
-  await p.keyboard.press("End");
-  await sleep(1600);
-  check("End winds the clock to hour 48", (await hour(p)) === 48, String(await hour(p)));
-  check("the control scrolled the page with it", await p.evaluate((y) => scrollY > y + 1000, hoursTop));
-  await p.keyboard.press("Home");
-  await sleep(1600);
-  check("Home returns to hour 0", (await hour(p)) === 0, String(await hour(p)));
-  for (let i = 0; i < 3; i++) await p.keyboard.press("ArrowRight");
-  await sleep(1300);
-  check("arrow keys step one hour at a time", (await hour(p)) === 3, String(await hour(p)));
-  check(
-    "slider publishes readable value text",
-    /^Hour \d+ of 48: /.test(await p.$eval("[data-clock-handle]", (h) => h.getAttribute("aria-valuetext"))),
-  );
-  check(
-    "focused handle stays visible in the pinned stage",
-    await p.evaluate(() => {
-      const r = document.querySelector("[data-clock-handle]").getBoundingClientRect();
-      return r.top >= 0 && r.bottom <= innerHeight;
-    }),
-  );
-  await p.click('[data-clock-jump="36"]');
-  await sleep(1700);
-  const h36 = await hour(p);
-  check("jump button sets the funding window", h36 >= 35 && h36 <= 37, String(h36));
-  const dial = await p.$eval("[data-clock-dial]", (c) => {
-    const r = c.getBoundingClientRect();
-    return { x: r.left, y: r.top, w: r.width };
-  });
-  await p.mouse.click(dial.x + dial.w * (0.5 + 0.372 * 0.85), dial.y + dial.w * 0.5);
-  await sleep(1700);
-  const h12 = await hour(p);
-  check("clicking the ring jumps to that hour", h12 >= 11 && h12 <= 13, String(h12));
-  await shot(p, "clock");
-  await p.close();
-
-  /* Calculator */
-  p = await open("/calculator/");
-  await p.click("[data-calc-next]");
-  await sleep(350);
-  const calcErrors = await p.$$eval(".calc .error:not([hidden])", (els) => els.map((e) => e.textContent));
-  check("calculator shows step errors", calcErrors.length === 2, calcErrors.join(" | "));
-  check("focus moves to first invalid field", await p.evaluate(() => document.activeElement.id === "calc-revenue"));
-  await p.evaluate(() => window.scrollTo(0, document.querySelector(".calc").getBoundingClientRect().top + scrollY - 90));
-  await sleep(900);
-  await shot(p, "calc-errors");
-  await p.type("#calc-revenue", "45000");
-  check("revenue formats with commas", (await p.$eval("#calc-revenue", (i) => i.value)) === "45,000");
-  await p.click('input[name="credit"][value="650-699"]');
-  await p.click("[data-calc-next]");
-  await sleep(700);
-  await p.click('input[name="industry"][value="restaurant"]');
-  await p.click('input[name="time"][value="2-5y"]');
-  await p.click("[data-calc-next]");
-  await sleep(700);
-  await p.click('input[name="positions"][value="1"]');
-  await sleep(150);
-  check("balance field appears for open positions", !(await hidden(p, "[data-balance]")));
-  await p.type("#calc-balance", "12000");
-  await p.click("[data-calc-next]");
-  await sleep(1500);
-  const status = await p.$eval("[data-calc-status]", (el) => el.textContent);
-  check("result announced in status region", /Illustrative range/.test(status), status);
-  check("certificate shows result state", (await p.$eval(".certificate", (c) => c.dataset.state)) === "result");
-  check("range figures read as plain text for assistive tech", /^\$[\d,]+$/.test(await p.$eval("[data-low]", (el) => el.textContent.trim())), await p.$eval("[data-low]", (el) => el.textContent.trim()));
-  check("estimate saved for Apply", await p.evaluate(() => !!sessionStorage.getItem("tmf-estimate")));
-  await p.evaluate(() => window.scrollTo(0, document.querySelector(".calc").getBoundingClientRect().top + scrollY - 90));
-  await sleep(900);
-  await shot(p, "calc-result");
-  await p.$eval("#calc-balance", (i) => {
-    i.value = "";
-  });
-  await p.type("#calc-balance", "90000");
-  await sleep(600);
-  check("over-leveraged state updates live", (await p.$eval(".certificate", (c) => c.dataset.state)) === "over");
-  await shot(p, "calc-over");
-
-  /* Apply, in the same tab so sessionStorage carries over like a real visit */
-  await p.goto(`${BASE}/apply/?from=calculator`, { waitUntil: "networkidle0" });
-  await sleep(1200);
-  check("calculator estimate carried into Apply", !(await hidden(p, "[data-estimate-note]")));
-  check("industry prefilled from calculator", (await p.$eval("#a-industry", (s) => s.value)) === "Restaurant");
-  await p.click("[data-apply-next]");
-  await sleep(400);
-  const applyErrors = await p.$$eval("[data-error-summary] li", (els) => els.length);
-  check("apply step 1 validation lists problems", applyErrors >= 7, `${applyErrors} problems`);
-  await shot(p, "apply-errors");
-  await p.type("#a-legal", "Lee Freight LLC");
-  await p.type("#a-dba", "Lee Freight");
-  await p.type("#a-ein", "12-3456789");
-  await p.type("#a-start", "01152019");
-  check("date input accepts typed date", (await p.$eval("#a-start", (i) => i.value)) === "2019-01-15", await p.$eval("#a-start", (i) => i.value));
-  await p.type("#a-address", "100 Main St");
-  await p.type("#a-city", "Dallas");
-  await p.select("#a-state", "TX");
-  await p.type("#a-zip", "75201");
-  await p.select("#a-industry", "Trucking");
-  await p.click("[data-apply-next]");
-  await sleep(900);
-  check("apply advances to step 2", !(await hidden(p, '[data-step="2"]')));
-  check("apply draft autosaves", await p.evaluate(() => JSON.parse(sessionStorage.getItem("tmf-apply-draft") || "{}").legalName === "Lee Freight LLC"));
-
-  /* Final CTA: the visitor's own estimate waits beside the buttons */
-  await p.goto(`${BASE}/about/`, { waitUntil: "networkidle0" });
-  check("estimate line stays hidden when balances come first", await hidden(p, "[data-cta-estimate]"));
-  await p.evaluate(() => sessionStorage.setItem("tmf-estimate", JSON.stringify({ low: 85000, high: 115000, over: false })));
-  await p.reload({ waitUntil: "networkidle0" });
-  const line = await p.$eval("[data-cta-estimate]", (el) => (el.hidden ? "" : el.textContent));
-  check("CTA shows the visitor's estimate", line.includes("$85,000–$115,000"), line);
-  await p.close();
-
-  /* Contact form */
-  p = await open("/contact/");
-  await p.click('.contact__form [type="submit"]');
-  await sleep(400);
-  check("contact error summary appears", !(await hidden(p, ".contact__form [data-error-summary]")));
-  check("focus moves to error summary", await p.evaluate(() => document.activeElement.matches("[data-error-summary]")));
-  await shot(p, "contact-errors");
-  await p.type("#c-first", "Jordan");
-  await p.type("#c-last", "Lee");
-  await p.type("#c-business", "Lee Freight LLC");
-  await p.type("#c-email", "jordan@example.com");
-  await p.click('.contact__form [type="submit"]');
-  await sleep(1500);
-  check("contact success state shows", !(await hidden(p, "#contact-success")));
-  await shot(p, "contact-success");
-  await p.close();
-
-  /* Mobile menu */
-  p = await open("/", 390, 844);
-  await p.click("[data-mobile-toggle]");
-  await sleep(400);
-  check("mobile menu opens", !(await hidden(p, "#mobile-menu")));
-  check("focus moves into mobile menu", await p.evaluate(() => !!document.activeElement.closest("#mobile-menu")));
-  await shot(p, "mobile-menu");
-  await p.keyboard.press("Escape");
-  await sleep(250);
-  check("Escape closes mobile menu", await hidden(p, "#mobile-menu"));
-  await p.close();
-
-  /* Reduced motion */
-  p = await open("/", 1440, 900, true);
-  check("hero visible with reduced motion", (await p.$eval(".hero__title", (h) => getComputedStyle(h).opacity)) === "1");
-  check("reduced motion: no pinned travel on the hero or the clock", await p.evaluate(() => document.querySelector("[data-hero]").offsetHeight <= innerHeight * 1.05 && document.querySelector("[data-clock]").offsetHeight < innerHeight * 2.2));
-  check("reduced motion: the clock rests complete at hour 48", (await hour(p)) === 48, String(await hour(p)));
-  await p.focus("[data-clock-handle]");
-  await p.keyboard.press("Home");
-  await sleep(300);
-  check("reduced motion: the slider still works without scroll travel", (await hour(p)) === 0, String(await hour(p)));
-  check("reduced motion: no view transitions", await p.evaluate(() => !CSS.supports("selector(::view-transition)") || matchMedia("(prefers-reduced-motion: reduce)").matches));
-  await p.close();
+  await testCalculator();
+  await testApplication();
+  await testContact();
+  await testChat();
+  await testUnsubscribe();
+  await testCookies();
 } finally {
   await browser.close();
+  rmSync(fixtureDir, { recursive: true, force: true });
 }
-console.log(errors.length ? `console errors:\n  ${[...new Set(errors)].join("\n  ")}` : "no console errors");
-console.log(failures ? `${failures} check(s) failed` : "all checks passed");
+
+const uniqueBrowserErrors = [...new Set(browserErrors)];
+check("browser console stays free of errors", uniqueBrowserErrors.length === 0, uniqueBrowserErrors.join(" | "));
+if (failures.length) {
+  console.error(`\n${failures.length} interaction check(s) failed.`);
+  process.exitCode = 1;
+} else {
+  console.log("\nAll interaction checks passed.");
+}

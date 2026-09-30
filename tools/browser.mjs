@@ -7,17 +7,26 @@
 */
 import { createRequire } from "node:module";
 import { existsSync, readdirSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 
 const require = createRequire(import.meta.url);
 const puppeteer = require("puppeteer-core");
 
-const CACHE = "C:/Users/Eli/.cache/puppeteer";
+const CACHE = join(homedir(), ".cache", "puppeteer");
 
 function findChrome() {
   if (process.env.CHROME_PATH && existsSync(process.env.CHROME_PATH)) {
     return process.env.CHROME_PATH;
   }
+  const installed = [
+    process.env.LOCALAPPDATA && join(process.env.LOCALAPPDATA, "Google", "Chrome", "Application", "chrome.exe"),
+    process.env.ProgramFiles && join(process.env.ProgramFiles, "Google", "Chrome", "Application", "chrome.exe"),
+    process.env["ProgramFiles(x86)"] && join(process.env["ProgramFiles(x86)"], "Google", "Chrome", "Application", "chrome.exe"),
+    process.env.ProgramFiles && join(process.env.ProgramFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+  ].filter(Boolean);
+  const systemBrowser = installed.find((path) => existsSync(path));
+  if (systemBrowser) return systemBrowser;
   const candidates = [
     ["chrome", "chrome-win64", "chrome.exe"],
     ["chrome-headless-shell", "chrome-headless-shell-win64", "chrome-headless-shell.exe"],
@@ -32,7 +41,7 @@ function findChrome() {
       if (existsSync(p)) return p;
     }
   }
-  throw new Error(`No cached Chrome found under ${CACHE}. Set CHROME_PATH.`);
+  throw new Error(`No installed or cached Chrome found (checked ${CACHE}). Set CHROME_PATH.`);
 }
 
 export async function launch(extraArgs = []) {

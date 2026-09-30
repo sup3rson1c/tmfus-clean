@@ -200,9 +200,9 @@ fi
 head "Signet removal"
 # John asked for the name off the website. Docs keep it for history.
 
-if grep -rliE 'signet|altaflow|alfw' --include='*.html' --include='*.js' \
+if grep -rliE 'signet|altaflow|alfw' --exclude-dir='node_modules' --include='*.html' --include='*.js' \
      --include='*.css' --include='*.php' . >/dev/null 2>&1; then
-  fail "Signet/altaFlow still referenced in served files: $(grep -rliE 'signet|altaflow|alfw' --include='*.html' --include='*.js' --include='*.css' --include='*.php' . | tr '\n' ' ')"
+  fail "Signet/altaFlow still referenced in served files: $(grep -rliE 'signet|altaflow|alfw' --exclude-dir='node_modules' --include='*.html' --include='*.js' --include='*.css' --include='*.php' . | tr '\n' ' ')"
 else
   pass "no Signet or altaFlow references in served files"
 fi
