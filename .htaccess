@@ -151,6 +151,13 @@ ErrorDocument 404 /404.html
   Require all denied
 </FilesMatch>
 
+# admin.php's lock library only defines functions, and the two PHP tools are
+# command-line only (tools/ is never deployed and is 404'd below). Denied by
+# name as well, so a stray copy in the web root can never be run from a browser.
+<FilesMatch "^(admin-lock|totp-setup|hash-password)\.php$">
+  Require all denied
+</FilesMatch>
+
 # Key material. The public key is not a secret, but this is the safety net
 # for the day someone saves the PRIVATE key here by mistake. Applications
 # are only as private as that file — it belongs on John's own machine.

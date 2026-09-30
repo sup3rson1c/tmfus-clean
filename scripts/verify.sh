@@ -631,6 +631,49 @@ for f in api/application.php api/lead.php api/unsubscribe.php; do
   chk "$f rate-limits per IP" has "$f" 'RATE_PER_HOUR'
 done
 
+# --- admin.php optional locks: IP allow-list, TOTP code, hashed password ---
+# Both locks are OFF unless api/config.php turns them on, so the template
+# must ship them empty; and the command-line helpers must never run from
+# the web, even if a copy of tools/ ever lands in public_html.
+for f in tools/*.php; do
+  chk "$f refuses to run outside the command line" has "$f" "if (PHP_SAPI !== 'cli') {"
+done
+chk "the admin lock library refuses to be requested directly" has api/admin-lock.php "http_response_code(404);"
+for key in "'admin_password_hash' => ''," "'admin_allowed_ips' => []," "'trusted_proxy' => ''," "'admin_totp_secret' => '',"; do
+  chk "config.example.php ships ${key%% =>*} present and empty" has api/config.example.php "$key"
+done
+gate=$(grep -n 'tmf_ip_in_list($clientIp, $allowedIps)' admin.php | sed -n 1p | cut -d: -f1)
+first_header=$(grep -n "^header(" admin.php | sed -n 1p | cut -d: -f1)
+first_session=$(grep -n "^session_start();" admin.php | sed -n 1p | cut -d: -f1)
+if [ -n "$gate" ] && [ -n "$first_header" ] && [ -n "$first_session" ] && \
+   [ "$gate" -lt "$first_header" ] && [ "$gate" -lt "$first_session" ]; then
+  pass "admin IP allow-list runs before any header, session or login code"
+else
+  fail "admin IP allow-list is missing or runs after other admin code"
+fi
+chk "admin reads the client IP from REMOTE_ADDR unless trusted_proxy is set" has api/admin-lock.php '$proxies === [] || !tmf_ip_in_list($remote, $proxies)'
+chk "admin counts a session as signed in only after the code when 2FA is on" has admin.php "\$authed = !empty(\$_SESSION['ok']) && (\$totpKey === null || !empty(\$_SESSION['totp']));"
+chk "admin throttles wrong 2FA codes per IP"            has admin.php "throttle('totp', \$clientIp)"
+chk "admin fails closed on an unreadable 2FA secret"    has admin.php "The two-step code is misconfigured"
+chk "admin prefers admin_password_hash via password_verify" has admin.php 'password_verify($given, $passHash)'
+chk ".htaccess denies the admin lock library and PHP tools by name" \
+    has .htaccess '<FilesMatch "^(admin-lock|totp-setup|hash-password)\.php$">'
+chk ".cpanel.yml deploys api/admin-lock.php (admin.php needs it)" has .cpanel.yml "cp -f api/admin-lock.php"
+if grep -qE '^[[:space:]]*-.*[[:space:]]tools/' .cpanel.yml; then
+  fail ".cpanel.yml copies something from tools/ — the CLI helpers must stay off the web"
+else
+  pass "tools/ (incl. the PHP helpers) is not deployed"
+fi
+if command -v php >/dev/null 2>&1; then
+  if out=$(php tools/totp-setup.php --selftest 2>&1); then
+    pass "TOTP matches the RFC 6238/4226 test vectors; IP allow-list cases pass"
+  else
+    fail "admin lock self-test: $out"
+  fi
+else
+  printf '  \033[33m—\033[0m %s\n' "php not installed here, so the TOTP/IP self-test did NOT run (CI runs it)"
+fi
+
 if [ $FAIL -eq 0 ]; then
   printf '\033[32mAll invariants hold.\033[0m\n'
 else
