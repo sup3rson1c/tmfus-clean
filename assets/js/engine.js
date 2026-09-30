@@ -1821,6 +1821,27 @@
       }
     })();
 
+    /* ---- preset the product from the page they came from ----
+       ?product=heloc wins; otherwise the referring page on this site.
+       Only fills an empty select, and only with a listed option. */
+    (function presetProduct() {
+      const sel = $('[data-field="product"]', form);
+      if (!sel || sel.value) return;
+      const byKey = { heloc: 'HELOC', mca: 'Working capital', sba: 'SBA loan' };
+      let key = '';
+      try { key = (new URLSearchParams(location.search).get('product') || '').toLowerCase(); } catch (_) {}
+      if (!byKey[key]) {
+        key = '';
+        try {
+          const ref = new URL(document.referrer);
+          if (ref.host === location.host) {
+            key = /heloc/.test(ref.pathname) ? 'heloc' : /sba/.test(ref.pathname) ? 'sba' : /mca/.test(ref.pathname) ? 'mca' : '';
+          }
+        } catch (_) {}
+      }
+      if (byKey[key]) sel.value = byKey[key];
+    })();
+
     /* ---- input masks ---- */
     $$('[data-mask]', form).forEach((input) => {
       const fn = MASKS[input.dataset.mask];

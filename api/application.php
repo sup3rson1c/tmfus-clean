@@ -356,6 +356,18 @@ foreach ($app as $k => $v) {
     }
 }
 
+// Product: fixed allow-list; anything else is dropped.
+const PRODUCTS = ['HELOC', 'Working capital', 'Line of credit', 'SBA loan', 'Equipment financing'];
+foreach (['product'] as $pk) {
+    if (isset($full[$pk]) && !in_array($full[$pk], PRODUCTS, true)) {
+        unset($full[$pk]);
+    }
+    if (isset($clean[$pk]) && !in_array($clean[$pk], PRODUCTS, true)) {
+        unset($clean[$pk]);
+    }
+}
+$product = $clean['product'] ?? 'Not specified';
+
 if (($full['business_legal_name'] ?? '') === '' || ($full['owner_name'] ?? '') === '') {
     fail(400, 'The application is missing the business or owner name.');
 }
@@ -498,6 +510,7 @@ if ($notifyTo !== '' && filter_var($notifyTo, FILTER_VALIDATE_EMAIL)) {
         '',
         'Reference:   ' . $reference,
         'Business:    ' . $business,
+        'Product:     ' . $product,
         'Received:    ' . date('D j M Y, H:i T'),
         'Statements:  ' . (count($saved) ?: 'none attached'),
         '',

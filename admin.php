@@ -1224,7 +1224,7 @@ header('Content-Type: text/html; charset=utf-8');
     { title: 'Business', keys: ['business_legal_name','business_dba_name','ein','industry','business_start_date','business_address','business_city','business_state','business_zip'] },
     { title: 'Owner', keys: ['owner_name','owner_dob','owner_ssn','owner_ownership_pct','email','phone','owner_address','owner_city','owner_state','owner_zip'] },
     { title: 'Co-owner', keys: ['co_owner','co_owner_name','co_owner_dob','co_owner_ssn','co_owner_ownership_pct','co_owner_address','co_owner_city','co_owner_state','co_owner_zip'] },
-    { title: 'Request', keys: ['amount_requested','statements_attached'] },
+    { title: 'Request', keys: ['product','amount_requested','statements_attached'] },
     { title: 'Consent and signing', keys: ['consent_credit','consent_contact','consent_text_id','signed_at'] }
   ];
   function pretty(k) {
