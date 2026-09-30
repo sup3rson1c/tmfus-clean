@@ -308,8 +308,9 @@ else
   fail "a live deep-link target (#solutions or #mca) is missing"
 fi
 
-if grep -qE 'href="/apply\?(product|from)=' ./*.html; then
-  fail "an apply link carries an inert product/from query that the application discards"
+# ?product= is honoured (engine.js presetProduct), so only an unhandled ?from= is inert.
+if grep -qE 'href="/apply\?from=' ./*.html; then
+  fail "an apply link carries an inert from query that the application discards"
 else
   pass "application links do not pretend to preserve intent they discard"
 fi

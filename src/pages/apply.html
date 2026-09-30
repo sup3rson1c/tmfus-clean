@@ -31,6 +31,18 @@
             <p class="prefill-note" data-prefill-note hidden></p>
             <div class="form-stack">
               <div class="field">
+                <label class="label field-label" for="ap-product">What are you applying for?</label>
+                <select class="input" id="ap-product" data-field="product">
+                  <option value="">Not sure yet</option>
+                  <option value="HELOC">HELOC (home equity line of credit)</option>
+                  <option value="Working capital">Working capital</option>
+                  <option value="Line of credit">Business line of credit</option>
+                  <option value="SBA loan">SBA loan</option>
+                  <option value="Equipment financing">Equipment financing</option>
+                </select>
+                <span class="field-hint">Filled in from the page you came from. Change it if it is wrong.</span>
+              </div>
+              <div class="field">
                 <label class="label field-label" for="ap-legal">Business legal name *</label>
                 <input class="input" id="ap-legal" data-field="business_legal_name" autocomplete="organization" placeholder="Acme Logistics LLC" required>
               </div>
