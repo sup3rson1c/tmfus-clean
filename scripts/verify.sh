@@ -79,10 +79,28 @@ done
 for f in api/*.php; do
   base=$(basename "$f")
   [ "$base" = "config.php" ] && continue      # server-only, never deployed
-  if grep -q "api/$base" .cpanel.yml; then :; else
-    fail "api/$base is not in .cpanel.yml — it will never deploy"
+  if grep -qE "cp -f[[:space:]]+api/$base[[:space:]]" .cpanel.yml; then :; else
+    fail "api/$base has no 'cp -f api/$base' line in .cpanel.yml — it will never deploy"
   fi
 done
+
+# Every /assets, /media and /api path that a built page, script or stylesheet
+# names must exist in the repo, and must be under a folder .cpanel.yml copies
+# (assets/ and media/ recursively, api/ file by file).
+grep -qE 'cp -Rf[[:space:]]+assets/' .cpanel.yml || fail ".cpanel.yml no longer copies assets/ recursively"
+grep -qE 'cp -Rf[[:space:]]+media/'  .cpanel.yml || fail ".cpanel.yml no longer copies media/ recursively"
+refs_bad=0
+for ref in $(grep -ohE "[\"'(=]/(assets|media|api)/[A-Za-z0-9_./-]*[A-Za-z0-9_]" ./*.html assets/js/*.js assets/css/site.css 2>/dev/null | sed -E "s/^[\"'(=]//" | sort -u); do
+  case "$ref" in
+    /api/*.php) base=$(basename "$ref")
+      [ -e "api/$base" ] || { fail "a page calls $ref but api/$base does not exist"; refs_bad=1; continue; }
+      [ "$base" = "config.php" ] && { fail "a page references api/config.php"; refs_bad=1; continue; }
+      grep -qE "cp -f[[:space:]]+api/$base[[:space:]]" .cpanel.yml || { fail "$ref is called by a page but not copied by .cpanel.yml"; refs_bad=1; } ;;
+    /media/film/clips) ;;   # directory prefix used to build clip names
+    *) [ -e ".$ref" ] || { fail "a page, script or stylesheet references $ref but the file is not in the repo"; refs_bad=1; } ;;
+  esac
+done
+[ $refs_bad -eq 0 ] && pass "every referenced asset, media file and API endpoint exists and is deployed"
 [ $FAIL -eq 0 ] && pass "every deployable file is listed in .cpanel.yml"
 
 if grep -qE 'cp -Rf?[[:space:]]+api/' .cpanel.yml; then
