@@ -95,8 +95,37 @@ return [
 
     // Optional. If you would rather not keep the password in plain text,
     // put a password_hash() output here instead and leave the line above
-    // empty. This one wins if both are set.
+    // empty. This one wins if both are set. To make one, in cPanel
+    // Terminal, inside the repository folder:
+    //     php tools/hash-password.php
     'admin_password_hash' => '',
+
+    // ---------------------------------------------------------------
+    // TWO OPTIONAL EXTRA LOCKS FOR admin.php  (both OFF while empty)
+    // ---------------------------------------------------------------
+
+    // Lock 1: only these internet addresses may open admin.php at all.
+    // Everyone else gets "Forbidden" before they even see the password box.
+    // One address, or a range written like 203.0.113.0/24. IPv6 works too.
+    //     'admin_allowed_ips' => ['203.0.113.7', '2001:db8::/32'],
+    // CAREFUL: home and phone addresses change. If yours changes you are
+    // locked out until you edit this file in cPanel File Manager.
+    // Empty = anyone may reach the password box (as today).
+    'admin_allowed_ips' => [],
+
+    // Only if the site sits behind a proxy or CDN (e.g. Cloudflare) that
+    // connects to the server for the visitor: that proxy's address(es).
+    // Only then is the visitor's real address read from X-Forwarded-For.
+    // Leave empty unless you know you need it; a wrong value here would
+    // let anyone pretend to be on the allow-list.
+    'trusted_proxy' => '',
+
+    // Lock 2: after the password, ask for the 6-digit code from an
+    // authenticator app on your phone. To make the secret, in cPanel
+    // Terminal, inside the repository folder:
+    //     php tools/totp-setup.php
+    // and paste what it prints between the quotes. Empty = no code asked.
+    'admin_totp_secret' => '',
 
     // ---------------------------------------------------------------
     // UNSUBSCRIBE  (api/unsubscribe.php, page at /unsubscribe)
