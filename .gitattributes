@@ -1,0 +1,4 @@
+# Every text file is LF on every machine. build.mjs stamps assets with the
+# sha1 of their bytes, so a CRLF checkout on Windows produced different
+# stamps from the Linux checker and every build looked stale.
+* text=auto eol=lf
