@@ -1,0 +1,100 @@
+<!--meta {"title": "Unsubscribe · TMF Team", "description": "Take your email address off every TMF Team mailing list. No account, no login.", "nav": "unsubscribe", "bodyClass": "page-legal", "robots": "noindex, follow"} -->
+<section class="legal-page grain" aria-labelledby="page-title">
+  <div class="container">
+    <div class="legal-page__head">
+      <p class="eyebrow">Email preferences</p>
+      <h1 class="h1" id="page-title">Unsubscribe</h1>
+      <p class="lede">Put your address in and you come off every one of our email lists. No account, no login, no questions about why.</p>
+    </div>
+
+    <div class="card unsub-card">
+      <form id="unsubForm" novalidate data-no-remember>
+        <label class="label" for="unsubEmail">Your email address</label>
+        <div class="unsub-field">
+          <input class="input" id="unsubEmail" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+          <button class="btn btn--primary" type="submit" id="unsubBtn">Unsubscribe</button>
+        </div>
+      </form>
+      <div class="unsub-msg" id="unsubMsg" role="status" aria-live="polite"></div>
+    </div>
+
+    <article class="legal-doc">
+      <h2>What happens next</h2>
+      <p>Your address is recorded the moment you press the button. It is then removed from the sending platform, which is the step that actually stops mail leaving. We aim to have that done within 48 hours, and the law gives us 10 business days.</p>
+      <p>If something is already queued it can arrive during that window. After it, nothing should. If mail keeps coming a week later, that is a mistake rather than a policy, and replying to any message reaches a person who can fix it.</p>
+
+      <h2>Other ways to stop the mail</h2>
+      <ul>
+        <li>Reply to any email we have sent with the word <strong>stop</strong>. A person reads it.</li>
+        <li>Use the unsubscribe link at the bottom of any of our emails.</li>
+      </ul>
+      <p>We do not sell or pass on an address once it has opted out. It stays on our suppression list purely so that nothing reaches it again.</p>
+    </article>
+  </div>
+</section>
+<script>
+/* The live site's unsubscribe handler, unchanged apart from the absolute
+   endpoint path. A GET from an email link never removes anyone on its own:
+   mail scanners follow links. The link pre-fills, the person presses once. */
+(function () {
+  var form = document.getElementById('unsubForm');
+  var input = document.getElementById('unsubEmail');
+  var btn = document.getElementById('unsubBtn');
+  var msg = document.getElementById('unsubMsg');
+  if (!form) return;
+
+  var params = new URLSearchParams(location.search);
+  var token = params.get('t') || '';
+  var campaign = params.get('c') || '';
+  var known = params.get('e') || '';
+
+  if (known && /.+@.+\..+/.test(known)) { input.value = known; }
+  if (token) { input.placeholder = 'Press Unsubscribe to confirm'; }
+
+  function show(kind, text) {
+    msg.className = 'unsub-msg ' + kind;
+    msg.textContent = text;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = (input.value || '').trim();
+    if (!token && !/.+@.+\..+/.test(email)) {
+      show('err', 'That does not look like an email address.');
+      input.focus();
+      return;
+    }
+    btn.disabled = true;
+    var prev = btn.textContent;
+    btn.textContent = 'Working...';
+
+    var url = '/api/unsubscribe.php';
+    var qs = [];
+    if (token) qs.push('t=' + encodeURIComponent(token));
+    if (campaign) qs.push('c=' + encodeURIComponent(campaign));
+    if (qs.length) url += '?' + qs.join('&');
+
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, t: token })
+    })
+      .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
+      .then(function (d) {
+        if (d && d.ok) {
+          form.style.display = 'none';
+          show('ok', 'Done. You are off the list. Anything already queued may still arrive in the next day or two.');
+        } else {
+          btn.disabled = false;
+          btn.textContent = prev;
+          show('err', (d && d.error) || 'Something went wrong. Reply to any of our emails with the word stop and a person will remove you.');
+        }
+      })
+      .catch(function () {
+        btn.disabled = false;
+        btn.textContent = prev;
+        show('err', 'We could not reach the server. Reply to any of our emails with the word stop and a person will remove you.');
+      });
+  });
+})();
+</script>

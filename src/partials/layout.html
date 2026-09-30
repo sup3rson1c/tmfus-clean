@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+{{> head}}
+</head>
+<body class="{{bodyClass}}">
+    {{> loader}}
+{{> header}}
+<main id="main" tabindex="-1">
+{{content}}
+</main>
+{{> footer}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
+<script src="/assets/js/site.js" defer></script>
+<script src="/assets/js/engine.js" defer></script>
+<script src="/assets/js/loader.js" defer></script>
+    <script src="/assets/js/motion.js" defer></script>
+  {{scripts}}
+<script src="/assets/js/moments.js" defer></script>
+</body>
+</html>

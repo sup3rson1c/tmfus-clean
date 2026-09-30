@@ -1,0 +1,382 @@
+/* Funding film: full-bleed scroll-scrubbed canvas sequence -------------
+   Pinned stage between the hero and the estimate section; scroll position
+   is the playhead. Script: assets/js/film.js. Direction and choreography:
+   docs/film-phase2-direction.md, docs/film-phase1-uxplan.md.
+
+   Two presentations live here. The pinned canvas stage is the default; the
+   static storyboard (.film__board) is what reduced-motion and no-JS get, and
+   it is the one that ships visible so the section is never blank. */
+.film {
+  position: relative;
+  background: var(--vault);
+  /* Hairlines seam the film to the sections above and below rather than
+     letting two near-black grounds meet with no edge at all. */
+  border-block: 1px solid var(--hair);
+}
+
+/* The "Skip the film" control reuses the header's .skip-link: same fixed
+   position, same reveal-on-focus. It has to be fixed rather than absolute,
+   because the section is ~3600px tall while pinned and an absolute control
+   would sit far above the viewport at exactly the point a keyboard user
+   needs it. Landing in the same place as "Skip to content" is deliberate —
+   repeated help mechanisms belong in a consistent spot. */
+
+/* Stage ---------------------------------------------------------------- */
+.film__stage {
+  position: relative;
+  display: none;
+  overflow: clip;
+  width: 100%;
+  height: 100svh;
+  background: var(--vault);
+}
+
+.film__canvas,
+.film__poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* film.js sets object-fit on this element to whatever it is drawing the
+   canvas with, so the poster and the first painted frame are the same size
+   and nothing jumps at the handover. `contain` is the safe default for the
+   moment before the script runs: it can letterbox, but it cannot crop the
+   safe and its counter out of the frame. */
+.film__poster {
+  object-fit: contain;
+  /* The poster holds the frame until the canvas has something to show, then
+     film.js fades it out. Kept in the DOM so a canvas failure still leaves a
+     picture on screen. */
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.film__canvas {
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.film--live .film__canvas {
+  opacity: 1;
+}
+.film--live .film__poster {
+  opacity: 0;
+}
+
+/* Vignette + a top edge that keeps the header legible over any frame. */
+.film__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(10, 12, 11, 0.72), rgba(10, 12, 11, 0) 22%),
+    radial-gradient(120% 90% at 50% 50%, rgba(10, 12, 11, 0) 45%, rgba(10, 12, 11, 0.55) 100%);
+}
+
+/* Caption — one mono line, bottom left, same family as the hero's dial
+   chips. It has to survive being read WHILE the picture is moving under a
+   scroll gesture, not in a still: 2026-09-27, the user reported it "small
+   and black and not visible" against the footage, which at the old
+   clamp(12px, 1.05vw, 15px) it basically was on anything under ~1400px wide.
+   Sized and backed to read at a glance without becoming a caption card that
+   competes with the frame. */
+.film__caption {
+  position: absolute;
+  /* Placed per step via data-pos below, not pinned to one corner. */
+  bottom: clamp(96px, 12vh, 136px); /* clears the chat button */
+  left: var(--gutter);
+  width: fit-content;
+  max-width: min(30ch, calc(100% - var(--gutter) * 2));
+  margin: 0;
+  padding: clamp(14px, 1.6vw, 24px) clamp(18px, 2vw, 32px);
+  border-radius: var(--r-sm);
+  background: rgba(8, 10, 9, 0.84);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--banknote);
+  font-family: var(--font-display);
+  font-stretch: 112%;
+  font-size: clamp(20px, 2.6vw, 38px);
+  font-weight: 620;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: pretty;
+  /* The overlay carries most of the contrast, but the footage behind it
+     ranges from a black safe to a lit monitor screen — this is what keeps
+     the letterforms themselves legible at the light end of that range. */
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+}
+/* A left rule ties it to the eyebrow rules used elsewhere on the page. */
+.film__caption::before {
+  content: "";
+  position: absolute;
+  top: var(--s-4);
+  bottom: var(--s-4);
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--greenback);
+}
+
+/* Load hairline — 1px of --greenback, no spinner. */
+.film__load {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 1px;
+  margin: 0;
+  background: var(--hair);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.film--loading .film__load {
+  opacity: 1;
+}
+.film__load span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: var(--greenback);
+  transform-origin: left center;
+}
+
+/* Storyboard (reduced motion / no JS / slow connection) ------------------ */
+.film__board {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--hair);
+}
+.film__board li {
+  position: relative;
+  background: var(--vault);
+}
+.film__board img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* The storyboard has to carry the captions too — under reduced motion it is
+   the whole film, so the steps can't only live in the scrubbed version. */
+.film__board span {
+  display: block;
+  padding: var(--s-4) var(--s-5) var(--s-6);
+  border-left: 2px solid var(--greenback);
+  color: var(--silver);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* When the scrubber takes over, the stage replaces the storyboard. */
+.film--ready .film__stage {
+  display: block;
+}
+.film--ready .film__board {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .film__board {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 767px) {
+  /* Letterboxed on a phone, so the caption sits under the band rather than
+     over the picture. */
+  .film__caption {
+    bottom: clamp(var(--s-5), 12vh, var(--s-8));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* film.js takes the .film--player branch here and never sets .film--ready,
+     so the old .film--ready overrides were dead. What is left: kill the
+     fades, and let the storyboard stand for the no-JS case, where no class
+     is ever added and .film__stage stays display:none. */
+  .film__poster,
+  .film__canvas {
+    transition: none;
+  }
+}
+
+/* Reduced motion: the film as something you press play on ---------------- */
+/* The preference means "do not impose motion on me", not "withhold the
+   work". Nothing loads or moves until the button is pressed, so the setting
+   is honoured while the actual film is still available. */
+.film--player .film__stage {
+  display: block;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+.film--player .film__board,
+.film--player .film__canvas,
+.film--player .film__load {
+  display: none;
+}
+.film--player .film__caption {
+  opacity: 0;
+}
+
+.film__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+}
+.film__video.is-on {
+  opacity: 1;
+}
+
+.film__player {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.film--playing .film__player {
+  pointer-events: none;
+}
+
+.film__play {
+  display: grid;
+  gap: var(--s-2);
+  justify-items: center;
+  padding: var(--s-5) var(--s-7);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: rgba(10, 12, 11, 0.62);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px var(--hair);
+  color: var(--banknote);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  /* Only transform and opacity — the surrounding page animates nothing here. */
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.film__play:hover {
+  transform: translateY(-1px);
+}
+.film__play:active {
+  transform: translateY(0);
+}
+.film__play:focus-visible {
+  outline: 2px solid var(--greenback);
+  outline-offset: 3px;
+}
+.film__play-icon {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent var(--greenback);
+}
+.film__play-meta {
+  color: var(--silver);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* Funded readout --------------------------------------------------------
+   It has to look like the safe's screen is showing the number, not like a
+   label parked on top of it. The previous version painted its own lit-glass
+   panel in an upright box; the real screen is in perspective, so the box sat
+   visibly off the glass and read as a sticker.
+
+   Now: a fixed 1000x420 plane that film.js maps onto the glass's four
+   measured corners with matrix3d (so it takes the screen's own perspective),
+   clipped to the glass, and blended with `screen` so it only ADDS light. The
+   footage's dark glass, its grain and its reflections stay visible through
+   the digits, which is what makes them read as lit from inside.
+
+   It exists because the generated footage cannot count: successive frames of
+   a rendered counter read 047260, 047240, 047210. Scroll drives this one,
+   along the measured drain of the syringe, so it can only ever rise. */
+.film__counter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 1000px;
+  height: 420px;
+  place-items: center;
+  overflow: hidden;
+  /* The backlight: a faint green lift of the glass, strongest behind the
+     digits, as an LCD's panel glows when it is on. With `screen` blending,
+     black here changes nothing. */
+  background: radial-gradient(70% 80% at 50% 52%, rgba(62, 150, 104, 0.2), rgba(30, 80, 56, 0.07) 70%, rgba(0, 0, 0, 0) 100%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+}
+/* Glass sheen over the digits: a soft diagonal highlight, as the footage's
+   own reflections cross the screen. */
+.film__counter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0) 30%, rgba(210, 235, 225, 0.07) 44%, rgba(255, 255, 255, 0) 58%);
+  pointer-events: none;
+}
+.film__counter span {
+  position: relative;
+  color: #8ff5c3;
+  font-family: var(--font-mono);
+  font-size: 176px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* Scan rows: the glyphs are built from lit lines, like the panel. */
+  -webkit-mask-image: repeating-linear-gradient(to bottom, #000 0 5px, rgba(0, 0, 0, 0.55) 5px 8px);
+  mask-image: repeating-linear-gradient(to bottom, #000 0 5px, rgba(0, 0, 0, 0.55) 5px 8px);
+  /* Soft to match the footage (a crisp DOM edge on soft video reads as
+     pasted on), and a bloom that stays inside the glass (overflow above). */
+  filter: blur(1.4px);
+  text-shadow:
+    0 0 10px rgba(143, 245, 195, 0.85),
+    0 0 34px rgba(110, 220, 165, 0.55),
+    0 0 90px rgba(90, 200, 150, 0.35);
+}
+
+/* Caption placement per step. Each of the four steps names the corner that
+   its stretch of footage leaves empty, so the words never sit on a face or
+   over the brightest part of the shot. */
+.film__caption[data-pos="top-left"] {
+  top: clamp(var(--s-8), 14vh, var(--s-10));
+  right: auto;
+  bottom: auto;
+  left: var(--gutter);
+}
+.film__caption[data-pos="top-right"] {
+  top: clamp(var(--s-8), 14vh, var(--s-10));
+  right: var(--gutter);
+  bottom: auto;
+  left: auto;
+  border-left: 0;
+}
+.film__caption[data-pos="bottom-right"] {
+  top: auto;
+  right: var(--gutter);
+  bottom: clamp(96px, 12vh, 136px); /* clears the chat button */
+  left: auto;
+}
+.film__caption[data-pos="bottom-left"] {
+  top: auto;
+  right: auto;
+  bottom: clamp(96px, 12vh, 136px); /* clears the chat button */
+  left: var(--gutter);
+}
+

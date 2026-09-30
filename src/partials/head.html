@@ -1,0 +1,49 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<meta name="robots" content="{{robots}}">
+<link rel="canonical" href="https://tmfus.com{{canonical}}">
+<link rel="alternate" hreflang="en-us" href="https://tmfus.com{{canonical}}">
+<link rel="alternate" hreflang="x-default" href="https://tmfus.com{{canonical}}">
+<meta name="theme-color" content="#0a0c0b">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TMF Team">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{description}}">
+<meta property="og:url" content="https://tmfus.com{{canonical}}">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://tmfus.com/assets/logo-mark-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{title}}">
+<meta name="twitter:description" content="{{description}}">
+<meta name="twitter:image" content="https://tmfus.com/assets/logo-mark-512.png">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/assets/css/site.css">
+<script>(function (d) {
+  d.classList.add("js");
+  var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
+  if (motion) d.classList.add("motion-ok");
+  /* The opening loader is decided here, before first paint, so the page never
+     shows for a moment before the cover arrives. ?motion=force is the review
+     override film.js also reads; it counts as motion allowed. */
+  var q = location.search, forced = /[?&]motion=force\b/.test(q), seen = false;
+  try {
+    forced = forced || (!/[?&]motion=auto\b/.test(q) && localStorage.getItem("tmf-motion") === "force");
+    seen = sessionStorage.getItem("tmf-loader-seen") === "1";
+  } catch (e) {}
+  if (forced) d.classList.add("motion-forced");
+  if (!seen && (motion || forced)) {
+    d.classList.add("is-loading");
+    /* Failsafe: if loader.js never runs, the cover still lifts. */
+    setTimeout(function () {
+      if (!d.classList.contains("is-loading")) return;
+      d.classList.remove("is-loading");
+      dispatchEvent(new Event("tmf:loader-done"));
+    }, 4500);
+  }
+})(document.documentElement);</script>

@@ -1,0 +1,72 @@
+<!--meta {"title": "Contact a funding specialist · TMF Team", "description": "Talk to a TMF Team funding specialist. Send a message and an advisor will come back to you within one business day.", "nav": "contact", "bodyClass": "page-contact"} -->
+<section class="section contact grain" aria-labelledby="page-title">
+  <div class="container contact__grid">
+    <div class="contact__copy">
+      <p class="eyebrow">Contact</p>
+      <h1 class="h1" id="page-title">Talk to a funding specialist.</h1>
+      <p class="lede">Send a message and an advisor will come back to you within one business day.</p>
+      <dl class="contact__direct">
+        <div><dt>Hours</dt><dd>Mon–Fri, 9am–6pm EST</dd></div>
+        <div><dt>Decision speed</dt><dd>3–24 hours</dd></div>
+        <div><dt>Funding window</dt><dd>24–48 hours</dd></div>
+      </dl>
+      <div class="contact__links">
+        <a class="link-arrow" href="/funding-estimator">See your numbers first {{> icon-arrow}}</a>
+        <a class="link-arrow" href="/apply">Ready now? Start your application {{> icon-arrow}}</a>
+      </div>
+    </div>
+
+    <div class="card contact__card">
+      <form class="contact__form" novalidate data-lead-form="contact" data-success="contact-success" aria-labelledby="form-title">
+        <h2 class="h3" id="form-title">Send us a message</h2>
+        <p class="small muted form-intro">Fields marked with <span aria-hidden="true" class="req">*</span> are required.</p>
+        <div class="error-summary" tabindex="-1" role="alert" data-error-summary hidden></div>
+        <div class="form-grid">
+          <div class="field">
+            <label class="label" for="c-first">First name<span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="c-first" name="first" autocomplete="given-name" required aria-describedby="c-first-err">
+            <p class="error" id="c-first-err" hidden></p>
+          </div>
+          <div class="field">
+            <label class="label" for="c-last">Last name<span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="c-last" name="last" autocomplete="family-name" required aria-describedby="c-last-err">
+            <p class="error" id="c-last-err" hidden></p>
+          </div>
+          <div class="field field--full">
+            <label class="label" for="c-business">Business name<span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="c-business" name="business" autocomplete="organization" required aria-describedby="c-business-err">
+            <p class="error" id="c-business-err" hidden></p>
+          </div>
+          <div class="field">
+            <label class="label" for="c-email">Email<span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="c-email" name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby="c-email-err">
+            <p class="error" id="c-email-err" hidden></p>
+          </div>
+          <div class="field">
+            <label class="label" for="c-phone">Phone</label>
+            <input class="input" id="c-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" aria-describedby="c-phone-help c-phone-err">
+            <p class="help" id="c-phone-help">Optional, but it's the fastest way for a specialist to reach you.</p>
+            <p class="error" id="c-phone-err" hidden></p>
+          </div>
+          <div class="field field--full">
+            <label class="label" for="c-message">How can we help?</label>
+            <textarea class="textarea" id="c-message" name="message" rows="4" aria-describedby="c-message-err"></textarea>
+            <p class="error" id="c-message-err" hidden></p>
+          </div>
+        </div>
+        <div class="form-foot">
+          <p class="secure-note"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"/></svg>Sent over an encrypted connection</p>
+          <button class="btn btn--primary btn--lg" type="submit">Send message</button>
+        </div>
+        <p class="small muted form-legal">By continuing you agree to our <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>, and you agree that TMF Team and its funding partners may contact you about this enquiry by phone, email and text, and may share your details with funding partners so they can make you an offer. Not a condition of funding.</p>
+      </form>
+
+      <div class="success" id="contact-success" tabindex="-1" hidden>
+        <svg class="success__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <h2 class="h3">Message sent.</h2>
+        <p class="muted">Thanks — we'll come back to you within one business day. While you wait, you can see your numbers in the calculator.</p>
+        <a class="btn btn--primary" href="/funding-estimator">See what you qualify for</a>
+      </div>
+    </div>
+  </div>
+</section>

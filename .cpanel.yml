@@ -1,31 +1,37 @@
----
 # cPanel Git Version Control deployment.
 # When you click "Deploy HEAD Commit" in cPanel, these run on the server.
 # DEPLOYPATH is your account's public_html — change it if the account changes.
+#
+# 2026 redesign: the pages are built by `node build.mjs` from src/ and the
+# built .html files are committed, so the server needs no Node. src/, tools/,
+# docs/ and scripts/ are deliberately NOT copied.
 deployment:
   tasks:
     - export DEPLOYPATH=$HOME/public_html
     - /bin/mkdir -p $DEPLOYPATH/assets
-    - /bin/cp -f index.html              $DEPLOYPATH/
-    - /bin/cp -f apply.html              $DEPLOYPATH/
-    - /bin/cp -f about.html              $DEPLOYPATH/
-    - /bin/cp -f contact.html            $DEPLOYPATH/
-    - /bin/cp -f funding-estimator.html  $DEPLOYPATH/
-    - /bin/cp -f heloc-calculator.html   $DEPLOYPATH/
-    - /bin/cp -f sba-loans.html          $DEPLOYPATH/
-    - /bin/cp -f mca.html                $DEPLOYPATH/
-    - /bin/cp -f 404.html                $DEPLOYPATH/
-    - /bin/cp -f terms.html              $DEPLOYPATH/
-    - /bin/cp -f privacy.html            $DEPLOYPATH/
-    - /bin/cp -f unsubscribe.html        $DEPLOYPATH/
-    - /bin/cp -f admin.php               $DEPLOYPATH/
-    - /bin/cp -f robots.txt              $DEPLOYPATH/
-    - /bin/cp -f llms.txt                $DEPLOYPATH/
-    - /bin/cp -f sitemap.xml             $DEPLOYPATH/
-    - /bin/cp -f .htaccess               $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/media
+    - /bin/cp -f 404.html               $DEPLOYPATH/
+    - /bin/cp -f about.html             $DEPLOYPATH/
+    - /bin/cp -f apply.html             $DEPLOYPATH/
+    - /bin/cp -f contact.html           $DEPLOYPATH/
+    - /bin/cp -f funding-estimator.html $DEPLOYPATH/
+    - /bin/cp -f heloc-calculator.html  $DEPLOYPATH/
+    - /bin/cp -f index.html             $DEPLOYPATH/
+    - /bin/cp -f mca.html               $DEPLOYPATH/
+    - /bin/cp -f privacy.html           $DEPLOYPATH/
+    - /bin/cp -f sba-loans.html         $DEPLOYPATH/
+    - /bin/cp -f terms.html             $DEPLOYPATH/
+    - /bin/cp -f unsubscribe.html       $DEPLOYPATH/
+    - /bin/cp -f admin.php              $DEPLOYPATH/
+    - /bin/cp -f robots.txt             $DEPLOYPATH/
+    - /bin/cp -f llms.txt               $DEPLOYPATH/
+    - /bin/cp -f sitemap.xml            $DEPLOYPATH/
+    - /bin/cp -f .htaccess              $DEPLOYPATH/
     - /bin/cp -Rf assets/.               $DEPLOYPATH/assets/
+    # The scroll film: ~870 stills and 5 short clips, about 145 MB.
+    - /bin/cp -Rf media/.                $DEPLOYPATH/media/
     # Server-side API. Files are copied individually on purpose: api/config.php
-    # holds the Figure credential, lives only on the server, and is not in this
+    # holds every credential, lives only on the server, and is not in this
     # repo. Never add a command here that could overwrite or delete it.
     - /bin/mkdir -p $DEPLOYPATH/api
     - /bin/cp -f api/figure-heloc.php    $DEPLOYPATH/api/

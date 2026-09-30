@@ -1,0 +1,212 @@
+/* Contact extras -------------------------------------------------------- */
+.contact__links {
+  display: grid;
+  gap: 2px;
+}
+.form-intro {
+  margin: 6px 0 var(--s-5);
+}
+.form-legal {
+  margin-top: var(--s-4);
+}
+.form-legal a {
+  color: var(--banknote);
+}
+
+/* SBA extras */
+.split-notes {
+  margin-top: var(--s-6);
+  max-width: 72ch;
+  color: var(--silver);
+}
+.options-title {
+  margin-bottom: var(--s-5);
+}
+.risk-banner {
+  padding: clamp(24px, 3vw, 36px);
+}
+.risk-banner .h4 {
+  margin-bottom: 6px;
+}
+
+/* Apply ------------------------------------------------------------------ */
+.apply {
+  position: relative;
+  padding-top: calc(var(--header-h) + clamp(32px, 5vw, 72px));
+  padding-bottom: var(--section-y);
+  background:
+    radial-gradient(50% 40% at 85% 0%, rgba(134, 183, 154, 0.08), transparent 70%),
+    var(--vault);
+}
+.apply__head {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+.apply__head .h1 {
+  font-size: clamp(2.125rem, 0.8rem + 3.6vw, 3.75rem);
+  max-inline-size: 18ch;
+}
+.apply__grid {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .apply__grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.6fr);
+    column-gap: var(--s-6);
+  }
+  .apply__aside {
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+}
+.apply__card form {
+  display: grid;
+  gap: var(--s-6);
+}
+.apply__legend {
+  margin-bottom: var(--s-5);
+}
+.apply__note {
+  margin-top: var(--s-5);
+  align-items: flex-start;
+}
+.apply__note svg {
+  margin-top: 3px;
+  flex: none;
+}
+.apply__aside {
+  display: grid;
+  gap: var(--s-4);
+}
+.apply__summary,
+.apply__help {
+  display: grid;
+  gap: var(--s-4);
+}
+.apply__estimate {
+  display: grid;
+  gap: 4px;
+  padding-top: var(--s-4);
+  box-shadow: inset 0 1px 0 var(--hair);
+}
+.apply__estimate-v {
+  font: 500 1.375rem/1.2 var(--font-mono);
+  letter-spacing: -0.02em;
+}
+.apply__help .link-arrow {
+  justify-self: start;
+}
+
+.dropzone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 20px;
+  border: 1.5px dashed var(--control);
+  border-radius: var(--r-md);
+  background: rgba(241, 242, 236, 0.02);
+  text-align: center;
+}
+.dropzone.is-over {
+  border-color: var(--greenback);
+  background: rgba(134, 183, 154, 0.08);
+}
+.dropzone__icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: var(--greenback);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dropzone__title {
+  font-weight: 600;
+}
+#statements-btn[aria-invalid] {
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+.file-list {
+  display: grid;
+  gap: 8px;
+}
+.file-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 4px 14px;
+  border-radius: 10px;
+  background: var(--vault);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+}
+.file-list__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-list__size {
+  color: var(--silver);
+  font: 0.8125rem var(--font-mono);
+}
+.file-list__remove {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+.file-list__remove svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--silver);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.file-list__remove:hover {
+  background: rgba(241, 242, 236, 0.06);
+}
+.consent {
+  max-height: 220px;
+  overflow: auto;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--vault);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--silver);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.consent p + p {
+  margin-top: 0.8em;
+}
+.reference {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: var(--s-5) 0;
+  box-shadow: inset 0 1px 0 var(--hair), inset 0 -1px 0 var(--hair);
+}
+.reference__k {
+  color: var(--silver);
+  font: 500 0.75rem/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.reference__v {
+  font: 500 clamp(1.5rem, 1rem + 1.4vw, 2.25rem) / 1.1 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+/* Legal placeholder pages */
+.legal__body {
+  display: grid;
+  gap: var(--s-5);
+  justify-items: start;
+  max-width: 760px;
+}

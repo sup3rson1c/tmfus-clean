@@ -1,0 +1,102 @@
+<!--meta {"title": "Funding calculator · TMF Team", "description": "See how much funding your business may qualify for in about a minute. Revenue, credit and time in business in; a projected range and the products that fit out. No login and no credit pull.", "nav": "funding-estimator", "scripts": ["calculator"], "bodyClass": "page-calculator"} -->
+<section class="page-hero grain" aria-labelledby="page-title">
+  <div class="container page-hero__grid">
+    <div class="page-hero__copy">
+      <p class="eyebrow">Funding calculator</p>
+      <h1 class="h1" id="page-title">How much funding can you get?</h1>
+      <p class="lede">Three quick steps. You're matched to products based on your revenue, credit and time in business, with no desired amount needed.</p>
+      <ul class="chip-row" role="list">
+        <li class="chip">{{> icon-check}}No effect on your credit</li>
+        <li class="chip">{{> icon-check}}Products matched live</li>
+        <li class="chip">{{> icon-check}}About 60 seconds</li>
+      </ul>
+      <div class="page-hero__actions">
+        <a class="btn btn--primary btn--lg" href="#estimate">Start the calculator</a>
+      </div>
+    </div>
+    <div class="page-hero__media page-hero__media--square media">
+      <img src="/assets/img/a6-calculator-dial-960.webp" srcset="/assets/img/a6-calculator-dial-480.webp 480w, /assets/img/a6-calculator-dial-960.webp 960w, /assets/img/a6-calculator-dial-1440.webp 1440w" sizes="(min-width: 1024px) 44vw, 100vw" width="1440" height="1440" alt="A machined steel control dial with a knurled edge on a black anodized base." fetchpriority="high" decoding="async">
+    </div>
+  </div>
+</section>
+
+<section class="section section--raised estimate" id="estimate" aria-labelledby="estimate-title">
+  <div class="container">
+    <h2 class="sr-only" id="estimate-title">Calculator</h2>
+    <div data-calculator></div>
+    <noscript><p class="lede">The calculator needs JavaScript turned on. You can <a href="/apply">start an application</a> or <a href="/contact">talk to a specialist</a> instead.</p></noscript>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="after-title">
+  <div class="container">
+    <div class="section-head section-head--split">
+      <div class="stack-sm">
+        <p class="eyebrow">After your estimate</p>
+        <h2 class="h2" id="after-title">Three ways forward.</h2>
+      </div>
+      <p class="lede">The estimate is where the conversation starts. Pick whichever next step suits how you like to work.</p>
+    </div>
+    <ul class="tiles tiles--3" role="list">
+      <li class="card tile">
+        <p class="tile__k">About 10 minutes</p>
+        <h3 class="h3">Start the application</h3>
+        <p class="muted">Four short steps. Have four months of business bank statements ready to upload.</p>
+        <a class="link-arrow" href="/apply?from=calculator">Start application {{> icon-arrow}}</a>
+      </li>
+      <li class="card tile">
+        <p class="tile__k">Mon–Fri, 9am–6pm EST</p>
+        <h3 class="h3">Talk to an advisor</h3>
+        <p class="muted">Get straight answers about your range, the products that fit and what a funder will look for.</p>
+        <a class="link-arrow" href="/contact">Talk to a specialist {{> icon-arrow}}</a>
+      </li>
+      <li class="card tile">
+        <p class="tile__k">Homeowners</p>
+        <h3 class="h3">Look at home equity</h3>
+        <p class="muted">After a larger line and you own property? See how a home equity line of credit could work.</p>
+        <a class="link-arrow" href="/heloc-calculator">Explore home equity {{> icon-arrow}}</a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="section section--light" aria-labelledby="faq-title">
+  <div class="container faq">
+    <div class="faq__head">
+      <p class="eyebrow">Straight answers</p>
+      <h2 class="h2" id="faq-title">About the calculator.</h2>
+    </div>
+    <div class="accordion" data-accordion>
+      <div class="accordion__item">
+        <h3><button class="accordion__trigger" type="button" id="cq-1-btn" aria-expanded="false" aria-controls="cq-1">How does the cash injection calculator work?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="cq-1" role="region" aria-labelledby="cq-1-btn" hidden>
+          <p>It takes your monthly revenue, adjusts it for your industry and your credit band, subtracts what you still owe on any existing advances, and shows the result as a range of plus or minus 15 percent. It is deliberately simple, and it is the same arithmetic a funder starts from before looking at your bank statements.</p>
+        </div>
+      </div>
+      <div class="accordion__item">
+        <h3><button class="accordion__trigger" type="button" id="cq-2-btn" aria-expanded="false" aria-controls="cq-2">Is the number I get an offer?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="cq-2" role="region" aria-labelledby="cq-2-btn" hidden>
+          <p>No. It is a projection, not a quote and not a commitment to lend. Real terms come from a funder after underwriting your bank statements, and they can land above or below the range shown.</p>
+        </div>
+      </div>
+      <div class="accordion__item">
+        <h3><button class="accordion__trigger" type="button" id="cq-3-btn" aria-expanded="false" aria-controls="cq-3">Why did it tell me I am over leveraged?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="cq-3" role="region" aria-labelledby="cq-3-btn" hidden>
+          <p>Because the balance you still owe on existing positions is larger than what your revenue supports advancing. That is not a decline — it means a new advance is the wrong tool right now. A specialist can look at consolidation or a payoff structure instead, and that conversation is usually worth having.</p>
+        </div>
+      </div>
+      <div class="accordion__item">
+        <h3><button class="accordion__trigger" type="button" id="cq-4-btn" aria-expanded="false" aria-controls="cq-4">Does running the calculator affect my credit score?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="cq-4" role="region" aria-labelledby="cq-4-btn" hidden>
+          <p>No. The calculator never touches your credit file; it uses the band you select yourself. A credit report is only pulled later, with your written authorization, once an application is being underwritten.</p>
+        </div>
+      </div>
+      <div class="accordion__item">
+        <h3><button class="accordion__trigger" type="button" id="cq-5-btn" aria-expanded="false" aria-controls="cq-5">What happens after I get my answer?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="cq-5" role="region" aria-labelledby="cq-5-btn" hidden>
+          <p>You choose. Start the application, which takes about ten minutes and needs four months of business bank statements. Or open the chat and ask questions first — an advisor can join it. Or, if you are looking for a larger line and you own your home, look at home equity instead. A funding specialist also reaches out within 24 hours either way.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

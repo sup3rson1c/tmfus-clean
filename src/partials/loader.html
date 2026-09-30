@@ -1,0 +1,17 @@
+<!-- Opening loader: the dial mark strokes itself on, then lifts away.
+
+     It is inert by default and only activates if loader.js says so. A loader
+     that ships visible is a loader that traps everyone whose JavaScript fails
+     or arrives late, so the page underneath is always the real, usable page
+     and this is painted over the top of it rather than replacing it. -->
+<div class="loader" data-loader hidden aria-hidden="true">
+  <div class="loader__inner">
+    <svg class="loader__mark" viewBox="0 0 32 32" width="120" height="120" aria-hidden="true" focusable="false">
+      <circle class="loader__ring" cx="16" cy="16" r="14.4" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".85" pathLength="1" />
+      <path class="loader__sweep" d="M20.4 5.38A11.5 11.5 0 0 1 16 27.5" fill="none" stroke="#86b79a" stroke-width="2.2" stroke-linecap="round" pathLength="1" />
+      <path class="loader__hand" d="M13.06 15.41 23.85 17.56" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      <circle class="loader__pin" cx="16" cy="16" r="1.8" fill="currentColor" />
+    </svg>
+    <p class="loader__word">TMF <span>TEAM</span></p>
+  </div>
+</div>

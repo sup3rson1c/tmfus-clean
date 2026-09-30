@@ -1,3 +1,91 @@
+# tmfus.com — 2026 redesign (read this first)
+
+This folder is the **new design of tmfus.com with every tool of the live site
+wired in**. Built 2026-09-29 from `tmf-team-website.zip` (the design) and the
+live repo `C:\Knowledge Work	mfus-site` (the tools). It is **not deployed**.
+The live site still runs from `tmfus-site`.
+
+Everything below the line is the live site's own CLAUDE.md, kept because its
+rules still apply. Where this section contradicts it, this section wins.
+
+## What is different from the live repo
+
+| Live repo | Here |
+|---|---|
+| Hand-written `*.html`, no build | `src/pages` + `src/partials` + `src/css` → `node build.mjs` → flat `*.html` at the root. **Never edit the root `.html` files.** |
+| `assets/app.js` | `assets/js/engine.js`, **generated** by `python tools/vendor-engine.py` from the live `app.js`. Never edit it by hand. |
+| `assets/styles.css` | `assets/css/site.css`, concatenated from `src/css/*.css` by the build |
+| Bump `?v=N` in every page | **Gone.** The build stamps `?v=<sha1 of the file>` on every asset link. `verify.sh` fails if a stamp is stale. |
+| One calculator in `app.js` | The UI is `assets/js/calculator.js` (new design). It calls `window.TMFEngine.estimateAdvance / matchProducts / sendLead` — the live formula, one copy only. `verify.sh` fails if calculator.js grows its own formula. |
+
+URLs are **exactly the live ones** (`/apply`, `/mca`, `/funding-estimator`,
+`/heloc-calculator`, `/unsubscribe` …), served by the live `.htaccess` clean-URL
+rule. The design's draft slugs (`/calculator`, `/cash-injection`,
+`/home-equity`) 301 to them.
+
+## Run it
+
+```bash
+node build.mjs            # after any change in src/ or assets/js
+node serve.mjs 3200       # http://localhost:3200 — clean URLs, 404 page, API mocks
+python tools/vendor-engine.py   # after any change to the live app.js
+./scripts/verify.sh       # all invariants; exit 0 or it is not done
+```
+
+`serve.mjs` answers `/api/*.php` from `tools/api-mock.mjs` (there is no PHP on
+this machine). The chat mock speaks the real protocol in "message" mode.
+
+## Patches applied to the engine (tools/vendor-engine.py)
+
+1. The old look's effects are not booted (header, headline, ticker, spotlight,
+   shards, parallax, momentum scroll, reveal, card glow). They fought Lenis/GSAP.
+2. Links point at clean URLs; the application endpoint is absolute.
+3. Generated buttons use the new classes (`btn--primary`, `btn--ghost`).
+4. **The Google Sheet post is skipped on localhost.** The live `app.js` posts
+   every lead from the browser straight to John's real sheet; local testing
+   would have filled it with test leads.
+5. `window.TMFEngine` exposes the formula, matching and lead capture.
+
+## Traps found while building this
+
+- **The live `.htaccess` denies every `.json`.** The scroll film loads
+  `/media/film/frames/manifest.json`, so on the server the film would fail
+  silently while working locally (the dev server has no `.htaccess`). There is
+  a `<Files "manifest.json">` exception directly below the deny rule; it must
+  stay below it.
+- The new design's `.select`, `.check` and `.chip` classes collide with the
+  engine's. The application uses native `<select class="input">`, the design's
+  `.check` pattern, and `.chips .chip` for the co-owner toggle. The engine only
+  needs its `data-*` hooks and `.field`, `.field-label`, `.step-pane`,
+  `.steps-bar i`, `.sig-wrap`, `.chips .chip`, `.panel`-free markup.
+- The engine's validation reads the field name from `.field-label` inside
+  `.field` — keep `class="label field-label"` on application labels or its
+  error messages say "Please fill in this field."
+- The design's contact form faked a send (`data-demo-form`, a 900 ms timer).
+  It is now `data-lead-form` and only shows success when `api/lead.php` confirms.
+
+## Removed from the design on purpose
+
+- Placeholder phone `(000) 000-0000`, `hello@example.com` and a street address:
+  the live site publishes none of these and invented NAP data spreads.
+- Sample testimonials and stats (`home-proof`) and the placeholder team on
+  About: invented reviews on a finance site are an FTC problem.
+- "No name, email or phone" claims: the live calculator asks for contact
+  details before showing the range, so the claim was false here.
+- `docs/film-preview.html` moved out of the web root (design review page).
+
+## Before this replaces the live site
+
+1. Run `./scripts/verify.sh` on a machine **with PHP** (the PHP is the live
+   repo's, unchanged, but has never been linted — see item 11 below).
+2. The media folder is ~145 MB. Committing it to the public GitHub repo is
+   fine (no single file is large) but the first deploy will be slow.
+3. Deploying means replacing the contents of the live repo with this folder
+   (keep its `.git`), committing, pushing with GitHub Desktop, then cPanel
+   "Deploy HEAD Commit". Then `./scripts/live-check.sh`.
+
+---
+
 # tmfus.com — project instructions
 
 Marketing and lead-generation site for **TMF Team**, a US business funding

@@ -1,0 +1,47 @@
+<section class="hours" id="hours" aria-labelledby="hours-title" data-clock data-sc-act="pin">
+  <div class="hours__stage" data-sc-stage>
+    <div class="container hours__grid">
+      <div class="hours__dial-wrap">
+        <div class="clock" data-clock-dial>
+          <img class="clock__plate" src="/assets/img/m6-dial-plate-1080.webp" srcset="/assets/img/m6-dial-plate-720.webp 720w, /assets/img/m6-dial-plate-1080.webp 1080w, /assets/img/m6-dial-plate-1440.webp 1440w" sizes="(min-width: 1024px) min(72svh, 44vw, 640px), min(64vw, 320px)" width="1440" height="1440" alt="" loading="lazy" decoding="async">
+          <canvas class="clock__cut" aria-hidden="true"></canvas>
+          <svg class="clock__ring" viewBox="-250 -250 500 500" aria-hidden="true" focusable="false"></svg>
+          <p class="clock__readout" aria-hidden="true"><span class="clock__hour" data-clock-hour>48h</span><span class="clock__label" data-clock-label>From apply to funds</span></p>
+          <div class="clock__handle" role="slider" tabindex="0" aria-label="Hours after you apply" aria-valuemin="0" aria-valuemax="48" aria-valuenow="48" aria-valuetext="Hour 48 of 48: get funded" data-clock-handle></div>
+        </div>
+        <p class="clock__hint" data-clock-hint hidden>Drag the hand to set the hour.</p>
+      </div>
+
+      <div class="hours__content">
+        <div class="hours__head">
+          <h2 class="h2" id="hours-title">Where the hours go.</h2>
+          <p class="lede">From form to funding in three stages, designed to be precise, fast and free of friction.</p>
+        </div>
+
+        <ol class="stages" role="list">
+          <li class="stage" data-stage data-sc-cue>
+            <p class="stage__time"><span class="stage__num">01</span>Hour 0</p>
+            <h3 class="h3">See your options</h3>
+            <p class="muted">Run the calculator and see which funding products match your business profile: revenue, credit band and time in business. No login, and no credit pull.</p>
+          </li>
+          <li class="stage" data-stage data-sc-cue>
+            <p class="stage__time"><span class="stage__num">02</span>Within 24 hours</p>
+            <h3 class="h3">Talk to a specialist</h3>
+            <p class="muted">A funding specialist contacts you with a pre-qualified offer tailored to your business, answers your questions and qualifies your needs so the file moves faster.</p>
+          </li>
+          <li class="stage is-active" data-stage data-sc-cue>
+            <p class="stage__time"><span class="stage__num">03</span>3–24h decision · 24–48h funds</p>
+            <h3 class="h3">Get funded</h3>
+            <p class="muted">With a complete file, a decision typically comes back in 3–24 hours, and funding commonly lands 24–48 hours after you accept. SBA loans run on their own 30–90 day track.</p>
+          </li>
+        </ol>
+
+        <div class="clock__jumps" role="group" aria-label="Set the hour">
+          <button class="jump" type="button" data-clock-jump="0">Hour 0</button>
+          <button class="jump" type="button" data-clock-jump="14">Within 24h</button>
+          <button class="jump" type="button" data-clock-jump="36">24–48h</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

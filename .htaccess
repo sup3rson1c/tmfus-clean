@@ -28,6 +28,13 @@ DirectoryIndex index.html
   #     /long-term-loans to a file that no longer exists and 404.
   RewriteRule ^long-term-loans(\.html)?/?$ /sba-loans [R=301,L]
 
+  # 2c. The 2026 redesign was drafted with these slugs. The live URLs won, so
+  #     inbound links, the sitemap and emailed links keep working, but any
+  #     link made from a draft still lands on the right page.
+  RewriteRule ^calculator/?$ /funding-estimator [R=301,L]
+  RewriteRule ^cash-injection/?$ /mca [R=301,L]
+  RewriteRule ^home-equity/?$ /heloc-calculator [R=301,L]
+
   # 3. Strip .html so /heloc-calculator works as a URL.
   #    Existing .html URLs redirect to the clean version so you
   #    never have two addresses serving the same page.
@@ -57,6 +64,7 @@ DirectoryIndex index.html
   ExpiresByType image/png             "access plus 1 year"
   ExpiresByType image/jpeg            "access plus 1 year"
   ExpiresByType font/woff2            "access plus 1 year"
+  ExpiresByType video/mp4             "access plus 1 year"
 </IfModule>
 
 <IfModule mod_headers.c>
@@ -97,9 +105,17 @@ ErrorDocument 404 /404.html
 # ------------------------------------------------------------
 #  Block access to files that should never be public
 # ------------------------------------------------------------
-<FilesMatch "^\.|\.(md|py|sh|json|lock|yml|yaml|zip|log|bak)$">
+<FilesMatch "^\.|\.(md|py|sh|json|lock|yml|yaml|zip|log|bak|mjs|gs)$">
   Require all denied
 </FilesMatch>
+
+# The scroll film reads its frame list from /media/film/frames/manifest.json.
+# The rule above denies every .json, which would break the film on the server
+# while it works perfectly on a local dev server (no .htaccess there). Later
+# sections win in Apache, so this one exception must stay BELOW the deny.
+<Files "manifest.json">
+  Require all granted
+</Files>
 
 # ------------------------------------------------------------
 #  Protect API config and logs
@@ -141,3 +157,7 @@ RedirectMatch 404 ^/api/uploads(/.*)?$
 <IfModule mod_autoindex.c>
   Options -Indexes
 </IfModule>
+
+# Build sources and tooling. .cpanel.yml never copies them to the server;
+# this is the safety net if a folder is ever uploaded by hand.
+RedirectMatch 404 ^/(src|tools|docs|scripts|node_modules)(/.*)?$

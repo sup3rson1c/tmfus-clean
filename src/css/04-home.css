@@ -1,0 +1,1027 @@
+/* Home: layered hero, the engraving clock, statement of paths ---------- */
+.stack-sm {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: start;
+}
+
+/* Hero: layered scene (docs/motion-phase2-direction.md §6) -------------
+   The scene holds a "world" box with the plate's aspect ratio, and every
+   plane is placed in world percentages, so the clean plate, the disc
+   cutout, its contact shadow and the 48-hour ring stay registered at any
+   size. The disc was cut from A1's 2048px square ("the frame"); --frame-*
+   place that square inside the world. --dx/--dy is the disc's centre in the
+   world and --tx/--ty is where it lands in the scene window.
+   Phones and short screens: copy, scene and second beat stack in flow.
+   Large screens: the stage sticks and the planes separate on scroll. */
+.hero {
+  position: relative;
+  background: var(--vault);
+}
+.hero__stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-top: calc(var(--header-h) + clamp(20px, 5vw, 40px));
+  overflow: hidden;
+}
+.hero__copy {
+  display: contents;
+}
+.hero__beat {
+  grid-column: 1;
+  position: relative;
+  z-index: 4;
+}
+.hero__beat--one {
+  grid-row: 1;
+  display: grid;
+  gap: var(--s-5);
+  justify-items: start;
+}
+.hero__title {
+  font-size: clamp(2.375rem, 0.55rem + 5vw, 4.5rem);
+  max-inline-size: 14ch;
+}
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3) var(--s-6);
+  margin-top: var(--s-2);
+}
+
+.hero__scene {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  container-type: size;
+  aspect-ratio: 4 / 5;
+  margin-top: calc(clamp(40px, 12vw, 112px) * -1);
+  pointer-events: none;
+  --ar: 1520 / 2688;
+  --arn: 0.56548;
+  --dx: 0.48336;
+  --dy: 0.50335;
+  --tx: 0.5;
+  --ty: 0.58;
+  --S: 1.9;
+  --Sh: 0;
+  --frame-l: 15.625%;
+  --frame-t: 31.031%;
+  --frame-w: 66.237%;
+}
+.hero__scene::before,
+.hero__scene::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.hero__scene::before {
+  top: 0;
+  height: 42%;
+  background: linear-gradient(to bottom, var(--vault), rgba(10, 12, 11, 0));
+}
+.hero__scene::after {
+  bottom: 0;
+  height: 26%;
+  background: linear-gradient(to top, var(--vault), rgba(10, 12, 11, 0));
+}
+.hero__world {
+  --ws: max(calc(var(--S) * 100cqw), calc(var(--Sh) * 100cqh));
+  position: absolute;
+  width: var(--ws);
+  aspect-ratio: var(--ar);
+  left: calc(var(--tx) * 100cqw - var(--dx) * var(--ws));
+  top: calc(var(--ty) * 100cqh - var(--dy) * var(--ws) / var(--arn));
+  /* Where the world is smaller than the stage, its near edges fade into the vault */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14%), linear-gradient(to bottom, transparent, #000 10%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 14%), linear-gradient(to bottom, transparent, #000 10%);
+  mask-composite: intersect;
+}
+.hero__plane,
+.hero__layer {
+  position: absolute;
+  inset: 0;
+}
+.hero__frame {
+  inset: auto;
+  left: var(--frame-l);
+  top: var(--frame-t);
+  width: var(--frame-w);
+  aspect-ratio: 1;
+}
+
+/* Far: clean plate with the colour layer (multiply) and exposure */
+.hero__layer picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hero__plate {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+[data-plane="plate"] .hero__layer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #1d2c25;
+  mix-blend-mode: multiply;
+  opacity: 0.28;
+}
+.hero__exposure {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--vault);
+  opacity: 0;
+}
+
+/* Rear and front atmosphere */
+.hero__shaft {
+  position: absolute;
+  inset: -8% 18% 12% 8%;
+  background: linear-gradient(
+    118deg,
+    rgba(214, 228, 219, 0) 32%,
+    rgba(214, 228, 219, 0.07) 44%,
+    rgba(214, 228, 219, 0.03) 52%,
+    rgba(214, 228, 219, 0) 62%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+.mote {
+  position: absolute;
+  left: var(--mx);
+  top: var(--my);
+  width: var(--ms);
+  height: var(--ms);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(228, 238, 231, 0.95), rgba(228, 238, 231, 0));
+  opacity: var(--mo);
+}
+.mote--near {
+  background: radial-gradient(closest-side, rgba(228, 238, 231, 0.7), rgba(228, 238, 231, 0));
+}
+
+/* Contact shadow, placed in the A1 frame under the disc's footprint */
+.hero__shadow {
+  position: absolute;
+  left: 16.96%;
+  top: 41.52%;
+  width: 64.5%;
+  height: 29.28%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0));
+  opacity: 0.7;
+}
+
+/* Subject: disc cutout (crop box from tools/images.mjs), sheen, ring */
+.hero__disc,
+.hero__sheen {
+  position: absolute;
+  left: 16.602%;
+  top: 29.785%;
+  width: 65.625%;
+  height: 43.457%;
+}
+.hero__sheen {
+  overflow: hidden;
+  -webkit-mask: url("/assets/img/m3-disc-720.webp") center / 100% 100% no-repeat;
+  mask: url("/assets/img/m3-disc-720.webp") center / 100% 100% no-repeat;
+  mix-blend-mode: overlay;
+}
+.hero__sheen-band {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: -60%;
+  width: 220%;
+  background: linear-gradient(
+    104deg,
+    rgba(241, 242, 236, 0) 40%,
+    rgba(241, 242, 236, 0.2) 47%,
+    rgba(241, 242, 236, 0.42) 50%,
+    rgba(241, 242, 236, 0.2) 53%,
+    rgba(241, 242, 236, 0) 60%
+  );
+}
+.instrument__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hero__scrim {
+  display: none;
+}
+
+/* Near: stone slab. The box top is the lit chamfer; the transparent upper
+   half of the image hangs above it (22.1% of the width). */
+.hero__slab {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: end;
+  position: relative;
+  z-index: 3;
+  margin-inline: -2vw;
+  height: clamp(56px, 16vw, 128px);
+  pointer-events: none;
+}
+.hero__slab img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: -22.1%;
+}
+/* The slab face falls away into the vault instead of ending on an edge */
+.hero__slab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to bottom, rgba(10, 12, 11, 0) 45%, var(--vault) 100%);
+}
+
+.hero__beat--two {
+  grid-row: 3;
+  display: grid;
+  gap: var(--s-5);
+  padding-top: var(--s-3);
+  padding-bottom: clamp(40px, 8vw, 72px);
+}
+.hero__next {
+  max-inline-size: 48ch;
+  color: var(--banknote);
+  font-size: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+  line-height: 1.6;
+}
+
+@media (min-width: 768px) {
+  .hero__scene {
+    aspect-ratio: 16 / 10;
+    --ar: 2688 / 1520;
+    --arn: 1.76842;
+    --dx: 0.49848;
+    --dy: 0.51206;
+    --tx: 0.52;
+    --ty: 0.55;
+    --S: 1.45;
+    --frame-l: 22.098%;
+    --frame-t: 0%;
+    --frame-w: 56.176%;
+  }
+}
+
+@media (min-width: 1024px) and (min-height: 760px) {
+  .hero__stage {
+    display: block;
+    height: 100svh;
+    padding: 0;
+  }
+  .motion-ok .hero {
+    /* One screen exactly. The extra 60svh existed so the second beat could
+       rise over the slab as you scrolled; with that beat removed it was just
+       an empty black band between the hero and the film. */
+    height: 100svh;
+  }
+  .motion-ok .hero__stage {
+    position: sticky;
+    top: 0;
+  }
+  .hero__scene {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    aspect-ratio: auto;
+    --tx: 0.73;
+    --ty: 0.55;
+    --S: 1.16;
+    --Sh: 1.8;
+  }
+  .hero__scene::before {
+    height: 20%;
+  }
+  /* Narrower desktops: a smaller disc, further right, so the ring clears the lede */
+  @media (max-width: 1279px) {
+    .hero__scene {
+      --tx: 0.74;
+      --ty: 0.56;
+      --S: 1.12;
+      --Sh: 1.6;
+    }
+  }
+  .hero__scene::after {
+    height: 12%;
+  }
+  .hero__scrim {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      rgba(10, 12, 11, 0.9) 0%,
+      rgba(10, 12, 11, 0.66) 26%,
+      rgba(10, 12, 11, 0.18) 46%,
+      rgba(10, 12, 11, 0) 58%
+    );
+  }
+  .hero__slab {
+    position: absolute;
+    left: -2vw;
+    right: -2vw;
+    top: 64%;
+    height: auto;
+    margin: 0;
+  }
+  .hero__slab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% - 1px);
+    height: 70svh;
+    background: var(--vault);
+  }
+  .hero__copy {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-block: calc(var(--header-h) + 5svh) 5svh;
+    pointer-events: none;
+  }
+  .hero__beat {
+    pointer-events: auto;
+  }
+  .hero__title {
+    font-size: min(5vw, 4.5rem);
+  }
+  .hero__lede {
+    max-inline-size: 40ch;
+  }
+  .hero__beat--two {
+    padding-block: 0;
+  }
+}
+
+/* Dial chips and the perspective ring on the disc */
+.dial-chip {
+  position: absolute;
+  left: var(--x, 50%);
+  top: var(--y, 50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
+  background: rgba(18, 22, 20, 0.78);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px var(--hair-2), 0 14px 30px -14px rgba(0, 0, 0, 0.85);
+  font: 500 0.75rem/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+.dial-chip__k {
+  color: var(--silver);
+}
+.dial-chip__v {
+  color: var(--banknote);
+  font-variant-numeric: tabular-nums;
+}
+.dial-chip--decision .dial-chip__v {
+  color: var(--greenback);
+}
+@media (max-width: 599px) {
+  .dial-chip {
+    padding: 5px 9px;
+    font-size: 0.6875rem;
+    gap: 6px;
+  }
+}
+.dial-svg {
+  overflow: visible;
+}
+.dial-svg .d-etch {
+  fill: none;
+  stroke: #33413a;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.dial-svg .d-tick {
+  stroke: #56635c;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.dial-svg .d-tick--major {
+  stroke: var(--silver);
+  stroke-width: 1.4;
+}
+/* Traced strokes use user units (--u is 1 screen px in viewBox units) so
+   their dash lengths stay true while they are drawn. */
+.dial-svg .d-ring {
+  fill: none;
+  stroke: rgba(241, 242, 236, 0.3);
+  stroke-width: calc(var(--u, 2.5) * 1px);
+}
+.dial-svg .d-arc {
+  fill: none;
+  stroke-width: calc(var(--u, 2.5) * 3px);
+  stroke-linecap: round;
+}
+.dial-svg .d-arc--decision {
+  stroke: var(--greenback);
+}
+.dial-svg .d-arc--funds {
+  stroke: rgba(241, 242, 236, 0.62);
+}
+.dial-svg .d-hand {
+  stroke: var(--banknote);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.dial-svg .d-hub {
+  fill: var(--banknote);
+}
+
+/* Statement of capital paths (light) ---------------------------------- */
+.statement-head {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: clamp(32px, 4vw, 56px);
+  padding-bottom: 13px;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+/* The double rule, as its own box so it can be traced */
+.statement-head::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-block: 1px solid var(--ledger);
+  transform: scaleX(var(--rule, 1));
+  transform-origin: 0 50%;
+}
+@media (max-width: 599px) {
+  .statement-head span:last-child {
+    display: none;
+  }
+}
+.statement__cols {
+  display: none;
+}
+.statement__rows li {
+  position: relative;
+}
+.statement__rows li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--hair-light);
+  transform: scaleX(var(--rule, 1));
+  transform-origin: 0 50%;
+}
+.statement__row {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 40px;
+  gap: 6px 16px;
+  padding: 22px 0;
+  color: var(--ledger);
+  text-decoration: none;
+}
+.statement__row::before {
+  content: "";
+  position: absolute;
+  inset: 0 -16px;
+  z-index: -1;
+  border-radius: 10px;
+  background: rgba(14, 19, 17, 0.045);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.statement__product {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.statement__name {
+  font-size: clamp(1.1875rem, 1rem + 0.5vw, 1.4375rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.statement__type {
+  color: var(--ink-2);
+  font: 500 0.75rem/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.statement__cell {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.statement__fit {
+  color: var(--ink-2);
+}
+.statement__thumb {
+  width: 64px;
+  height: 80px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--ledger);
+}
+.statement__go {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--hair-light);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .statement__row:hover::before {
+    opacity: 1;
+  }
+  .statement__row:hover .statement__go {
+    transform: translateX(4px);
+  }
+}
+.statement__row:active .statement__go {
+  transform: translateX(2px) scale(0.96);
+}
+@media (max-width: 1023px) {
+  .statement__thumb {
+    grid-column: 1;
+    grid-row: 1 / span 5;
+  }
+  .statement__row > span {
+    grid-column: 2;
+  }
+  .statement__go {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  /* Show the hidden cell labels as visible labels on small screens */
+  .statement__row .sr-only {
+    position: static !important;
+    width: auto;
+    height: auto;
+    margin: 0 6px 0 0;
+    clip: auto;
+    overflow: visible;
+    white-space: normal;
+    color: var(--ink-2);
+    font: 500 0.75rem/1.2 var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+}
+@media (min-width: 1024px) {
+  .statement__cols,
+  .statement__row {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr) minmax(0, 0.8fr) minmax(0, 0.95fr) minmax(0, 1.35fr) 40px;
+    column-gap: var(--s-5);
+    align-items: center;
+  }
+  .statement__cols {
+    display: grid;
+    padding-bottom: 12px;
+    box-shadow: inset 0 -1px 0 var(--ledger);
+    color: var(--ink-2);
+    font: 500 0.75rem/1.4 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .statement__row {
+    min-height: 108px;
+    padding: 24px 0;
+  }
+  .statement__go {
+    grid-column: 6;
+    grid-row: 1;
+  }
+  .statement__thumb {
+    position: absolute;
+    right: 64px;
+    bottom: 55%;
+    z-index: 2;
+    width: 116px;
+    height: 145px;
+    box-shadow: 0 24px 48px -20px rgba(14, 19, 17, 0.6);
+    opacity: 0;
+    transform: translateY(12px) rotate(-4deg) scale(0.94);
+    transform-origin: 50% 100%;
+    transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+    pointer-events: none;
+  }
+  .statement__row:hover .statement__thumb,
+  .statement__row:focus-visible .statement__thumb {
+    opacity: 1;
+    transform: translateY(0) rotate(-4deg) scale(1);
+  }
+}
+.paths__microprint {
+  margin-top: var(--s-6);
+}
+.paths__note {
+  margin-top: var(--s-3);
+}
+
+/* Paper feed: a statement-paper section rises over the dark ground with
+   rounded top corners that ease flat (scroll-driven in moments.js). */
+[data-feed] {
+  isolation: isolate;
+}
+.motion-ok [data-feed] {
+  background: var(--feed-ground, var(--vault));
+}
+.motion-ok [data-feed]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--statement);
+  clip-path: inset(var(--feed, 0px) 0 0 0 round var(--feed-r, 0px) var(--feed-r, 0px) 0 0);
+}
+
+/* Where the hours go: the engraving clock (§7) -------------------------- */
+.hours {
+  position: relative;
+  background: radial-gradient(38% 52% at 27% 50%, rgba(134, 183, 154, 0.075), transparent 70%), var(--vault);
+}
+.hours__stage {
+  position: relative;
+  padding-block: var(--section-y);
+}
+.hours__grid {
+  display: grid;
+  gap: var(--s-7);
+}
+.hours__dial-wrap {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--s-3);
+}
+.hours__head {
+  display: grid;
+  gap: var(--s-5);
+  justify-items: start;
+  margin-bottom: var(--s-6);
+}
+.clock {
+  position: relative;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+}
+.clock__plate,
+.clock__cut,
+.clock__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.clock__plate {
+  object-fit: contain;
+}
+.clock__ring {
+  overflow: visible;
+}
+.clock.is-hover {
+  cursor: pointer;
+}
+.clock__ring .c-ring {
+  fill: none;
+  stroke: rgba(241, 242, 236, 0.2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--dur-base) var(--ease-out);
+}
+.clock.is-hover .c-ring,
+.clock.is-dragging .c-ring {
+  stroke: rgba(241, 242, 236, 0.42);
+}
+.clock__ring .c-tick {
+  stroke: #56635c;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.clock__ring .c-tick--major {
+  stroke: var(--silver);
+  stroke-width: 1.5;
+}
+.clock__ring .c-num {
+  fill: #8d9892;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+.clock__ring .c-track,
+.clock__ring .c-arc {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.clock__ring .c-track {
+  stroke: rgba(241, 242, 236, 0.1);
+}
+.clock__ring .c-arc--decision {
+  stroke: var(--greenback);
+}
+.clock__ring .c-arc--funds {
+  stroke: rgba(241, 242, 236, 0.62);
+}
+.clock__ring .c-hand {
+  stroke: var(--banknote);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.clock__ring .c-hub {
+  fill: var(--banknote);
+}
+.clock__readout {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: 21%;
+  margin: 0;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.clock__hour {
+  color: var(--banknote);
+  font: 500 clamp(1.625rem, 0.9rem + 2.2vw, 2.75rem) / 1 var(--font-mono);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.clock__label {
+  color: var(--greenback);
+  font: 500 0.6875rem/1.35 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.clock__handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.clock__handle::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  background: var(--banknote);
+  box-shadow: 0 0 0 3px rgba(10, 12, 11, 0.72), 0 6px 14px -4px rgba(0, 0, 0, 0.8);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) {
+  .clock__handle:hover::before,
+  .clock.is-hover .clock__handle::before {
+    transform: scale(1.18);
+  }
+}
+.clock__handle:focus-visible {
+  outline: 2px solid var(--greenback);
+  outline-offset: 2px;
+}
+.clock.is-dragging,
+.clock.is-dragging .clock__handle {
+  cursor: grabbing;
+}
+.clock__handle:active::before,
+.clock.is-dragging .clock__handle::before {
+  transform: scale(1.1);
+}
+.clock__hint {
+  color: var(--silver);
+  font: 500 0.8125rem/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+}
+.clock__jumps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-6);
+}
+.jump {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 1px var(--hair-2);
+  color: var(--silver);
+  font: 500 0.8125rem/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.jump::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(241, 242, 236, 0.07);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .jump:hover {
+    color: var(--banknote);
+  }
+  .jump:hover::before {
+    opacity: 1;
+  }
+}
+.jump:active {
+  transform: scale(0.97);
+}
+.jump[aria-current="true"] {
+  color: var(--banknote);
+  box-shadow: inset 0 0 0 1px var(--greenback);
+}
+
+/* Stages (also used on the home equity page) */
+.stage {
+  position: relative;
+  padding: 32px 0 32px 32px;
+  box-shadow: inset 1px 0 0 var(--hair-2);
+}
+.stage::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 38px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--vault);
+  box-shadow: inset 0 0 0 1.5px var(--control);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.stage.is-active::before {
+  background: var(--greenback);
+  box-shadow: 0 0 0 6px rgba(134, 183, 154, 0.16);
+}
+.stage__time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+  color: var(--greenback);
+  font: 500 0.8125rem/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stage__num {
+  color: var(--silver);
+}
+.stage .h3 {
+  margin-bottom: 10px;
+}
+.js .hours .stage > * {
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.js .hours .stage:not(.is-active) > * {
+  opacity: 0.72;
+}
+
+@media (min-width: 1024px) {
+  .hours__grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+    column-gap: var(--s-9);
+    align-items: center;
+  }
+  .clock {
+    width: min(100%, 560px);
+  }
+}
+/* Pinned: 200svh of travel winds the hand from hour 0 to hour 48 */
+@media (min-width: 1024px) and (min-height: 700px) {
+  .motion-ok .hours {
+    height: 290svh;
+  }
+  .motion-ok .hours__stage {
+    position: sticky;
+    top: 0;
+    display: grid;
+    align-content: center;
+    height: 100svh;
+    padding-block: calc(var(--header-h) + 2svh) 3svh;
+  }
+  .motion-ok .hours .clock {
+    width: min(100%, 70svh, 640px);
+  }
+  .motion-ok .hours .stages {
+    display: grid;
+  }
+  .motion-ok .hours .stage {
+    grid-area: 1 / 1;
+  }
+  .motion-ok .hours .stage > * {
+    opacity: 1;
+  }
+}
+/* Compact: the dial sticks under the header while the stages scroll by */
+@media (max-width: 1023px), (max-height: 699px) {
+  .motion-ok .hours__dial-wrap {
+    position: sticky;
+    top: calc(var(--header-h) - 1px);
+    z-index: 2;
+    margin-inline: calc(var(--gutter) * -1);
+    padding: var(--s-3) var(--gutter) var(--s-5);
+    background: var(--vault);
+  }
+  /* The band is solid; its soft edge sits below it, so stage text never shows through the hint */
+  .motion-ok .hours__dial-wrap::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: var(--s-6);
+    background: linear-gradient(to bottom, var(--vault), rgba(10, 12, 11, 0));
+    pointer-events: none;
+  }
+  .motion-ok .hours .clock {
+    width: min(58vw, 300px);
+  }
+  .motion-ok .hours .stage {
+    min-height: 44svh;
+  }
+  /* The small dial keeps only the hour; the stage beneath it names the window */
+  .hours .clock__label {
+    display: none;
+  }
+  .hours .clock__hour {
+    font-size: 1.25rem;
+  }
+}
+@media (max-height: 520px) {
+  .motion-ok .hours__dial-wrap {
+    position: static;
+    background: none;
+  }
+  .motion-ok .hours__dial-wrap::after {
+    display: none;
+  }
+  .motion-ok .hours .clock {
+    width: min(58vw, 260px);
+  }
+  .motion-ok .hours .stage {
+    min-height: 0;
+  }
+}

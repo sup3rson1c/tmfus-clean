@@ -1,0 +1,242 @@
+/* Opening loader ---------------------------------------------------------
+   Painted over a page that is already fully rendered, so removing it reveals
+   the real thing rather than swapping anything in. It ships hidden; only the
+   head script reveals it, and that script also sets a failsafe timer, which is
+   what keeps a JS failure from leaving a dark screen nobody can dismiss. */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: var(--vault);
+  opacity: 1;
+  /* Only transform and opacity animate. */
+  transition: opacity 520ms var(--ease-out), transform 520ms var(--ease-out);
+}
+.loader[hidden] {
+  display: none;
+}
+/* The head script adds .is-loading before first paint, so the cover is up
+   from the very first frame instead of arriving after the deferred scripts. */
+.is-loading .loader[hidden] {
+  display: grid;
+}
+.loader.is-out {
+  opacity: 0;
+  transform: translate3d(0, -1.5%, 0);
+  pointer-events: none;
+}
+
+.loader__inner {
+  display: grid;
+  gap: var(--s-5);
+  justify-items: center;
+  color: var(--silver);
+}
+.loader__mark {
+  width: clamp(88px, 11vw, 132px);
+  height: auto;
+  overflow: visible;
+}
+.loader__word {
+  margin: 0;
+  color: var(--banknote);
+  font-family: var(--font-display);
+  font-size: clamp(15px, 1.5vw, 19px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.loader__word span {
+  color: var(--silver);
+  font-weight: 400;
+}
+
+/* The mark draws itself in CSS, not GSAP: it starts on the first painted
+   frame rather than waiting for the library to download from the CDN, and
+   the paths never flash fully drawn before the animation takes hold.
+   pathLength="1" on the ring and sweep makes a dash of 1 the whole stroke. */
+.loader__ring,
+.loader__sweep {
+  /* Gap of 2, not 1: with a gap equal to the dash, the next dash starts
+     exactly at the path's end and its round cap shows as a stray dot. */
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+  animation: loader-draw 900ms var(--ease-out) 150ms both;
+}
+.loader__ring {
+  --line-o: 0.85; /* keyframed opacity would otherwise override the attribute */
+}
+.loader__sweep {
+  animation-delay: 300ms;
+}
+.loader__hand {
+  transform: scaleX(0);
+  transform-origin: 13.06px 15.41px;
+  animation: loader-grow 450ms var(--ease-out) 850ms forwards;
+}
+.loader__pin {
+  transform: scale(0);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: loader-grow 320ms var(--ease-out) 1050ms forwards;
+}
+.loader__word {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  animation: loader-rise 480ms var(--ease-out) 1100ms forwards;
+}
+/* Starts transparent so the zero-length dash's round cap is not a dot sitting
+   there before the stroke begins. */
+@keyframes loader-draw {
+  from {
+    opacity: 0;
+  }
+  4% {
+    opacity: var(--line-o, 1);
+  }
+  to {
+    opacity: var(--line-o, 1);
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes loader-grow {
+  to {
+    transform: none;
+  }
+}
+@keyframes loader-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Scroll locked only while the cover is up. */
+.is-loading,
+.is-loading body {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The head script skips the loader under reduced motion; this is belt and
+     braces in case the element is ever rendered another way. The review
+     override (?motion=force) is the one exception. */
+  html:not(.motion-forced) .loader {
+    display: none;
+  }
+  /* Under the override, restore the real timings that 01-base.css flattens
+     to 1ms, so the review shows the loader a visitor actually gets. */
+  .motion-forced .loader {
+    transition-duration: 520ms !important;
+  }
+  .motion-forced .loader__ring,
+  .motion-forced .loader__sweep {
+    animation-duration: 900ms !important;
+  }
+  .motion-forced .loader__hand {
+    animation-duration: 450ms !important;
+  }
+  .motion-forced .loader__pin {
+    animation-duration: 320ms !important;
+  }
+  .motion-forced .loader__word {
+    animation-duration: 480ms !important;
+  }
+}
+
+/* Scroll cue -------------------------------------------------------------
+   A small down arrow under the hero. It is a real link to the next section,
+   not decoration, so it works by keyboard and says where it goes. */
+.scroll-cue {
+  position: absolute;
+  /* Right-aligned, not centred. The stat line now occupies the bottom-left of
+     the hero and a centred cue lands straight on top of it. */
+  right: var(--gutter);
+  bottom: clamp(var(--s-5), 4vh, var(--s-7));
+  z-index: 3;
+  display: grid;
+  gap: var(--s-2);
+  justify-items: center;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  color: var(--silver);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 200ms var(--ease-out);
+}
+.scroll-cue:hover {
+  color: var(--banknote);
+}
+.scroll-cue:focus-visible {
+  outline: 2px solid var(--greenback);
+  outline-offset: 3px;
+}
+
+.scroll-cue__rail {
+  position: relative;
+  width: 1px;
+  height: 34px;
+  overflow: hidden;
+  background: var(--hair);
+}
+/* A mint bead falls down the rail and repeats — the motion is the invitation,
+   the arrow only names the direction. */
+.scroll-cue__bead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 12px;
+  background: linear-gradient(to bottom, transparent, var(--greenback));
+  animation: scroll-cue-fall 1.9s var(--ease-out) infinite;
+}
+@keyframes scroll-cue-fall {
+  0% {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(34px);
+    opacity: 0;
+  }
+}
+.scroll-cue__chev {
+  display: block;
+  animation: scroll-cue-nudge 1.9s var(--ease-out) infinite;
+}
+@keyframes scroll-cue-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+/* The cue is an invitation to scroll; once scrolling has started it has done
+   its job and would only sit in the way. */
+.has-scrolled .scroll-cue {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue__bead,
+  .scroll-cue__chev {
+    animation: none;
+  }
+  .scroll-cue__bead {
+    opacity: 0.55;
+    transform: translateY(11px);
+  }
+}

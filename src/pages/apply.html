@@ -1,0 +1,549 @@
+<!--meta {"title": "Apply for business funding · TMF Team", "description": "Apply for business funding in four steps and about ten minutes. Have your EIN, business address and four months of business bank statements ready.", "nav": "apply", "bodyClass": "page-apply"} -->
+<section class="apply grain" aria-labelledby="page-title">
+  <div class="container">
+    <div class="apply__head">
+      <p class="eyebrow">Application</p>
+      <h1 class="h1" id="page-title">Apply in about ten minutes.</h1>
+      <p class="lede">Have your EIN, business address and four months of business bank statements to hand. Your answers are kept as you go, so a mistyped field never costs you the whole form.</p>
+    </div>
+
+    <div class="apply__grid">
+      <div class="card apply__card" id="apply-card">
+        <!-- The engine (assets/js/engine.js, from the live app.js) runs this form:
+             validation, masks, the co-owner toggle, the signature pad, uploads,
+             and the encrypted submit to /api/application.php. Keep every data-
+             attribute; the classes are free to change. -->
+        <form class="app-form" data-application novalidate aria-labelledby="page-title">
+          <div class="calc-head">
+            <p class="certificate__label" style="margin:0">TMF Team application</p>
+            <span class="calc-step" data-step-label>Step 1 of 4</span>
+          </div>
+          <div class="steps-bar" aria-hidden="true">
+            <i class="done"><span class="stepper__num">01</span><span class="stepper__label">Business</span></i>
+            <i><span class="stepper__num">02</span><span class="stepper__label">Owner</span></i>
+            <i><span class="stepper__num">03</span><span class="stepper__label">Co-owner</span></i>
+            <i><span class="stepper__num">04</span><span class="stepper__label">Statements</span></i>
+          </div>
+
+          <!-- ============ STEP 1 — BUSINESS ============ -->
+          <div class="step-pane active" data-pane="1">
+            <h2 class="calc-title">Tell us about <b>the business.</b></h2>
+            <p class="prefill-note" data-prefill-note hidden></p>
+            <div class="form-stack">
+              <div class="field">
+                <label class="label field-label" for="ap-legal">Business legal name *</label>
+                <input class="input" id="ap-legal" data-field="business_legal_name" autocomplete="organization" placeholder="Acme Logistics LLC" required>
+              </div>
+              <div class="field">
+                <label class="label field-label" for="ap-dba">Business DBA name *</label>
+                <input class="input" id="ap-dba" data-field="business_dba_name" placeholder="Acme Freight" required>
+                <span class="field-hint">Trading name. If you do not use one, repeat the legal name.</span>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-ein">EIN *</label>
+                  <input class="input mono-input" id="ap-ein" data-field="ein" inputmode="numeric" data-mask="ein" maxlength="10" placeholder="12-3456789" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-start">Business start date *</label>
+                  <input class="input mono-input" id="ap-start" data-field="business_start_date" data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" required>
+                </div>
+              </div>
+              <div class="field">
+                <label class="label field-label" for="ap-baddr">Business physical address *</label>
+                <input class="input" id="ap-baddr" data-field="business_address" autocomplete="street-address" placeholder="140 Commerce Way, Suite 3" required>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-bcity">City *</label>
+                  <input class="input" id="ap-bcity" data-field="business_city" placeholder="Miami" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-bstate">State *</label>
+                  <select class="input" id="ap-bstate" data-field="business_state" required>
+                    <option value="">Select a state</option>
+                    <option value="AL">AL — Alabama</option>
+                    <option value="AK">AK — Alaska</option>
+                    <option value="AZ">AZ — Arizona</option>
+                    <option value="AR">AR — Arkansas</option>
+                    <option value="CA">CA — California</option>
+                    <option value="CO">CO — Colorado</option>
+                    <option value="CT">CT — Connecticut</option>
+                    <option value="DE">DE — Delaware</option>
+                    <option value="DC">DC — District of Columbia</option>
+                    <option value="FL">FL — Florida</option>
+                    <option value="GA">GA — Georgia</option>
+                    <option value="HI">HI — Hawaii</option>
+                    <option value="ID">ID — Idaho</option>
+                    <option value="IL">IL — Illinois</option>
+                    <option value="IN">IN — Indiana</option>
+                    <option value="IA">IA — Iowa</option>
+                    <option value="KS">KS — Kansas</option>
+                    <option value="KY">KY — Kentucky</option>
+                    <option value="LA">LA — Louisiana</option>
+                    <option value="ME">ME — Maine</option>
+                    <option value="MD">MD — Maryland</option>
+                    <option value="MA">MA — Massachusetts</option>
+                    <option value="MI">MI — Michigan</option>
+                    <option value="MN">MN — Minnesota</option>
+                    <option value="MS">MS — Mississippi</option>
+                    <option value="MO">MO — Missouri</option>
+                    <option value="MT">MT — Montana</option>
+                    <option value="NE">NE — Nebraska</option>
+                    <option value="NV">NV — Nevada</option>
+                    <option value="NH">NH — New Hampshire</option>
+                    <option value="NJ">NJ — New Jersey</option>
+                    <option value="NM">NM — New Mexico</option>
+                    <option value="NY">NY — New York</option>
+                    <option value="NC">NC — North Carolina</option>
+                    <option value="ND">ND — North Dakota</option>
+                    <option value="OH">OH — Ohio</option>
+                    <option value="OK">OK — Oklahoma</option>
+                    <option value="OR">OR — Oregon</option>
+                    <option value="PA">PA — Pennsylvania</option>
+                    <option value="RI">RI — Rhode Island</option>
+                    <option value="SC">SC — South Carolina</option>
+                    <option value="SD">SD — South Dakota</option>
+                    <option value="TN">TN — Tennessee</option>
+                    <option value="TX">TX — Texas</option>
+                    <option value="UT">UT — Utah</option>
+                    <option value="VT">VT — Vermont</option>
+                    <option value="VA">VA — Virginia</option>
+                    <option value="WA">WA — Washington</option>
+                    <option value="WV">WV — West Virginia</option>
+                    <option value="WI">WI — Wisconsin</option>
+                    <option value="WY">WY — Wyoming</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-bzip">Zip code *</label>
+                  <input class="input mono-input" id="ap-bzip" data-field="business_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33131" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-industry">Industry *</label>
+                  <select class="input" id="ap-industry" data-field="industry" required>
+                    <option value="">Select an industry</option>
+                    <option value="Construction">Construction</option>
+                    <option value="Healthcare / Medical">Healthcare / Medical</option>
+                    <option value="Restaurant / Food service">Restaurant / Food service</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Trucking / Transportation">Trucking / Transportation</option>
+                    <option value="Wholesale / Distribution">Wholesale / Distribution</option>
+                    <option value="Auto services">Auto services</option>
+                    <option value="Beauty / Salon / Spa">Beauty / Salon / Spa</option>
+                    <option value="Professional services">Professional services</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Real estate">Real estate</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Staffing">Staffing</option>
+                    <option value="Cleaning / Janitorial">Cleaning / Janitorial</option>
+                    <option value="Landscaping">Landscaping</option>
+                    <option value="Entertainment / Events">Entertainment / Events</option>
+                    <option value="Education">Education</option>
+                    <option value="Fitness">Fitness</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <p class="err" data-err role="alert"></p>
+              <div class="calc__nav">
+                <button class="btn btn--primary" type="button" data-next data-calc-next>Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ STEP 2 — OWNER ============ -->
+          <div class="step-pane" data-pane="2">
+            <h2 class="calc-title">Now <b>the owner.</b></h2>
+            <div class="form-stack">
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-oname">Full name *</label>
+                  <input class="input" id="ap-oname" data-field="owner_name" autocomplete="name" placeholder="Jane Doe" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-opct">Ownership % *</label>
+                  <input class="input mono-input" id="ap-opct" data-field="owner_ownership_pct" inputmode="numeric" data-mask="pct" maxlength="3" placeholder="100" required>
+                </div>
+              </div>
+              <div class="field">
+                <label class="label field-label" for="ap-oaddr">Home address *</label>
+                <input class="input" id="ap-oaddr" data-field="owner_address" autocomplete="street-address" placeholder="88 Palm Avenue" required>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-ocity">City *</label>
+                  <input class="input" id="ap-ocity" data-field="owner_city" placeholder="Miami" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-ostate">State *</label>
+                  <select class="input" id="ap-ostate" data-field="owner_state" required>
+                    <option value="">Select a state</option>
+                    <option value="AL">AL — Alabama</option>
+                    <option value="AK">AK — Alaska</option>
+                    <option value="AZ">AZ — Arizona</option>
+                    <option value="AR">AR — Arkansas</option>
+                    <option value="CA">CA — California</option>
+                    <option value="CO">CO — Colorado</option>
+                    <option value="CT">CT — Connecticut</option>
+                    <option value="DE">DE — Delaware</option>
+                    <option value="DC">DC — District of Columbia</option>
+                    <option value="FL">FL — Florida</option>
+                    <option value="GA">GA — Georgia</option>
+                    <option value="HI">HI — Hawaii</option>
+                    <option value="ID">ID — Idaho</option>
+                    <option value="IL">IL — Illinois</option>
+                    <option value="IN">IN — Indiana</option>
+                    <option value="IA">IA — Iowa</option>
+                    <option value="KS">KS — Kansas</option>
+                    <option value="KY">KY — Kentucky</option>
+                    <option value="LA">LA — Louisiana</option>
+                    <option value="ME">ME — Maine</option>
+                    <option value="MD">MD — Maryland</option>
+                    <option value="MA">MA — Massachusetts</option>
+                    <option value="MI">MI — Michigan</option>
+                    <option value="MN">MN — Minnesota</option>
+                    <option value="MS">MS — Mississippi</option>
+                    <option value="MO">MO — Missouri</option>
+                    <option value="MT">MT — Montana</option>
+                    <option value="NE">NE — Nebraska</option>
+                    <option value="NV">NV — Nevada</option>
+                    <option value="NH">NH — New Hampshire</option>
+                    <option value="NJ">NJ — New Jersey</option>
+                    <option value="NM">NM — New Mexico</option>
+                    <option value="NY">NY — New York</option>
+                    <option value="NC">NC — North Carolina</option>
+                    <option value="ND">ND — North Dakota</option>
+                    <option value="OH">OH — Ohio</option>
+                    <option value="OK">OK — Oklahoma</option>
+                    <option value="OR">OR — Oregon</option>
+                    <option value="PA">PA — Pennsylvania</option>
+                    <option value="RI">RI — Rhode Island</option>
+                    <option value="SC">SC — South Carolina</option>
+                    <option value="SD">SD — South Dakota</option>
+                    <option value="TN">TN — Tennessee</option>
+                    <option value="TX">TX — Texas</option>
+                    <option value="UT">UT — Utah</option>
+                    <option value="VT">VT — Vermont</option>
+                    <option value="VA">VA — Virginia</option>
+                    <option value="WA">WA — Washington</option>
+                    <option value="WV">WV — West Virginia</option>
+                    <option value="WI">WI — Wisconsin</option>
+                    <option value="WY">WY — Wyoming</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-ozip">Zip code *</label>
+                  <input class="input mono-input" id="ap-ozip" data-field="owner_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33139" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-oemail">Email *</label>
+                  <input class="input" id="ap-oemail" type="email" data-field="email" autocomplete="email" placeholder="jane@acme.com" required>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label class="label field-label" for="ap-ophone">Phone *</label>
+                  <input class="input mono-input" id="ap-ophone" data-field="phone" inputmode="tel" data-mask="phone" maxlength="14" placeholder="(555) 123-4567" required>
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-amount">Amount requested <span class="muted">(optional)</span></label>
+                  <div class="money-wrap">
+                    <span aria-hidden="true">$</span>
+                    <input class="input" id="ap-amount" data-field="amount_requested" data-money inputmode="numeric" placeholder="150,000">
+                  </div>
+                </div>
+              </div>
+              <!-- Identity block. Encrypted on submit; never travels in a URL.
+                   See api/application.php. -->
+              <div class="field-row" data-identity-block>
+                <div class="field">
+                  <label class="label field-label" for="ap-odob">Date of birth *</label>
+                  <input class="input mono-input" id="ap-odob" data-field="owner_dob" data-sensitive data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" autocomplete="off">
+                </div>
+                <div class="field">
+                  <label class="label field-label" for="ap-ossn">Social Security number *</label>
+                  <input class="input mono-input" id="ap-ossn" data-field="owner_ssn" data-sensitive data-mask="ssn" inputmode="numeric" maxlength="11" placeholder="•••-••-••••" autocomplete="off">
+                </div>
+              </div>
+              <p class="secure-note"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"/></svg>Date of birth and Social Security number are encrypted the moment they reach us, and never sent by email or stored in plain text.</p>
+              <p class="err" data-err role="alert"></p>
+              <div class="calc__nav">
+                <button class="btn btn--ghost" type="button" data-back>Back</button>
+                <button class="btn btn--primary" type="button" data-next data-calc-next>Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ STEP 3 — CO-OWNER ============ -->
+          <div class="step-pane" data-pane="3">
+            <h2 class="calc-title">Is there a <b>second owner?</b></h2>
+            <div class="form-stack">
+              <div class="chips" data-coowner-toggle>
+                <button class="chip sel" type="button" data-co="no">No, just me</button>
+                <button class="chip" type="button" data-co="yes">Yes, add a co-owner</button>
+              </div>
+              <p class="field-hint">Most lenders want every owner holding 20% or more on the file. Adding them now avoids a second round of questions later.</p>
+
+              <div data-coowner-fields hidden>
+                <div class="form-stack" style="margin-top:0">
+                  <div class="field-row">
+                    <div class="field">
+                      <label class="label field-label" for="ap-cname">Co-owner full name *</label>
+                      <input class="input" id="ap-cname" data-field="co_owner_name" placeholder="John Doe">
+                    </div>
+                    <div class="field">
+                      <label class="label field-label" for="ap-cpct">Ownership % *</label>
+                      <input class="input mono-input" id="ap-cpct" data-field="co_owner_ownership_pct" inputmode="numeric" data-mask="pct" maxlength="3" placeholder="50">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label class="label field-label" for="ap-caddr">Home address *</label>
+                    <input class="input" id="ap-caddr" data-field="co_owner_address" placeholder="88 Palm Avenue">
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label class="label field-label" for="ap-ccity">City *</label>
+                      <input class="input" id="ap-ccity" data-field="co_owner_city" placeholder="Miami">
+                    </div>
+                    <div class="field">
+                      <label class="label field-label" for="ap-cstate">State *</label>
+                      <select class="input" id="ap-cstate" data-field="co_owner_state">
+                        <option value="">Select a state</option>
+                        <option value="AL">AL — Alabama</option>
+                        <option value="AK">AK — Alaska</option>
+                        <option value="AZ">AZ — Arizona</option>
+                        <option value="AR">AR — Arkansas</option>
+                        <option value="CA">CA — California</option>
+                        <option value="CO">CO — Colorado</option>
+                        <option value="CT">CT — Connecticut</option>
+                        <option value="DE">DE — Delaware</option>
+                        <option value="DC">DC — District of Columbia</option>
+                        <option value="FL">FL — Florida</option>
+                        <option value="GA">GA — Georgia</option>
+                        <option value="HI">HI — Hawaii</option>
+                        <option value="ID">ID — Idaho</option>
+                        <option value="IL">IL — Illinois</option>
+                        <option value="IN">IN — Indiana</option>
+                        <option value="IA">IA — Iowa</option>
+                        <option value="KS">KS — Kansas</option>
+                        <option value="KY">KY — Kentucky</option>
+                        <option value="LA">LA — Louisiana</option>
+                        <option value="ME">ME — Maine</option>
+                        <option value="MD">MD — Maryland</option>
+                        <option value="MA">MA — Massachusetts</option>
+                        <option value="MI">MI — Michigan</option>
+                        <option value="MN">MN — Minnesota</option>
+                        <option value="MS">MS — Mississippi</option>
+                        <option value="MO">MO — Missouri</option>
+                        <option value="MT">MT — Montana</option>
+                        <option value="NE">NE — Nebraska</option>
+                        <option value="NV">NV — Nevada</option>
+                        <option value="NH">NH — New Hampshire</option>
+                        <option value="NJ">NJ — New Jersey</option>
+                        <option value="NM">NM — New Mexico</option>
+                        <option value="NY">NY — New York</option>
+                        <option value="NC">NC — North Carolina</option>
+                        <option value="ND">ND — North Dakota</option>
+                        <option value="OH">OH — Ohio</option>
+                        <option value="OK">OK — Oklahoma</option>
+                        <option value="OR">OR — Oregon</option>
+                        <option value="PA">PA — Pennsylvania</option>
+                        <option value="RI">RI — Rhode Island</option>
+                        <option value="SC">SC — South Carolina</option>
+                        <option value="SD">SD — South Dakota</option>
+                        <option value="TN">TN — Tennessee</option>
+                        <option value="TX">TX — Texas</option>
+                        <option value="UT">UT — Utah</option>
+                        <option value="VT">VT — Vermont</option>
+                        <option value="VA">VA — Virginia</option>
+                        <option value="WA">WA — Washington</option>
+                        <option value="WV">WV — West Virginia</option>
+                        <option value="WI">WI — Wisconsin</option>
+                        <option value="WY">WY — Wyoming</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field">
+                      <label class="label field-label" for="ap-czip">Zip code *</label>
+                      <input class="input mono-input" id="ap-czip" data-field="co_owner_zip" inputmode="numeric" data-mask="zip" maxlength="10" placeholder="33139">
+                    </div>
+                    <div class="field" data-identity-block>
+                      <label class="label field-label" for="ap-cdob">Date of birth *</label>
+                      <input class="input mono-input" id="ap-cdob" data-field="co_owner_dob" data-sensitive data-mask="date" inputmode="numeric" maxlength="10" placeholder="MM/DD/YYYY" autocomplete="off">
+                    </div>
+                  </div>
+                  <div class="field" data-identity-block>
+                    <label class="label field-label" for="ap-cssn">Social Security number *</label>
+                    <input class="input mono-input" id="ap-cssn" data-field="co_owner_ssn" data-sensitive data-mask="ssn" inputmode="numeric" maxlength="11" placeholder="•••-••-••••" autocomplete="off">
+                  </div>
+                </div>
+              </div>
+
+              <p class="err" data-err role="alert"></p>
+              <div class="calc__nav">
+                <button class="btn btn--ghost" type="button" data-back>Back</button>
+                <button class="btn btn--primary" type="button" data-next data-calc-next>Continue</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ STEP 4 — STATEMENTS & CONSENT ============ -->
+          <div class="step-pane" data-pane="4">
+            <h2 class="calc-title">Statements and <b>consent.</b></h2>
+            <div class="form-stack">
+              <div class="field">
+                <span class="label field-label">Business bank statements *</span>
+                <div class="dropzone" data-dropzone tabindex="0" role="button" aria-label="Add bank statements">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                  <b data-statements-headline>Add your last 4 months</b>
+                  <span>PDF, JPG or PNG &middot; up to 10&nbsp;MB each &middot; drop them here or click</span>
+                  <input type="file" data-files multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" hidden>
+                </div>
+                <ul class="file-list" data-file-list></ul>
+                <span class="field-hint" data-statements-hint>Required — we cannot review an application without them. One file per month, or a single PDF covering all of them.</span>
+              </div>
+
+              <!-- Authorization text. If you change a word of this, bump the id in
+                   data-consent-text-id — the id is stored with every signed
+                   application so you can prove which wording was agreed to.
+                   This wording is the live site's tmf-auth-2026-08c, unchanged. -->
+              <div class="consent" tabindex="0" role="region" aria-label="Authorization" data-consent-text-id="tmf-auth-2026-08c">
+                <p>
+                  By signing below, the applicant authorizes TMF Team, its assigned
+                  agents, and affiliates to obtain a consumer report from a Credit
+                  Bureau or Credit Agency and to investigate the references given on
+                  any other statement or data obtained by the applicant. The applicant
+                  also authorizes TMF Team to send relevant marketing information and
+                  carry out market research about our products and services.
+                </p>
+                <p>
+                  The applicant further authorizes TMF Team to disclose, transfer, sell
+                  and share <b>this entire application</b> and the information and
+                  documents submitted with it &mdash; including bank statements, and
+                  including the applicant&rsquo;s <b>date of birth, Social Security
+                  number and signature</b> &mdash; with funders, lenders, banks, other
+                  brokers, independent sales organizations, syndicators, participants,
+                  buyers, servicers, collection agents and referral partners in the
+                  commercial finance industry, and with verification services and
+                  service providers, so that the application can be underwritten,
+                  funded, syndicated, sold, serviced or collected and so that related
+                  products can be offered. The applicant agrees that any such party may
+                  use and further disclose that information under its own privacy
+                  policy. <b>TMF Team may be paid for those disclosures.</b>
+                </p>
+                <p>
+                  The applicant agrees to the
+                  <a href="/terms" target="_blank" rel="noopener">Terms of Use and Service Agreement</a>
+                  and the
+                  <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>,
+                  consents to signing and receiving records electronically, and may
+                  withdraw the sharing and marketing permissions at any time by writing
+                  to privacy@tmfus.com.
+                </p>
+              </div>
+
+              <label class="check">
+                <input type="checkbox" data-field="consent_credit" data-required-check>
+                <span class="check__text">I have read and agree to the authorization above, including the sale and sharing of my complete application &mdash; date of birth, Social Security number and signature included &mdash; with funding partners across the commercial finance industry. <span class="req" aria-hidden="true">*</span></span>
+              </label>
+              <label class="check">
+                <input type="checkbox" data-field="consent_contact" data-required-check>
+                <span class="check__text">TMF Team and its funding partners may contact me about this application by phone, email and text, including by autodialer or prerecorded voice, at the numbers I gave. This is not a condition of funding. <span class="req" aria-hidden="true">*</span></span>
+              </label>
+
+              <!-- Signature. Captured as a PNG and sealed into the encrypted
+                   application with the IP, timestamp and the consent wording id. -->
+              <div class="field" data-identity-block>
+                <span class="label field-label">E-signature *</span>
+                <div class="sig-wrap">
+                  <canvas data-sig-pad height="150" aria-label="Sign here"></canvas>
+                  <span class="sig-hint">Draw your signature</span>
+                  <button class="sig-clear" type="button" data-sig-clear>Clear</button>
+                </div>
+              </div>
+
+              <div class="handoff-note" data-handoff-note>
+                <p class="certificate__label">Last step</p>
+                <p>Press submit and your application comes straight to TMF Team — there is no second form to fill in. Your date of birth, Social Security number and signature are encrypted the moment they reach us and are never sent by email or stored in plain text.</p>
+              </div>
+
+              <p class="err" data-err role="alert"></p>
+              <div class="calc__nav">
+                <button class="btn btn--ghost" type="button" data-back>Back</button>
+                <button class="btn btn--primary" type="submit" data-submit data-calc-next>Submit application</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ DONE ============ -->
+          <div class="step-pane" data-pane="done">
+            <div class="app-done">
+              <svg class="success__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <h2 class="h2">Application received.</h2>
+              <p class="lede">That is everything — nothing else is needed from you right now. An advisor reviews the file and comes back to you, usually within 3&ndash;24 hours.</p>
+              <div class="reference">
+                <span class="reference__k">Your reference</span>
+                <span class="reference__v" data-reference>&mdash;</span>
+                <span class="help">Quote this if you contact us about your application.</span>
+              </div>
+              <p class="muted">Need to add bank statements or change something? <a href="/contact">Talk to an advisor</a>.</p>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <aside class="apply__aside" aria-label="Application help">
+        <div class="card apply__summary">
+          <p class="certificate__title">What you will need</p>
+          <ul class="checklist" role="list">
+            <li>{{> icon-tick}}<span>Business legal name, EIN and start date</span></li>
+            <li>{{> icon-tick}}<span>Owner name, home address and ownership split</span></li>
+            <li>{{> icon-tick}}<span>Date of birth and Social Security number for each owner</span></li>
+            <li>{{> icon-tick}}<span>Four months of business bank statements — required</span></li>
+            <li>{{> icon-tick}}<span>About ten minutes, start to finish</span></li>
+          </ul>
+          <div class="apply__estimate" data-estimate-note hidden>
+            <p class="certificate__title">From your calculator</p>
+            <p class="apply__estimate-v" data-estimate-range></p>
+            <p class="help">A projection, not an offer. Real terms come from a funder after underwriting.</p>
+          </div>
+          <p class="secure-note"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"/></svg>256-bit encrypted connection</p>
+        </div>
+        <div class="card apply__summary">
+          <p class="certificate__title">How it goes</p>
+          <ul class="checklist" role="list">
+            <li>{{> icon-tick}}<span>No hard credit pull to get an indicative offer</span></li>
+            <li>{{> icon-tick}}<span>An advisor reviews the file, usually inside 3–24 hours</span></li>
+            <li>{{> icon-tick}}<span>We come back with the structures you actually qualify for</span></li>
+            <li>{{> icon-tick}}<span>On approval, funding can land in 24–48 hours</span></li>
+          </ul>
+        </div>
+        <div class="card apply__help">
+          <p class="h4">Rather talk it through first?</p>
+          <p class="muted small">Speak to an advisor, Mon–Fri, 9am–6pm EST. It costs nothing and often saves a step.</p>
+          <a class="link-arrow" href="/contact">Send us a message {{> icon-arrow}}</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+<script>
+  /* The calculator's projection, if this visitor just ran it (sessionStorage,
+     this tab only). Shown as context, never sent with the application. */
+  (function () {
+    try {
+      var e = JSON.parse(sessionStorage.getItem("tmf-estimate") || "null");
+      if (!e || e.over || !e.low || !e.high) return;
+      var f = function (n) { return "$" + Math.round(n).toLocaleString("en-US"); };
+      document.querySelector("[data-estimate-range]").textContent = f(e.low) + " – " + f(e.high);
+      document.querySelector("[data-estimate-note]").hidden = false;
+    } catch (_) {}
+  })();
+</script>

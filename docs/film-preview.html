@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The funding film — continuous playback</title>
+<style>
+  :root { --vault:#0a0c0b; --silver:#a9b0aa; --banknote:#f1f2ec; --greenback:#7fd4a8; --hair:rgba(169,176,170,.18); }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--vault); color:var(--banknote);
+    font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace; }
+  .wrap { position:relative; width:100%; height:100svh; overflow:hidden; background:#000; }
+  video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; }
+  video.on { opacity:1; }
+  .cap { position:absolute; left:28px; bottom:96px; max-width:52ch; margin:0; padding:12px 16px;
+    border-radius:6px; background:rgba(10,12,11,.55); backdrop-filter:blur(6px);
+    box-shadow:inset 0 0 0 1px var(--hair); color:var(--banknote); font-size:15px; line-height:1.55; }
+  .cap::before { content:""; position:absolute; top:12px; bottom:12px; left:0; width:2px;
+    border-radius:2px; background:var(--greenback); }
+  .bar { position:absolute; left:0; right:0; bottom:0; height:2px; background:rgba(169,176,170,.15); }
+  .bar i { display:block; height:100%; width:0; background:var(--greenback); }
+  .hud { position:absolute; top:20px; left:28px; right:28px; display:flex; justify-content:space-between;
+    font-size:12px; letter-spacing:.06em; color:var(--silver); text-transform:uppercase; }
+  button { position:absolute; inset:0; margin:auto; width:170px; height:52px; cursor:pointer;
+    background:var(--greenback); color:#0a0c0b; border:0; border-radius:4px;
+    font:inherit; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
+  button[hidden] { display:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <video id="a" muted playsinline preload="auto"></video>
+  <video id="b" muted playsinline preload="auto"></video>
+  <p class="cap" id="cap"></p>
+  <div class="hud"><span id="beat">Beat 1 / 12</span><span>The funding film · 45s</span></div>
+  <div class="bar"><i id="prog"></i></div>
+  <button id="go">Play film</button>
+</div>
+<script>
+const CLIPS = [
+  ["a-owner-to-screen",   "One application. Revenue, time in business, what you already owe."],
+  ["b-into-system",       "It comes to us, not to a lender. Nothing touches your credit file."],
+  ["c-out-to-analyst",    "An analyst reads it and works out which funders will want it."],
+  ["d-to-underwriting",   "It goes to several funders at once, and they bid against each other."],
+  ["e-to-the-number",     "Offers come back with a rate, an amount and a term."],
+  ["f-stamp-down",        "The funder approves it. Not us \u2014 we are the brokerage."],
+  ["g-stamp-up",          "The funder approves it. Not us \u2014 we are the brokerage."],
+  ["h-the-offer",         "Your account executive walks you through every line."],
+  ["i-signing",           "You sign only once you have seen the full cost."],
+  ["j-paper-falls",       "You sign only once you have seen the full cost."],
+  ["k-drain-a",           "Funds land in your account, usually within 24\u201348 hours."],
+  ["k-drain-b",           "Funds land in your account, usually within 24\u201348 hours."],
+  ["k-drain-c",           "Funds land in your account, usually within 24\u201348 hours."],
+];
+const url = n => `/media/film/clips/${n}.mp4`;
+const a = document.getElementById("a"), b = document.getElementById("b");
+const cap = document.getElementById("cap"), beat = document.getElementById("beat");
+const prog = document.getElementById("prog"), go = document.getElementById("go");
+let i = 0, cur = a, next = b;
+
+// Double-buffered: the next clip is already decoded and holding its first
+// frame before the current one ends, so the swap has no black gap.
+const prime = (el, n) => { el.src = url(CLIPS[n][0]); el.load(); };
+
+const show = () => {
+  cap.textContent = CLIPS[i][1];
+  beat.textContent = `Beat ${i + 1} / ${CLIPS.length}`;
+  cur.classList.add("on"); next.classList.remove("on");
+  cur.play();
+  if (i + 1 < CLIPS.length) prime(next, i + 1);
+};
+
+const tick = () => {
+  const per = 100 / CLIPS.length;
+  const within = cur.duration ? (cur.currentTime / cur.duration) * per : 0;
+  prog.style.width = `${i * per + within}%`;
+  requestAnimationFrame(tick);
+};
+
+const advance = () => {
+  if (i + 1 >= CLIPS.length) { prog.style.width = "100%"; go.hidden = false; go.textContent = "Play again"; return; }
+  i += 1;
+  [cur, next] = [next, cur];
+  show();
+};
+a.addEventListener("ended", advance);
+b.addEventListener("ended", advance);
+
+go.addEventListener("click", () => {
+  go.hidden = true;
+  i = 0; cur = a; next = b;
+  prime(a, 0);
+  a.addEventListener("loadeddata", show, { once: true });
+  tick();
+});
+prime(a, 0);
+</script>
+</body>
+</html>

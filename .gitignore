@@ -41,3 +41,7 @@ knowledge.txt
 *.enc.json
 chats/
 leads/
+
+# Dev only
+node_modules/
+temporary screenshots/

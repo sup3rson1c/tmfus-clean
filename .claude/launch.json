@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "tmf-team", "runtimeExecutable": "node", "runtimeArgs": ["C:/Knowledge Work/tmf-team-site/serve.mjs", "3200"], "port": 3200 }
+  ]
+}
