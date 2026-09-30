@@ -22,7 +22,7 @@ one setting has to be right or opt-outs silently fail.
 | `api/unsubscribe.php` | Records the opt-out and emails you about it |
 | `api/config.example.php` | Four new settings, listed below |
 | `.cpanel.yml` | Both new files, so they actually deploy |
-| `seo-inject.py` | The page is marked never-indexed, like the 404 page |
+| `build.mjs` | The page is marked never-indexed, like the 404 page |
 | `scripts/verify.sh` | Five new checks |
 
 ---

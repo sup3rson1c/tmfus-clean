@@ -313,7 +313,7 @@ scripts/verify.sh        Invariant checker — run before finishing
 scripts/live-check.sh    Deploy-drift checker — is the server running this code?
 scripts/crypto-chain-test.mjs  Seal → wrap → unlock → decrypt, for real
 scripts/bundle-vault.py  Obsidian vault -> one knowledge file for the chat
-seo-inject.py            Canonicals, robots, schema AND sitemap.xml
+build.mjs               Pages, canonicals, schema, assets AND sitemap.xml
 ```
 
 ---

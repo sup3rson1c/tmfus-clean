@@ -23,17 +23,25 @@ DirectoryIndex index.html
   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
   RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
 
-  # 2b. The term-loans page was replaced by the SBA page. This must come
+  # 2b. Keep the homepage on one URL. The explicit /index rule handles the
+  #     clean duplicate; THE_REQUEST prevents the DirectoryIndex subrequest
+  #     for / from redirecting in a loop.
+  RewriteRule ^index/?$ / [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+  RewriteRule ^index\.html$ / [R=301,L]
+
+  # 2c. The term-loans page was replaced by the SBA page. This must come
   #     before the rules below: rule 4 would otherwise rewrite
   #     /long-term-loans to a file that no longer exists and 404.
   RewriteRule ^long-term-loans(\.html)?/?$ /sba-loans [R=301,L]
 
-  # 2c. The 2026 redesign was drafted with these slugs. The live URLs won, so
+  # 2d. The 2026 redesign was drafted with these slugs. The live URLs won, so
   #     inbound links, the sitemap and emailed links keep working, but any
-  #     link made from a draft still lands on the right page.
-  RewriteRule ^calculator/?$ /funding-estimator [R=301,L]
-  RewriteRule ^cash-injection/?$ /mca [R=301,L]
-  RewriteRule ^home-equity/?$ /heloc-calculator [R=301,L]
+  #     link made from a draft still lands on the right page. Accept the old
+  #     .html form directly so it takes one redirect, not two.
+  RewriteRule ^calculator(\.html)?/?$ /funding-estimator [R=301,L]
+  RewriteRule ^cash-injection(\.html)?/?$ /mca [R=301,L]
+  RewriteRule ^home-equity(\.html)?/?$ /heloc-calculator [R=301,L]
 
   # 3. Strip .html so /heloc-calculator works as a URL.
   #    Existing .html URLs redirect to the clean version so you
