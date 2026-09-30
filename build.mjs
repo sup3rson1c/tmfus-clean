@@ -78,7 +78,7 @@ const CRUMBS = {
 };
 const SERVICES = {
   mca: ["Merchant Cash Advance", "Revenue-based business funding from $5K to $2M with remittances aligned to card and bank receipts."],
-  "sba-loans": ["SBA 7(a) and 504 Loans", "SBA-guaranteed business lending: 7(a) for working capital and acquisitions, 504 for property and long-life equipment."],
+  "sba-loans": ["SBA 7(a) and 504 Loans", "SBA-guaranteed business lending: 7(a) for working capital and acquisitions, 504 for property and long-life equipment financing."],
   "heloc-calculator": ["Home Equity Line of Credit", "A line secured against home equity for business owners, up to $750K, valued without an appraisal appointment."],
   "funding-estimator": ["Business Funding Estimate", "A four-step estimate of the cash injection a business may qualify for, based on revenue, time in business and credit."],
 };
@@ -146,10 +146,10 @@ function schema(html, v) {
       alternateName: "TMF Team Capital Strategy",
       url: `${SITE}/`,
       logo: { "@type": "ImageObject", url: `${SITE}/assets/logo-mark-512.png`, width: 512, height: 512 },
-      description: "TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, and home equity lines of credit, and manages the application end to end.",
+      description: "TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, equipment financing, and home equity lines of credit, and manages the application end to end.",
       areaServed: { "@type": "Country", name: "United States" },
-      knowsAbout: ["merchant cash advance", "SBA 7(a) loans", "SBA 504 loans", "home equity line of credit", "small business working capital", "revenue-based financing"],
-      serviceType: ["Business funding brokerage", "Merchant cash advance", "SBA loan brokerage", "HELOC brokerage"],
+      knowsAbout: ["merchant cash advance", "SBA 7(a) loans", "SBA 504 loans", "home equity line of credit", "equipment financing", "small business working capital", "revenue-based financing"],
+      serviceType: ["Business funding brokerage", "Merchant cash advance", "SBA loan brokerage", "Equipment financing", "HELOC brokerage"],
     },
     { "@type": "WebSite", "@id": `${SITE}/#website`, url: `${SITE}/`, name: "TMF Team", publisher: { "@id": `${SITE}/#organization` }, inLanguage: "en-US" },
     {
