@@ -1,0 +1,24 @@
+# Runs the site's own invariants on every pull request, on a machine WITH php,
+# so the PHP is finally linted (it never had been: no PHP on John's PC).
+name: verify
+on:
+  pull_request:
+  push:
+    branches: [master, redesign-2026]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+      - name: Built pages match src/ (run node build.mjs if this fails)
+        run: |
+          node build.mjs
+          git diff --exit-code -- '*.html' assets/css/site.css
+      - name: Site invariants
+        run: bash scripts/verify.sh
