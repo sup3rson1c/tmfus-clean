@@ -1837,8 +1837,8 @@ html.menu-open {
 }
 .hero__sheen {
   overflow: hidden;
-  -webkit-mask: url("/assets/img/m3-disc-720.webp") center / 100% 100% no-repeat;
-  mask: url("/assets/img/m3-disc-720.webp") center / 100% 100% no-repeat;
+  -webkit-mask: url("/assets/img/m3-disc-mask-720.webp") center / 100% 100% no-repeat;
+  mask: url("/assets/img/m3-disc-mask-720.webp") center / 100% 100% no-repeat;
   mix-blend-mode: overlay;
 }
 .hero__sheen-band {

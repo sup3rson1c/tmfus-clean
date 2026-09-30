@@ -34,6 +34,7 @@ const OUT = join(ROOT, "media", "film");
 // The markup's width/height attributes; frames are 1920x1072 (same 16:9).
 const W = 2048;
 const H = 1143;
+const BOARD_WIDTHS = [640, 960, 1280];
 
 // `frame` is 1-based into the beat, or negative to count back from its end.
 const BOARD = [
@@ -57,5 +58,12 @@ for (const { file, beat, frame } of BOARD) {
   const src = join(FRAMES, "d", `b${beat}`, `${String(n).padStart(4, "0")}.webp`);
   const out = join(OUT, `${file}.webp`);
   await sharp(src).resize(W, H, { fit: "fill" }).webp({ quality: 82, effort: 5 }).toFile(out);
+  // Display-size renditions for the storyboard grid (issue #4). The board
+  // shows each still at a third of the width on desktop and full width on a
+  // phone, so the 2048px file is only needed by the full-bleed poster. The
+  // widths match the srcset in src/partials/home-film.html.
+  for (const w of BOARD_WIDTHS) {
+    await sharp(src).resize(w, Math.round((w * H) / W), { fit: "fill" }).webp({ quality: 82, effort: 5 }).toFile(join(OUT, `${file}-${w}.webp`));
+  }
   console.log(`${file}.webp  <- beat ${beat} frame ${n}/${entry.desktop.count}  (${(statSync(out).size / 1024).toFixed(0)}KB)`);
 }
