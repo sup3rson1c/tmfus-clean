@@ -490,6 +490,16 @@
 html.menu-open {
   overflow: hidden;
 }
+.site-header.is-open {
+  z-index: 1000;
+}
+html.menu-open .chat-launch,
+html.menu-open .cookie-bar {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  transition: none !important;
+}
 
 /* Footer -------------------------------------------------------------- */
 .site-footer {
