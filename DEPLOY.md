@@ -33,6 +33,8 @@ boss a screenshot. Do not try again and again.
    `./scripts/live-check.sh`, then press Enter.
 3. You want to see **green ticks and no red crosses**. Red means the site on
    the server is not the same as the repo. Send the boss the screen.
+4. Run `./scripts/compare-live.sh` to prove the new site kept every page, title,
+   and form from before the deploy (exit 0 means all URLs are still 200).
 
 ## Good to know
 
