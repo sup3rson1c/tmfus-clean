@@ -526,7 +526,7 @@ select.input option {
   position: fixed;
   left: 22px;
   bottom: 22px;
-  z-index: 90;
+  z-index: 950;
   width: min(430px, calc(100vw - 44px));
   padding: 20px;
   border-radius: var(--r-md);
@@ -567,8 +567,9 @@ select.input option {
 }
 .cookie-opt {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
+  min-height: 44px;
   font-size: 0.875rem;
   cursor: pointer;
 }
@@ -594,7 +595,8 @@ select.input option {
 }
 .cookie-btns .btn {
   flex: 1 1 auto;
-  --btn-h: 42px;
+  --btn-h: 44px;
+  min-height: 44px;
   padding: 0 16px;
   font-size: 0.875rem;
 }
@@ -608,6 +610,12 @@ select.input option {
   }
   .cookie-btns .btn {
     flex: 1 1 100%;
+    min-height: 44px;
+  }
+  body:has(.cookie-bar.open) .chat-launch {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(16px);
   }
 }
 
@@ -638,7 +646,7 @@ select.input option {
   position: fixed;
   right: 22px;
   bottom: 22px;
-  z-index: 901;
+  z-index: 960;
   display: flex;
   flex-direction: column;
   width: min(460px, calc(100vw - 32px));
@@ -685,8 +693,12 @@ select.input option {
   vertical-align: middle;
 }
 .chat-close {
-  width: 36px;
-  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border: 0;
   border-radius: 50%;
   background: none;
@@ -835,6 +847,8 @@ select.input option {
   outline-offset: 1px;
 }
 .chat-send {
+  flex: none;
+  height: 44px;
   min-height: 44px;
   padding: 0 16px;
   border: 0;
@@ -855,7 +869,10 @@ select.input option {
   margin-top: 8px;
 }
 .chat-chip {
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
   border: 0;
   border-radius: var(--r-pill);
   background: none;
