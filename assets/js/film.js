@@ -345,18 +345,30 @@
 
   // Release beats outside the window so nine beats never sit in memory at
   // once. Dropping the Image references lets the browser reclaim the decode.
+  //
+  // The beat in view loads first and its neighbours only once it is done, so
+  // on a thin connection the frames you are looking at are not sharing the
+  // pipe with the ones you are not. The total fetched is the same.
+  let lastCentre = 1;
   const retire = (centre) => {
+    lastCentre = centre;
     beats.forEach((b) => {
       const near = Math.abs(b.beat - centre) <= WINDOW;
-      if (near && b.state === "idle") loadBeat(b);
       if (!near && b.state !== "idle") {
         b.state = "dropped";
         b.frames = new Array(b.count);
       }
-      if (near && b.state === "dropped") {
-        b.state = "idle";
-        loadBeat(b);
-      }
+      if (near && b.state === "dropped") b.state = "idle";
+    });
+    const main = beats.find((b) => b.beat === centre);
+    if (main && main.state !== "ready") {
+      // Once it is ready, come back for the neighbours. render() does this on
+      // the next scroll anyway; this covers a reader who has stopped scrolling.
+      if (main.state === "idle") loadBeat(main).then(() => main.state === "ready" && retire(lastCentre));
+      return;
+    }
+    beats.forEach((b) => {
+      if (b.state === "idle" && Math.abs(b.beat - centre) <= WINDOW) loadBeat(b);
     });
   };
 
@@ -609,16 +621,40 @@
     retire(1);
   };
 
-  // Begin fetching a viewport and a half out, so the film is warm on arrival.
-  const watcher = new IntersectionObserver(
-    (entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      watcher.disconnect();
-      start();
-    },
-    { rootMargin: "150% 0px" }
-  );
-  watcher.observe(section);
+  /* When to start fetching frames (issue #4, page speed).
+     The film sits directly under a full-height hero, so "a viewport and a
+     half out" was true the moment the page opened: every first visit pulled
+     two beats of frames (~9 MB desktop, ~2 MB phone) whether or not anyone
+     scrolled, and because those Image() requests began before window.load
+     they also held the opening loader up. Now nothing is fetched until
+       1. the page has finished loading (the hero and loader go first), and
+       2. the visitor has scrolled at all - or arrived already scrolled, via
+          a restored position or an anchor - and
+       3. the section is within a viewport and a half, as before.
+     The pin only starts once the section's top reaches the top of the
+     screen, a full viewport of scrolling after the first tick, which is
+     the head start the first frames need. Until they arrive the storyboard
+     stands in, exactly as it always has on a slow connection. */
+  const begin = () => {
+    const watcher = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        watcher.disconnect();
+        start();
+      },
+      { rootMargin: "150% 0px" }
+    );
+    watcher.observe(section);
+  };
+  const whenScrolled = () => {
+    if (window.scrollY > 0) {
+      begin();
+      return;
+    }
+    window.addEventListener("scroll", begin, { once: true, passive: true });
+  };
+  if (document.readyState === "complete") whenScrolled();
+  else window.addEventListener("load", whenScrolled, { once: true });
 
   // Track the stage's own box, not the window's. A window resize event is not
   // fired for every layout change that matters — resizing a preview pane, a

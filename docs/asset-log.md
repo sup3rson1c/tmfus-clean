@@ -42,7 +42,7 @@ All prompts end with the shared lighting DNA and "no text, no numbers, no logos,
 
 ## Totals
 - Batch 1: 9 images × 3 credits = **27 credits**. 9/9 approved, 0 regenerations. Balance ≈ 439.5.
-- Build-time todo: convert PNG masters (3.5–4.9 MB) to AVIF/WebP at display sizes (e.g. 800/1200/1600w) before shipping.
+- ~~Build-time todo: convert PNG masters (3.5–4.9 MB) to AVIF/WebP at display sizes (e.g. 800/1200/1600w) before shipping.~~ Done: `tools/images.mjs` writes the WebP renditions in `assets/img/` and no page references a PNG master; the masters are no longer in the repo. Issue #4 (2026-09-30) added display-size storyboard stills (`media/film/k*-640/960/1280.webp`, from `tools/film-board.mjs`) and an alpha-only hero sheen mask (`assets/img/m3-disc-mask-720.webp`, 10 KB instead of a second 104 KB download).
 - Optional V1 (hero light-sweep loop, image-to-video from A1) not generated — decide during build whether the static dial + CSS motion already carries the hero.
 
 ---

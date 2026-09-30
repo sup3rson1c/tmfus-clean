@@ -53,3 +53,15 @@ for (const plane of PLANES) {
     console.log(`${plane.out}-${w}.webp  ${info.width}x${info.height}  ${Math.round(info.size / 1024)} KB`);
   }
 }
+
+/* The hero sheen's CSS mask (issue #4). A mask only reads alpha, and a CSS
+   mask is fetched in CORS mode, so pointing it at m3-disc-720.webp downloaded
+   that 104 KB colour image a second time next to the <img>. This keeps the
+   alpha channel bit for bit, paints the colour white and stores it lossless:
+   the same mask for about 10 KB. */
+{
+  const { data, info } = await sharp(join(OUT, "m3-disc-720.webp")).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  for (let i = 0; i < data.length; i += 4) data[i] = data[i + 1] = data[i + 2] = 255;
+  const mask = await sharp(data, { raw: info }).webp({ lossless: true, effort: 6 }).toFile(join(OUT, "m3-disc-mask-720.webp"));
+  console.log(`m3-disc-mask-720.webp  ${mask.width}x${mask.height}  ${Math.round(mask.size / 1024)} KB`);
+}
