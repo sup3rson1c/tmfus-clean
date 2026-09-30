@@ -128,7 +128,7 @@
     }
     if (!value || input.type === "checkbox") return "";
     if (input.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value)) {
-      return "Enter an email address in the format name@business.com.";
+      return window.TMFEngine?.EMAIL_ERROR || "Not a valid email address.";
     }
     if (input.dataset.pattern && !new RegExp(input.dataset.pattern).test(value)) {
       return input.dataset.invalid || `Check ${labelFor(input)}.`;

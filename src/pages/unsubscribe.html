@@ -60,7 +60,7 @@
     e.preventDefault();
     var email = (input.value || '').trim();
     if (!token && !/.+@.+\..+/.test(email)) {
-      show('err', 'That does not look like an email address.');
+      show('err', (window.TMFEngine && window.TMFEngine.EMAIL_ERROR) || 'Not a valid email address.');
       input.focus();
       return;
     }
