@@ -736,9 +736,10 @@ display: none;
 position: fixed;
 inset: var(--header-h) 0 0;
 overflow-y: auto;
+-webkit-overflow-scrolling: touch;
 overscroll-behavior: contain;
 background: var(--vault);
-padding-block: var(--s-5) var(--s-7);
+padding-block: var(--s-5) max(var(--s-7), env(safe-area-inset-bottom, 24px));
 animation: tmf-fade var(--dur-base) var(--ease-out);
 }
 @keyframes tmf-fade {
@@ -859,7 +860,7 @@ display: flex;
 flex-wrap: wrap;
 align-items: center;
 justify-content: space-between;
-gap: 0 var(--s-6);
+gap: var(--s-3) var(--s-6);
 margin-top: var(--s-6);
 padding-top: var(--s-3);
 box-shadow: inset 0 1px 0 var(--hair);
@@ -869,7 +870,7 @@ font-size: 0.875rem;
 .site-footer__legal-links {
 display: flex;
 flex-wrap: wrap;
-gap: 0 var(--s-5);
+gap: var(--s-2) var(--s-5);
 }
 .site-footer__legal-links a {
 color: var(--silver) !important;
@@ -3343,7 +3344,7 @@ flex-wrap: wrap;
 align-items: baseline;
 gap: 0 10px;
 color: var(--banknote);
-font: 500 clamp(1.625rem, 1rem + 1.6vw, 2.375rem) / 1.1 var(--font-mono);
+font: 500 clamp(1.375rem, 0.9rem + 1.6vw, 2.375rem) / 1.1 var(--font-mono);
 letter-spacing: -0.03em;
 font-variant-numeric: tabular-nums;
 }
@@ -4114,6 +4115,7 @@ background: rgba(241, 242, 236, 0.06);
 .consent {
 max-height: 220px;
 overflow: auto;
+-webkit-overflow-scrolling: touch;
 padding: 16px 18px;
 border-radius: 10px;
 background: var(--vault);
@@ -5616,6 +5618,10 @@ gap: var(--s-4);
 justify-items: start;
 margin-bottom: var(--s-6);
 }
+.legal-page__head .h1 {
+font-size: clamp(2rem, 0.8rem + 3.6vw, 3.75rem);
+overflow-wrap: break-word;
+}
 .legal-doc {
 max-width: 78ch;
 }
@@ -5712,9 +5718,11 @@ margin-top: 0;
 }
 .legal-scroll {
 overflow-x: auto;
+-webkit-overflow-scrolling: touch;
 }
 .legal-table {
 width: 100%;
+min-width: 500px;
 margin-top: 18px;
 border-collapse: collapse;
 font-size: 0.875rem;
@@ -5758,6 +5766,14 @@ margin-top: 10px;
 }
 .unsub-field .input {
 flex: 1 1 240px;
+}
+@media (max-width: 480px) {
+.unsub-field {
+flex-direction: column;
+}
+.unsub-field .btn {
+width: 100%;
+}
 }
 .unsub-msg {
 margin-top: 14px;

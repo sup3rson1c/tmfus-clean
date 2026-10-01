@@ -941,6 +941,10 @@ select.input option {
   justify-items: start;
   margin-bottom: var(--s-6);
 }
+.legal-page__head .h1 {
+  font-size: clamp(2rem, 0.8rem + 3.6vw, 3.75rem);
+  overflow-wrap: break-word;
+}
 .legal-doc {
   max-width: 78ch;
 }
@@ -1037,9 +1041,11 @@ select.input option {
 }
 .legal-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .legal-table {
   width: 100%;
+  min-width: 500px;
   margin-top: 18px;
   border-collapse: collapse;
   font-size: 0.875rem;
@@ -1085,6 +1091,14 @@ select.input option {
 }
 .unsub-field .input {
   flex: 1 1 240px;
+}
+@media (max-width: 480px) {
+  .unsub-field {
+    flex-direction: column;
+  }
+  .unsub-field .btn {
+    width: 100%;
+  }
 }
 .unsub-msg {
   margin-top: 14px;
