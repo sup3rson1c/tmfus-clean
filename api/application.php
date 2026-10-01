@@ -29,6 +29,10 @@ declare(strict_types=1);
  *   statements[]   0..12 files, PDF / JPG / PNG, <= 10 MB each
  */
 
+/* Security review 2026-10: a PHP warning printed into the response would
+   carry server file paths. They go to the error log instead. */
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -504,12 +508,22 @@ if (!empty($_FILES['statements']['name'][0])) {
 // travels unencrypted the moment it leaves the server.
 // ---------------------------------------------------------------
 if ($notifyTo !== '' && filter_var($notifyTo, FILTER_VALIDATE_EMAIL)) {
+    /* Email header injection (security review 2026-10). The business name is
+       typed by the applicant and goes into the Subject header. A line break
+       in it would let them add their own headers (Bcc:, a new body) to a mail
+       sent from this server. Strip every control character, then MIME-encode
+       so the em dash and any accented name arrive intact. */
+    $mailBusiness = trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $business)) ?: 'Unknown business';
+    $subject = 'Application ' . $reference . ' — ' . $mailBusiness;
+    if (function_exists('mb_encode_mimeheader')) {
+        $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+    }
     $lines = [
         'New application received on tmfus.com',
         str_repeat('-', 42),
         '',
         'Reference:   ' . $reference,
-        'Business:    ' . $business,
+        'Business:    ' . $mailBusiness,
         'Product:     ' . $product,
         'Received:    ' . date('D j M Y, H:i T'),
         'Statements:  ' . (count($saved) ?: 'none attached'),
@@ -529,7 +543,7 @@ if ($notifyTo !== '' && filter_var($notifyTo, FILTER_VALIDATE_EMAIL)) {
 
     @mail(
         $notifyTo,
-        'Application ' . $reference . ' — ' . $business,
+        $subject,
         implode("\n", $lines),
         "From: no-reply@tmfus.com\r\nContent-Type: text/plain; charset=utf-8\r\n"
     );

@@ -33,6 +33,10 @@ declare(strict_types=1);
  * Endpoint:  POST /api/unsubscribe.php
  */
 
+/* Security review 2026-10: a PHP warning printed into the response would
+   carry server file paths. They go to the error log instead. */
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');

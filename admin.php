@@ -75,10 +75,25 @@ const READY_REPLIES = [
         "I have to step away for a bit. Leave me your number and I will come back to you today — I do not want this sitting here unanswered.",
 ];
 
+/* Security review 2026-10: never print PHP warnings to the browser. A
+   warning carries the server's file paths; the real ones go to the log. */
+ini_set('display_errors', '0');
+
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 header('Cache-Control: no-store, private');
+
+/* Content-Security-Policy. This page shows decrypted SSNs, so if anything
+   ever slipped past esc() the browser itself must refuse to run it: only
+   the two script blocks below, which carry this nonce, may execute;
+   images only from this page or data: (the signature); fetch only back to
+   this server. Styles stay inline-permitted because the page is built on
+   style="" attributes — that is a look concern, not a script one. */
+$cspNonce = base64_encode(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; script-src 'nonce-{$cspNonce}'; "
+     . "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+     . "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
 
 $cfg = is_readable(__DIR__ . '/api/config.php') ? (require __DIR__ . '/api/config.php') : [];
 $storeDir = rtrim((string) ($cfg['application_dir'] ?? ''), '/');
@@ -121,7 +136,17 @@ if ($storeDir === '' || $storeDir[0] !== '/') {
 /* ---------------------------------------------------------------
    Session
    --------------------------------------------------------------- */
-session_name(SESSION_NAME);
+/* Security review 2026-10:
+   - use_strict_mode: PHP refuses a session id it did not issue itself, so a
+     planted cookie cannot be adopted (session fixation, belt to the
+     session_regenerate_id() braces below).
+   - The __Host- prefix makes the browser refuse the cookie unless it is
+     Secure, path=/ and has no Domain — so a sibling subdomain can never set
+     or overwrite it. Only possible over HTTPS; localhost keeps the plain name. */
+ini_set('session.use_strict_mode', '1');
+ini_set('session.use_only_cookies', '1');
+ini_set('session.use_trans_sid', '0');
+session_name($https ? '__Host-' . SESSION_NAME : SESSION_NAME);
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
@@ -135,6 +160,15 @@ $action = (string) ($_GET['action'] ?? $_POST['action'] ?? '');
 
 if ($action === 'logout') {
     $_SESSION = [];
+    // Expire the cookie in the browser too, not only the file on the server.
+    $cp = session_get_cookie_params();
+    setcookie(session_name(), '', [
+        'expires'  => time() - 3600,
+        'path'     => $cp['path'],
+        'secure'   => $cp['secure'],
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
     session_destroy();
     header('Location: admin.php');
     exit;
@@ -178,6 +212,7 @@ if ($action === 'login') {
             session_regenerate_id(true);
             $_SESSION['ok'] = true;
             $_SESSION['seen'] = time();
+            $_SESSION['csrf'] = bin2hex(random_bytes(32));
             header('Location: admin.php');
             exit;
         }
@@ -188,6 +223,10 @@ if ($action === 'login') {
 $authed = !empty($_SESSION['ok']);
 if ($authed) {
     $_SESSION['seen'] = time();
+    // Sessions opened before this token existed get one now.
+    if (empty($_SESSION['csrf']) || !is_string($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    }
 }
 
 /* ---------------------------------------------------------------
@@ -434,7 +473,20 @@ if ($authed && $action !== '') {
     }
 
     if ($action === 'chattake' || $action === 'chatrelease' || $action === 'chatsend') {
-        $session = (string) ($_POST['session'] ?? $_GET['session'] ?? '');
+        /* CSRF (security review 2026-10). These write to a live conversation
+           with a merchant, so they must come from this page and nowhere else:
+           POST only, carrying the per-session token the page was rendered
+           with. SameSite=Strict already blocks most cross-site requests; this
+           closes the rest (same-site subdomains, older browsers). */
+        $sent = (string) ($_POST['csrf'] ?? '');
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'
+            || $sent === '' || !hash_equals((string) $_SESSION['csrf'], $sent)) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'stale page — reload and try again']);
+            exit;
+        }
+        $session = (string) ($_POST['session'] ?? '');
         $t = loadChat($storeDir, $session);
         if ($t === null) { http_response_code(404); exit; }
 
@@ -616,7 +668,7 @@ header('Content-Type: text/html; charset=utf-8');
     </form>
   </div>
 
-  <script>
+  <script nonce="<?= htmlspecialchars($cspNonce) ?>">
   /* ============================================================
      ONE PASSWORD FOR THE WHOLE PAGE
 
@@ -833,7 +885,7 @@ header('Content-Type: text/html; charset=utf-8');
       <div class="top noprint">
         <span class="mono-label">Application</span>
         <div>
-          <button class="ghost" onclick="window.print()">Print / PDF</button>
+          <button class="ghost" id="btnPrint">Print / PDF</button>
           <button class="ghost" id="closeViewer">Close</button>
         </div>
       </div>
@@ -847,10 +899,12 @@ header('Content-Type: text/html; charset=utf-8');
 </div>
 
 <?php if ($authed): ?>
-<script>
+<script nonce="<?= htmlspecialchars($cspNonce) ?>">
 (function () {
   'use strict';
   var $ = function (i) { return document.getElementById(i); };
+  // Anti-CSRF token for the chat actions; see the chattake/chatsend handler.
+  var CSRF = <?= json_encode((string) $_SESSION['csrf']) ?>;
   var subtle = window.crypto && window.crypto.subtle;
   var privKey = null;          // CryptoKey, memory only
   var apps = [], leads = [];
@@ -1247,7 +1301,9 @@ header('Content-Type: text/html; charset=utf-8');
       } else {
         cell = '<td>' + esc(obj[k]) + '</td>';
       }
-      html += '<tr><td class="k">' + pretty(k) + '</td>' + cell + '</tr>';
+      // Key names are escaped too: the server strips them to [a-z0-9_] today,
+      // but this line should not depend on that staying true.
+      html += '<tr><td class="k">' + esc(pretty(k)) + '</td>' + cell + '</tr>';
     });
     return html ? '<table>' + html + '</table>' : '';
   }
@@ -1332,7 +1388,10 @@ header('Content-Type: text/html; charset=utf-8');
     GROUPS.forEach(function (g) { g.keys.forEach(function (k) { known[k] = 1; }); });
     var extras = Object.keys(app).filter(function (k) { return !known[k] && k !== 'owner_signature'; });
     if (extras.length) out += '<div class="group"><h3>Other fields</h3>' + rows(app, extras) + '</div>';
-    if (app.owner_signature) {
+    /* Only a real PNG data URL is drawn. Anything else in this field (an
+       https:// address, say) would make John's browser call out to a
+       stranger's server the moment he opened the application. */
+    if (app.owner_signature && /^data:image\/png;base64,[A-Za-z0-9+\/=]+$/.test(app.owner_signature)) {
       out += '<div class="group"><h3>Signature</h3><div class="sig"><img alt="Applicant signature" src="' +
              esc(app.owner_signature) + '"></div></div>';
     }
@@ -1341,6 +1400,8 @@ header('Content-Type: text/html; charset=utf-8');
   }
 
   $('closeViewer').addEventListener('click', function () { $('viewer').close(); });
+  // Was an inline onclick; the CSP above does not allow inline handlers.
+  $('btnPrint').addEventListener('click', function () { window.print(); });
 
   /* ================= live chat =================
      Polls twice as often when a conversation is open, because a merchant
@@ -1444,6 +1505,7 @@ header('Content-Type: text/html; charset=utf-8');
     if (!current) return Promise.resolve();
     var body = new URLSearchParams();
     body.set('session', current);
+    body.set('csrf', CSRF);
     Object.keys(extra || {}).forEach(function (k) { body.set(k, extra[k]); });
     return fetch('admin.php?action=' + action, {
       method: 'POST', credentials: 'same-origin',
