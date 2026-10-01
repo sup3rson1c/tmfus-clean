@@ -4,7 +4,9 @@
 #
 # 2026 redesign: the pages are built by `node build.mjs` from src/ and the
 # built .html files are committed, so the server needs no Node. src/, tools/,
-# docs/ and scripts/ are deliberately NOT copied.
+# docs/ and scripts/ are deliberately NOT copied. That includes the PHP
+# command-line helpers tools/hash-password.php and tools/totp-setup.php:
+# run them from the cPanel repository folder, never from public_html.
 deployment:
   tasks:
     - export DEPLOYPATH=$HOME/public_html
@@ -39,4 +41,7 @@ deployment:
     - /bin/cp -f api/lead.php            $DEPLOYPATH/api/
     - /bin/cp -f api/chat.php            $DEPLOYPATH/api/
     - /bin/cp -f api/unsubscribe.php     $DEPLOYPATH/api/
+    # admin.php's optional IP allow-list and 2FA code live here. admin.php
+    # will not start without it, so it must deploy alongside admin.php.
+    - /bin/cp -f api/admin-lock.php      $DEPLOYPATH/api/
     - /bin/cp -f api/config.example.php  $DEPLOYPATH/api/
