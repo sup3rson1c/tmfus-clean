@@ -72,6 +72,42 @@ only after the site has run on https for a week with no problems.
 To back out during step 1, comment the line out again; browsers forget
 within a day. That is why step 1 is short.
 
+## Content-Security-Policy: report-only now, enforcing after a week
+
+The site sends a security rule (Content-Security-Policy) that lists the only
+places the pages may load scripts, styles, fonts and pictures from. At launch
+it is in **report-only** mode: browsers only write a warning in their console
+when something breaks the rule, and nothing on the site is blocked. Do this
+in the same week as HSTS step 1 (it does not depend on it).
+
+1. Each day of the first week, open a few pages (home, calculator, apply,
+   contact, home equity) in Chrome. Press **F12**, click the **Console** tab,
+   then press Ctrl+F5 to reload. Look for red lines that start with
+   **[Report Only]**. Also send one test message through the contact form.
+2. If you see any, copy them and paste them to Claude with the words
+   "CSP report". Do not switch to enforcing yet. Claude fixes the rule (or the
+   page), and the week starts again.
+3. After a full week with no **[Report Only]** lines: tell the boss "switch
+   CSP to enforcing". The change is made in `build.mjs`, not in `.htaccess`
+   (the build rewrites that part of `.htaccess`, so a hand edit would be lost):
+   - set `CSP_ENFORCE = true` in `build.mjs`, run `node build.mjs`;
+   - in `scripts/verify.sh`, flip the two "Report-Only" checks under
+     "Content-Security-Policy" to expect the enforcing header;
+   - run `CSP_ENFORCE=1 node serve.mjs 3200` plus `tools/interact.mjs`,
+     `tools/audit.mjs` and `tools/prelaunch-final.mjs`: all must pass;
+   - merge, then deploy with the two cPanel buttons as in Part 2.
+4. After that deploy, open the pages again with F12. Red lines now start with
+   "Refused to" and mean something really is blocked: tell Claude at once.
+   To back out, set `CSP_ENFORCE = false` again, rebuild and deploy; it takes
+   effect on the next page load (browsers do not remember this header).
+
+Before anyone switches on Google Analytics or the Meta pixel (the `TAGS` line
+in `assets/js/engine.js`), their web addresses must be added to the CSP list
+in `build.mjs` first, or the tags will be reported (and later blocked).
+
+The admin page has its own, stricter rule that is already enforcing. It is
+not part of this and must not be changed by it.
+
 ## Good to know
 
 - The old `master` (version 43) stays in GitHub history, so going back is

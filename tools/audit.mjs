@@ -9,7 +9,7 @@
     node serve.mjs 3200
     node tools/audit.mjs
 */
-import { launch } from "./browser.mjs";
+import { launch, watchCsp } from "./browser.mjs";
 import axe from "axe-core";
 
 const PORT = process.env.PORT || "3200";
@@ -60,6 +60,11 @@ try {
   for (const path of PAGES) {
     for (const [w, h] of WIDTHS) {
       const page = await browser.newPage();
+      const csp = [];
+      await watchCsp(page);
+      // " at pptr:" is code this script injected (axe fetches stylesheets to
+      // read them), not the site; a visitor's browser never runs it.
+      page.on("console", (m) => { if (m.text().startsWith("CSP ") && !m.text().includes(" at pptr:")) csp.push(m.text()); });
       await page.setViewport({ width: w, height: h, isMobile: w < 768, hasTouch: w < 768 });
       await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
       await page.goto(BASE + path, { waitUntil: "networkidle0", timeout: 60000 });
@@ -81,6 +86,11 @@ try {
       });
 
       await page.close();
+
+      for (const item of new Set(csp)) {
+        const bucket = ((report[path] ??= {})["csp"] ??= new Map());
+        bucket.set(item, [...(bucket.get(item) ?? []), w]);
+      }
 
       if (overflow) {
         const bucket = ((report[path] ??= {})["overflow"] ??= new Map());
