@@ -348,6 +348,72 @@ else
   fail "sitemap does not exactly match the clean indexable canonical set"
 fi
 
+# SEO basics (#22): every built page has exactly one h1, a title of at most 60
+# characters and a meta description of 120-160 characters, none shared with
+# another page, and a canonical on https://tmfus.com at its clean URL. The 404
+# page is exempt from the length rules only (it is noindex and never ranked).
+if python3 - <<'PY'
+import glob, html as H, io, re, sys
+bad, titles, descs = [], {}, {}
+for f in sorted(glob.glob('*.html')):
+    s = io.open(f, encoding='utf-8').read()
+    h1 = len(re.findall(r'<h1[\s>]', s))
+    if h1 != 1:
+        bad.append('%s has %d <h1> elements' % (f, h1))
+    t = re.search(r'<title>([^<]*)</title>', s)
+    d = re.search(r'<meta name="description" content="([^"]*)">', s)
+    if not t or not t.group(1).strip():
+        bad.append('%s has no <title>' % f); continue
+    if not d or not d.group(1).strip():
+        bad.append('%s has no meta description' % f); continue
+    title, desc = H.unescape(t.group(1)), H.unescape(d.group(1))
+    if f != '404.html':
+        if len(title) > 60:
+            bad.append('%s title is %d chars (max 60)' % (f, len(title)))
+        if not 120 <= len(desc) <= 160:
+            bad.append('%s description is %d chars (want 120-160)' % (f, len(desc)))
+    titles.setdefault(title, []).append(f)
+    descs.setdefault(desc, []).append(f)
+    slug = f[:-5]
+    want = 'https://tmfus.com/' + ('' if slug == 'index' else slug)
+    if f != '404.html' and '<link rel="canonical" href="%s">' % want not in s:
+        bad.append('%s canonical is not %s' % (f, want))
+    for prop in ('og:title', 'og:description'):
+        if 'property="%s"' % prop not in s:
+            bad.append('%s is missing %s' % (f, prop))
+    for name in ('twitter:title', 'twitter:description'):
+        if 'name="%s"' % name not in s:
+            bad.append('%s is missing %s' % (f, name))
+for kind, seen in (('title', titles), ('description', descs)):
+    for value, files in seen.items():
+        if len(files) > 1:
+            bad.append('%s shared by %s' % (kind, ', '.join(files)))
+if bad:
+    print('\n'.join(bad))
+sys.exit(1 if bad else 0)
+PY
+then
+  pass "every page has one h1, a unique title (<=60) and description (120-160), canonical and social tags"
+else
+  fail "a page has the wrong h1 count or a missing, duplicate or mis-sized title/description"
+fi
+
+if grep -qx 'Disallow: /admin.php' robots.txt && grep -qx 'Disallow: /api/' robots.txt && \
+   grep -qx 'Allow: /' robots.txt && grep -qx 'Sitemap: https://tmfus.com/sitemap.xml' robots.txt; then
+  pass "robots.txt allows the site, disallows /admin.php and /api/, and points to the sitemap"
+else
+  fail "robots.txt no longer disallows /admin.php and /api/ or lost its Sitemap line"
+fi
+
+# The address is the one privacy.html and terms.html publish. Never add a phone.
+if grep -q '"@type":\["Organization","FinancialService"\]' index.html && \
+   grep -q '"streetAddress":"550 S Andrews Ave","addressLocality":"Fort Lauderdale","addressRegion":"FL","postalCode":"33301"' index.html && \
+   ! grep -q '"telephone"' ./*.html; then
+  pass "Organization + FinancialService schema carries the published address and no phone"
+else
+  fail "Organization/FinancialService schema lost its address or gained a telephone"
+fi
+
 if grep -q 'RewriteRule \^index/?\$ / \[R=301,L\]' .htaccess && \
    grep -q 'RewriteRule \^calculator(\\.html)?/?\$ /funding-estimator \[R=301,L\]' .htaccess && \
    grep -q 'RewriteRule \^cash-injection(\\.html)?/?\$ /mca \[R=301,L\]' .htaccess && \
