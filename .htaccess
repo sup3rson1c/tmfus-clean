@@ -104,6 +104,16 @@ DirectoryIndex index.html
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+
+  # HTTPS-only (HSTS). OFF until about one week after launch, once https has
+  # worked without a hiccup. Browsers remember this, so it is hard to undo:
+  # if the certificate ever lapses, visitors cannot reach the site at all.
+  # Step 1 (week 1 after launch): remove the # from the 1-day line below.
+  # Step 2 (a week later, still fine): put the # back on it and remove the #
+  # from the 1-year line. No preload and no includeSubDomains on purpose:
+  # cPanel/mail subdomains may not all have certificates.
+  # Header always set Strict-Transport-Security "max-age=86400" "expr=%{HTTPS} == 'on'"
+  # Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
 </IfModule>
 
 # ------------------------------------------------------------
