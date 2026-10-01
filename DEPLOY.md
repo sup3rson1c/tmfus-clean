@@ -36,6 +36,27 @@ boss a screenshot. Do not try again and again.
 4. Run `./scripts/compare-live.sh` to prove the new site kept every page, title,
    and form from before the deploy (exit 0 means all URLs are still 200).
 
+## After launch
+
+Do this right after cPanel says the deploy is done. It only looks at the
+site. It never fills in a form and never changes anything.
+
+1. Open **Git Bash** in the repo folder.
+2. Type `./scripts/post-launch.sh` and press Enter.
+3. Wait about 3 minutes. It checks one thing per second on purpose, so the
+   server is not bothered.
+4. Read the very bottom of the screen:
+   - **Green** "Everything important works." means you are done. Yellow
+     lines under "Worth knowing" are notes, not problems.
+   - **Red** crosses mean something is broken. It lists each problem in
+     plain words.
+5. If you see red: select everything in the Git Bash window, copy it, and
+   paste it to Claude with the words "post-launch is red". Do not deploy
+   again until Claude has looked.
+
+One line always says "HSTS: present" or "absent". That is information for
+you to decide on later, not an error.
+
 ## Good to know
 
 - The old `master` (version 43) stays in GitHub history, so going back is
