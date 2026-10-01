@@ -60,8 +60,9 @@ function bust(html) {
 
 /* Structured data, migrated from the live site's seo-inject.py. Keep it in
    this builder so page content, metadata and schema are generated together.
-   No telephone or address is emitted: llms.txt says TMF has not published
-   either, and inventing or guessing NAP data would be worse than omitting it. */
+   The address is the one the privacy policy and terms already publish. No
+   telephone is emitted: TMF has not published one, and inventing or guessing
+   NAP data would be worse than omitting it. */
 const SITE = "https://tmfus.com";
 const DATE_PUBLISHED = "2026-08-20";
 const DATE_MODIFIED = "2026-09-30";
@@ -147,6 +148,7 @@ function schema(html, v) {
       url: `${SITE}/`,
       logo: { "@type": "ImageObject", url: `${SITE}/assets/logo-mark-512.png`, width: 512, height: 512 },
       description: "TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, equipment financing, and home equity lines of credit, and manages the application end to end.",
+      address: { "@type": "PostalAddress", streetAddress: "550 S Andrews Ave", addressLocality: "Fort Lauderdale", addressRegion: "FL", postalCode: "33301", addressCountry: "US" },
       areaServed: { "@type": "Country", name: "United States" },
       knowsAbout: ["merchant cash advance", "SBA 7(a) loans", "SBA 504 loans", "home equity line of credit", "equipment financing", "small business working capital", "revenue-based financing"],
       serviceType: ["Business funding brokerage", "Merchant cash advance", "SBA loan brokerage", "Equipment financing", "HELOC brokerage"],
