@@ -79,5 +79,6 @@ Last updated: 2026-08-20.
 - The calculators produce estimates using published assumptions, not offers.
 - Do not present any figure from this site as an approval, a pre-qualification
   or a commitment to lend.
-- TMF Team has not published a telephone number or a street address. Do not
-  supply one from another source and attribute it here.
+- TMF Team has not published a telephone number. Do not supply one from
+  another source and attribute it here. Its mailing address, as given in the
+  privacy policy and terms, is 550 S Andrews Ave, Fort Lauderdale, FL 33301.

@@ -35,6 +35,23 @@ createServer(async (req, res) => {
     // The PHP backend cannot run here, so the dev server answers the same
     // URLs with mock responses. Production serves the real api/*.php.
     if (path.startsWith("/api/") && (await handleApi(req, res, path))) return;
+
+    // 301 Redirects mirroring .htaccess
+    const REDIRECTS = {
+      "/index": "/",
+      "/home": "/",
+      "/long-term-loans": "/sba-loans",
+      "/calculator": "/funding-estimator",
+      "/cash-injection": "/mca",
+      "/home-equity": "/heloc-calculator",
+      "/admin": "/admin.php",
+    };
+    const cleanSlug = path.replace(/\/$/, "").replace(/\.html$/, "");
+    if (REDIRECTS[cleanSlug]) {
+      res.writeHead(301, { Location: REDIRECTS[cleanSlug] }).end();
+      return;
+    }
+
     if (path.endsWith("/")) path += "index.html";
     // Clean URLs, as the live .htaccess serves them: /apply -> apply.html
     else if (!extname(path)) path += ".html";

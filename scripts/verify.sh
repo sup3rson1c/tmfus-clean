@@ -348,6 +348,72 @@ else
   fail "sitemap does not exactly match the clean indexable canonical set"
 fi
 
+# SEO basics (#22): every built page has exactly one h1, a title of at most 60
+# characters and a meta description of 120-160 characters, none shared with
+# another page, and a canonical on https://tmfus.com at its clean URL. The 404
+# page is exempt from the length rules only (it is noindex and never ranked).
+if python3 - <<'PY'
+import glob, html as H, io, re, sys
+bad, titles, descs = [], {}, {}
+for f in sorted(glob.glob('*.html')):
+    s = io.open(f, encoding='utf-8').read()
+    h1 = len(re.findall(r'<h1[\s>]', s))
+    if h1 != 1:
+        bad.append('%s has %d <h1> elements' % (f, h1))
+    t = re.search(r'<title>([^<]*)</title>', s)
+    d = re.search(r'<meta name="description" content="([^"]*)">', s)
+    if not t or not t.group(1).strip():
+        bad.append('%s has no <title>' % f); continue
+    if not d or not d.group(1).strip():
+        bad.append('%s has no meta description' % f); continue
+    title, desc = H.unescape(t.group(1)), H.unescape(d.group(1))
+    if f != '404.html':
+        if len(title) > 60:
+            bad.append('%s title is %d chars (max 60)' % (f, len(title)))
+        if not 120 <= len(desc) <= 160:
+            bad.append('%s description is %d chars (want 120-160)' % (f, len(desc)))
+    titles.setdefault(title, []).append(f)
+    descs.setdefault(desc, []).append(f)
+    slug = f[:-5]
+    want = 'https://tmfus.com/' + ('' if slug == 'index' else slug)
+    if f != '404.html' and '<link rel="canonical" href="%s">' % want not in s:
+        bad.append('%s canonical is not %s' % (f, want))
+    for prop in ('og:title', 'og:description'):
+        if 'property="%s"' % prop not in s:
+            bad.append('%s is missing %s' % (f, prop))
+    for name in ('twitter:title', 'twitter:description'):
+        if 'name="%s"' % name not in s:
+            bad.append('%s is missing %s' % (f, name))
+for kind, seen in (('title', titles), ('description', descs)):
+    for value, files in seen.items():
+        if len(files) > 1:
+            bad.append('%s shared by %s' % (kind, ', '.join(files)))
+if bad:
+    print('\n'.join(bad))
+sys.exit(1 if bad else 0)
+PY
+then
+  pass "every page has one h1, a unique title (<=60) and description (120-160), canonical and social tags"
+else
+  fail "a page has the wrong h1 count or a missing, duplicate or mis-sized title/description"
+fi
+
+if grep -qx 'Disallow: /admin.php' robots.txt && grep -qx 'Disallow: /api/' robots.txt && \
+   grep -qx 'Allow: /' robots.txt && grep -qx 'Sitemap: https://tmfus.com/sitemap.xml' robots.txt; then
+  pass "robots.txt allows the site, disallows /admin.php and /api/, and points to the sitemap"
+else
+  fail "robots.txt no longer disallows /admin.php and /api/ or lost its Sitemap line"
+fi
+
+# The address is the one privacy.html and terms.html publish. Never add a phone.
+if grep -q '"@type":\["Organization","FinancialService"\]' index.html && \
+   grep -q '"streetAddress":"550 S Andrews Ave","addressLocality":"Fort Lauderdale","addressRegion":"FL","postalCode":"33301"' index.html && \
+   ! grep -q '"telephone"' ./*.html; then
+  pass "Organization + FinancialService schema carries the published address and no phone"
+else
+  fail "Organization/FinancialService schema lost its address or gained a telephone"
+fi
+
 if grep -q 'RewriteRule \^index/?\$ / \[R=301,L\]' .htaccess && \
    grep -q 'RewriteRule \^calculator(\\.html)?/?\$ /funding-estimator \[R=301,L\]' .htaccess && \
    grep -q 'RewriteRule \^cash-injection(\\.html)?/?\$ /mca \[R=301,L\]' .htaccess && \
@@ -355,6 +421,105 @@ if grep -q 'RewriteRule \^index/?\$ / \[R=301,L\]' .htaccess && \
   pass "homepage duplicate and old redesign slugs have one-hop 301 rules"
 else
   fail ".htaccess is missing a homepage or old-draft-slug redirect"
+fi
+
+if python3 - <<'PY'
+import os, re, sys
+
+snapshot_file = 'scripts/live-snapshot-2026-09-30.md'
+if not os.path.exists(snapshot_file):
+    print(f"Snapshot file not found: {snapshot_file}")
+    sys.exit(1)
+
+with open(snapshot_file, 'r', encoding='utf-8') as f:
+    snapshot = f.read()
+
+with open('.htaccess', 'r', encoding='utf-8') as f:
+    ht = f.read()
+
+def parse_snapshot_urls(content):
+    urls = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith('|'):
+            continue
+        cols = [c.strip() for c in line.split('|')[1:-1]]
+        if not cols:
+            continue
+        col0 = cols[0]
+        if col0.lower() == 'url' or set(col0) <= {'-', ':'}:
+            continue
+        if col0.startswith('/'):
+            urls.append(col0)
+    return urls
+
+def is_built(url):
+    clean = url.strip('/')
+    if not clean:
+        return os.path.exists('index.html')
+    if os.path.exists(clean):
+        return True
+    if not os.path.splitext(clean)[1]:
+        return os.path.exists(clean + '.html')
+    return False
+
+def is_redirected(slug, htaccess_content):
+    slug_clean = slug.strip('/')
+    if not slug_clean:
+        return False
+    for line in htaccess_content.splitlines():
+        line = line.strip()
+        if line.startswith('#'):
+            continue
+        m = re.search(r'^RewriteRule\s+(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line, re.I)
+        if m:
+            pattern, target, flags = m.groups()
+            flags = flags or ''
+            if 'R=' in flags or 'R' in flags.split(','):
+                if pattern in ('^', '.*', '^.*$', '^/'):
+                    continue
+                try:
+                    clean_pat = pattern.lstrip('^')
+                    if re.match('^' + clean_pat, slug_clean) or re.match(pattern, slug_clean) or re.match(pattern, '/' + slug_clean):
+                        return True
+                except re.error:
+                    pass
+        m3 = re.search(r'^Redirect(?:Match)?\s+(?:301|permanent)?\s+(\S+)', line, re.I)
+        if m3:
+            red_path = m3.group(1).strip('/')
+            if red_path == slug_clean:
+                return True
+    return False
+
+urls = parse_snapshot_urls(snapshot)
+if not urls:
+    print("No snapshot URLs found in", snapshot_file)
+    sys.exit(1)
+
+unhandled = []
+for u in urls:
+    if not (is_built(u) or is_redirected(u, ht)):
+        unhandled.append(u)
+
+if unhandled:
+    print("Snapshot URLs neither built nor redirected:", unhandled)
+    sys.exit(1)
+
+sys.exit(0)
+PY
+then
+  pass "every snapshot URL is either built or redirected"
+else
+  fail "some snapshot URLs are neither built nor redirected"
+fi
+
+if [ -f 404.html ] && \
+   grep -q 'href="/apply"' 404.html && \
+   grep -q 'href="/contact"' 404.html && \
+   grep -qE 'href="/(mca|sba-loans|heloc-calculator)"' 404.html; then
+  pass "friendly 404 page exists with links to Apply, Products and Contact"
+else
+  fail "404 page is missing or lacks links to Apply, Products or Contact"
 fi
 
 # ---------------------------------------------------------------
@@ -565,6 +730,71 @@ if grep -q "'unsubscribe_dir' => ''" api/config.example.php; then
 else
   fail "config.example.php has a default unsubscribe_dir - it would land in the web root"
 fi
+
+# ---------------------------------------------------------------
+head "Security hardening (pre-launch review, Oct 2026)"
+# Each line below is an invariant established by the pre-launch security
+# review. If one fails, something that protects applicant data was undone.
+
+sec() { if eval "$2"; then pass "$1"; else fail "$1"; fi; }
+
+# --- secrets ---
+sec "api/config.php is not tracked by git (only config.example.php is)" \
+    '! git ls-files --error-unmatch api/config.php >/dev/null 2>&1'
+sec ".gitignore still lists api/config.php" 'grep -qx "api/config.php" .gitignore'
+
+# --- .htaccess ---
+sec ".htaccess turns directory listing off" 'grep -q "^Options -Indexes" .htaccess'
+sec ".htaccess denies config.php and config.example.php" \
+    'grep -qF "<FilesMatch \"^(config\.php|config\.example\.php)$\">" .htaccess'
+sec ".htaccess denies dotfiles, .json, .log, .sh, .md" \
+    'grep -qF "<FilesMatch \"^\.|\.(md|py|sh|json|lock|yml|yaml|zip|log|bak|mjs|gs)$\">" .htaccess'
+sec ".htaccess denies cPanel's extension-less error_log and csv/jsonl/sql/env/ini leftovers" \
+    'grep -qF "(^error_log$|\.(csv|jsonl|sql|env|ini|" .htaccess'
+sec ".htaccess denies key files and encrypted applications" \
+    'grep -qF "\.(pem|key|crt|p12|pfx)$" .htaccess && grep -qF "\.enc\.json$" .htaccess'
+sec ".htaccess hides /api/uploads (bank statements fallback)" \
+    'grep -qF "RedirectMatch 404 ^/api/uploads(/.*)?$" .htaccess'
+sec ".htaccess hides src/tools/docs/scripts" \
+    'grep -qF "RedirectMatch 404 ^/(src|tools|docs|scripts|node_modules)(/.*)?$" .htaccess'
+
+# --- admin.php session and CSRF ---
+# has <file> <literal text> — plain fixed-string grep, no shell expansion.
+has() { grep -qF -- "$2" "$1"; }
+chk() { if "${@:2}"; then pass "$1"; else fail "$1"; fi; }
+chk "admin session cookie is HttpOnly"                 has admin.php "'httponly' => true,"
+chk "admin session cookie is SameSite=Strict"          has admin.php "'samesite' => 'Strict',"
+chk "admin session cookie is Secure over HTTPS"        has admin.php "'secure'   => \$https,"
+chk "admin session cookie uses the __Host- prefix over HTTPS" has admin.php "'__Host-' . SESSION_NAME"
+chk "admin refuses to run over plain HTTP (except localhost)" has admin.php 'This page needs HTTPS'
+chk "admin uses strict session mode (no adopted session ids)" has admin.php "ini_set('session.use_strict_mode', '1');"
+chk "admin regenerates the session id on login"        has admin.php 'session_regenerate_id(true);'
+chk "admin login is throttled per IP"                  has admin.php 'count($hits) >= LOGIN_PER_HOUR'
+chk "admin logout expires the cookie"                  has admin.php "setcookie(session_name(), ''"
+chk "admin chat actions compare a CSRF token with hash_equals" has admin.php "hash_equals((string) \$_SESSION['csrf'], \$sent)"
+chk "admin chat actions are POST only"                 has admin.php "(\$_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'"
+chk "the admin page sends the CSRF token with chat actions" has admin.php "body.set('csrf', CSRF);"
+chk "admin sends a nonce-based Content-Security-Policy" has admin.php "script-src 'nonce-"
+if grep -qE '<script>|<script [^n>]' admin.php; then fail "admin.php has a <script> without the CSP nonce — it will not run"; else pass "every <script> in admin.php carries the CSP nonce"; fi
+if grep -qE ' on(click|load|error|submit|change|input)=' admin.php; then fail "admin.php has an inline event handler — the CSP blocks it"; else pass "admin.php has no inline event handlers"; fi
+chk "admin escapes field labels as well as values"     has admin.php 'esc(pretty(k))'
+chk "admin only draws a PNG data: URL as the signature" has admin.php 'data:image\/png;base64,'
+
+# --- endpoints ---
+for f in admin.php api/application.php api/lead.php api/unsubscribe.php api/chat.php api/figure-heloc.php; do
+  chk "$f never prints PHP errors to the browser" has "$f" "ini_set('display_errors', '0');"
+done
+if has api/application.php "preg_replace('/[\x00-\x1F\x7F]+/u', ' ', \$business)" && \
+   ! has api/application.php "' — ' . \$business,"; then
+  pass "application.php strips line breaks from the business name before it reaches the mail Subject"
+else
+  fail "application.php may put raw applicant text in a mail header (header injection)"
+fi
+chk "application.php checks upload type from the bytes (finfo), not the name" has api/application.php 'new finfo(FILEINFO_MIME_TYPE)'
+chk "lead.php neutralises spreadsheet formulas in the CSV" has api/lead.php 'return "'"'"'" . $cell;'
+for f in api/application.php api/lead.php api/unsubscribe.php; do
+  chk "$f rate-limits per IP" has "$f" 'RATE_PER_HOUR'
+done
 
 if [ $FAIL -eq 0 ]; then
   printf '\033[32mAll invariants hold.\033[0m\n'

@@ -5774,13 +5774,19 @@ color: var(--red);
 min-height: 80svh;
 display: grid;
 align-content: center;
-padding-top: var(--header-h);
+padding-block: calc(var(--header-h) + clamp(24px, 4vw, 48px)) clamp(56px, 6vw, 96px);
 }
 .lost__code {
 color: #3a4841;
 font: 620 clamp(6rem, 4rem + 12vw, 14rem) / 0.9 var(--font-display);
 font-stretch: 125%;
 letter-spacing: -0.04em;
+}
+.lost__products {
+margin-top: clamp(40px, 5vw, 64px);
+}
+.lost__subtitle {
+margin-bottom: var(--s-4);
 }
 .heloc-handoff {
 display: grid;

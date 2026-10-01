@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=143e736c98">
+<link rel="stylesheet" href="/assets/css/site.css?v=1852f12514">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -50,7 +50,7 @@
     }, 4500);
   }
 })(document.documentElement);</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["Organization","FinancialService"],"@id":"https://tmfus.com/#organization","name":"TMF Team","alternateName":"TMF Team Capital Strategy","url":"https://tmfus.com/","logo":{"@type":"ImageObject","url":"https://tmfus.com/assets/logo-mark-512.png","width":512,"height":512},"description":"TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, equipment financing, and home equity lines of credit, and manages the application end to end.","areaServed":{"@type":"Country","name":"United States"},"knowsAbout":["merchant cash advance","SBA 7(a) loans","SBA 504 loans","home equity line of credit","equipment financing","small business working capital","revenue-based financing"],"serviceType":["Business funding brokerage","Merchant cash advance","SBA loan brokerage","Equipment financing","HELOC brokerage"]},{"@type":"WebSite","@id":"https://tmfus.com/#website","url":"https://tmfus.com/","name":"TMF Team","publisher":{"@id":"https://tmfus.com/#organization"},"inLanguage":"en-US"},{"@type":"WebPage","@id":"https://tmfus.com/404#webpage","url":"https://tmfus.com/404","name":"Page not found · TMF Team","description":"That page took a wrong turn. Your funding options are still one click away.","isPartOf":{"@id":"https://tmfus.com/#website"},"about":{"@id":"https://tmfus.com/#organization"},"datePublished":"2026-08-20","dateModified":"2026-09-30","inLanguage":"en-US"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["Organization","FinancialService"],"@id":"https://tmfus.com/#organization","name":"TMF Team","alternateName":"TMF Team Capital Strategy","url":"https://tmfus.com/","logo":{"@type":"ImageObject","url":"https://tmfus.com/assets/logo-mark-512.png","width":512,"height":512},"description":"TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, equipment financing, and home equity lines of credit, and manages the application end to end.","address":{"@type":"PostalAddress","streetAddress":"550 S Andrews Ave","addressLocality":"Fort Lauderdale","addressRegion":"FL","postalCode":"33301","addressCountry":"US"},"areaServed":{"@type":"Country","name":"United States"},"knowsAbout":["merchant cash advance","SBA 7(a) loans","SBA 504 loans","home equity line of credit","equipment financing","small business working capital","revenue-based financing"],"serviceType":["Business funding brokerage","Merchant cash advance","SBA loan brokerage","Equipment financing","HELOC brokerage"]},{"@type":"WebSite","@id":"https://tmfus.com/#website","url":"https://tmfus.com/","name":"TMF Team","publisher":{"@id":"https://tmfus.com/#organization"},"inLanguage":"en-US"},{"@type":"WebPage","@id":"https://tmfus.com/404#webpage","url":"https://tmfus.com/404","name":"Page not found · TMF Team","description":"That page took a wrong turn. Your funding options are still one click away.","isPartOf":{"@id":"https://tmfus.com/#website"},"about":{"@id":"https://tmfus.com/#organization"},"datePublished":"2026-08-20","dateModified":"2026-09-30","inLanguage":"en-US"}]}</script>
 </head>
 <body class="page-404">
     <!-- Opening loader: the dial mark strokes itself on, then lifts away.
@@ -144,11 +144,37 @@
     <h1 class="h1" id="page-title">That page took a wrong turn.</h1>
     <p class="lede">The link may be outdated, or the address mistyped. Your funding options are still one click away.</p>
     <div class="page-hero__actions">
-      <a class="btn btn--primary btn--lg" href="/funding-estimator">See what you qualify for</a>
+      <a class="btn btn--primary btn--lg" href="/apply">Apply now</a>
+      <a class="btn btn--ghost btn--lg" href="/contact">Talk to a specialist</a>
       <a class="btn btn--ghost btn--lg" href="/">Back to home</a>
+    </div>
+
+    <div class="lost__products">
+      <h2 class="h3 lost__subtitle">Explore our products</h2>
+      <div class="tiles tiles--3">
+        <div class="card tile">
+          <span class="tile__k">Revenue-based</span>
+          <h3 class="h4">Cash injection (MCA)</h3>
+          <p class="small muted">$5K–$2M with remittances aligned to card and bank receipts. Decisions in 3–24 hours.</p>
+          <a class="link-arrow" href="/mca">Explore cash injection <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+        <div class="card tile">
+          <span class="tile__k">Government-backed</span>
+          <h3 class="h4">SBA loans</h3>
+          <p class="small muted">SBA 7(a) and 504 loans up to $5.5M for working capital, acquisitions, and property.</p>
+          <a class="link-arrow" href="/sba-loans">Explore SBA loans <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+        <div class="card tile">
+          <span class="tile__k">Home equity</span>
+          <h3 class="h4">Home equity (HELOC)</h3>
+          <p class="small muted">$25K–$750K line against personal home equity with an offer inside the hour.</p>
+          <a class="link-arrow" href="/heloc-calculator">Explore HELOC <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        </div>
+      </div>
     </div>
   </div>
 </section>
+
 
 </main>
 <footer class="site-footer">
@@ -218,7 +244,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
 <script src="/assets/js/site.js?v=09d2060b10" defer></script>
-<script src="/assets/js/engine.js?v=c54652d5b9" defer></script>
+<script src="/assets/js/engine.js?v=a9c407aa38" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
     <script src="/assets/js/motion.js?v=7aeebac17a" defer></script>
   

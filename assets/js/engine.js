@@ -2061,7 +2061,7 @@
       for (const el of scope) {
         const key = el.getAttribute('data-field');
         const val = (el.value || '').trim();
-        const optional = key === 'amount_requested';
+        const optional = key === 'amount_requested' || key === 'product';
         const label = (el.closest('.field') && $('.field-label', el.closest('.field')));
         const name = label ? label.textContent.replace(' *', '').trim() : 'this field';
 

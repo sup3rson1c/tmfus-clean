@@ -30,6 +30,10 @@ declare(strict_types=1);
  *   { kind, page, submittedAt, referrer, data: { ... } }
  */
 
+/* Security review 2026-10: a PHP warning printed into the response would
+   carry server file paths. They go to the error log instead. */
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -221,6 +225,27 @@ foreach (CSV_COLUMNS as $col) {
     }
 }
 $row[] = $extras === [] ? '' : json_encode($extras, JSON_UNESCAPED_SLASHES);
+
+/* CSV formula injection (security review 2026-10). This file is opened in
+   Excel with a double-click, and every cell was typed by a stranger. A cell
+   that starts with = @ + - (or a tab / carriage return) is run as a formula,
+   which can pull data out of the sheet or launch commands via DDE. Such a
+   cell gets a leading apostrophe so Excel shows it as text. A plain phone
+   number like +1 (555) 123-4567 or a negative number is left alone. */
+$row = array_map(static function ($cell): string {
+    $cell = (string) $cell;
+    if ($cell === '') {
+        return $cell;
+    }
+    $first = $cell[0];
+    if ($first === '=' || $first === '@' || $first === "\t" || $first === "\r") {
+        return "'" . $cell;
+    }
+    if (($first === '+' || $first === '-') && !preg_match('/^[+\-]?[0-9 ().\-]+$/', $cell)) {
+        return "'" . $cell;
+    }
+    return $cell;
+}, $row);
 
 $fh = @fopen($csvPath, 'a');
 if ($fh !== false) {
