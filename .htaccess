@@ -29,6 +29,7 @@ DirectoryIndex index.html
   RewriteRule ^index/?$ / [R=301,L]
   RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
   RewriteRule ^index\.html$ / [R=301,L]
+  RewriteRule ^home(\.html)?/?$ / [R=301,L]
 
   # 2c. The term-loans page was replaced by the SBA page. This must come
   #     before the rules below: rule 4 would otherwise rewrite
@@ -42,6 +43,7 @@ DirectoryIndex index.html
   RewriteRule ^calculator(\.html)?/?$ /funding-estimator [R=301,L]
   RewriteRule ^cash-injection(\.html)?/?$ /mca [R=301,L]
   RewriteRule ^home-equity(\.html)?/?$ /heloc-calculator [R=301,L]
+  RewriteRule ^admin/?$ /admin.php [R=301,L]
 
   # 3. Strip .html so /heloc-calculator works as a URL.
   #    Existing .html URLs redirect to the clean version so you

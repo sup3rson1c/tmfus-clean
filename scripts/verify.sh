@@ -357,6 +357,105 @@ else
   fail ".htaccess is missing a homepage or old-draft-slug redirect"
 fi
 
+if python3 - <<'PY'
+import os, re, sys
+
+snapshot_file = 'scripts/live-snapshot-2026-09-30.md'
+if not os.path.exists(snapshot_file):
+    print(f"Snapshot file not found: {snapshot_file}")
+    sys.exit(1)
+
+with open(snapshot_file, 'r', encoding='utf-8') as f:
+    snapshot = f.read()
+
+with open('.htaccess', 'r', encoding='utf-8') as f:
+    ht = f.read()
+
+def parse_snapshot_urls(content):
+    urls = []
+    for line in content.splitlines():
+        line = line.strip()
+        if not line.startswith('|'):
+            continue
+        cols = [c.strip() for c in line.split('|')[1:-1]]
+        if not cols:
+            continue
+        col0 = cols[0]
+        if col0.lower() == 'url' or set(col0) <= {'-', ':'}:
+            continue
+        if col0.startswith('/'):
+            urls.append(col0)
+    return urls
+
+def is_built(url):
+    clean = url.strip('/')
+    if not clean:
+        return os.path.exists('index.html')
+    if os.path.exists(clean):
+        return True
+    if not os.path.splitext(clean)[1]:
+        return os.path.exists(clean + '.html')
+    return False
+
+def is_redirected(slug, htaccess_content):
+    slug_clean = slug.strip('/')
+    if not slug_clean:
+        return False
+    for line in htaccess_content.splitlines():
+        line = line.strip()
+        if line.startswith('#'):
+            continue
+        m = re.search(r'^RewriteRule\s+(\S+)\s+(\S+)(?:\s+\[(.*)\])?', line, re.I)
+        if m:
+            pattern, target, flags = m.groups()
+            flags = flags or ''
+            if 'R=' in flags or 'R' in flags.split(','):
+                if pattern in ('^', '.*', '^.*$', '^/'):
+                    continue
+                try:
+                    clean_pat = pattern.lstrip('^')
+                    if re.match('^' + clean_pat, slug_clean) or re.match(pattern, slug_clean) or re.match(pattern, '/' + slug_clean):
+                        return True
+                except re.error:
+                    pass
+        m3 = re.search(r'^Redirect(?:Match)?\s+(?:301|permanent)?\s+(\S+)', line, re.I)
+        if m3:
+            red_path = m3.group(1).strip('/')
+            if red_path == slug_clean:
+                return True
+    return False
+
+urls = parse_snapshot_urls(snapshot)
+if not urls:
+    print("No snapshot URLs found in", snapshot_file)
+    sys.exit(1)
+
+unhandled = []
+for u in urls:
+    if not (is_built(u) or is_redirected(u, ht)):
+        unhandled.append(u)
+
+if unhandled:
+    print("Snapshot URLs neither built nor redirected:", unhandled)
+    sys.exit(1)
+
+sys.exit(0)
+PY
+then
+  pass "every snapshot URL is either built or redirected"
+else
+  fail "some snapshot URLs are neither built nor redirected"
+fi
+
+if [ -f 404.html ] && \
+   grep -q 'href="/apply"' 404.html && \
+   grep -q 'href="/contact"' 404.html && \
+   grep -qE 'href="/(mca|sba-loans|heloc-calculator)"' 404.html; then
+  pass "friendly 404 page exists with links to Apply, Products and Contact"
+else
+  fail "404 page is missing or lacks links to Apply, Products or Contact"
+fi
+
 # ---------------------------------------------------------------
 head "Chat launcher"
 # There used to be two buttons in the bottom-right corner: the real one,
