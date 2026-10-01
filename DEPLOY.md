@@ -57,6 +57,21 @@ site. It never fills in a form and never changes anything.
 One line always says "HSTS: present" or "absent". That is information for
 you to decide on later, not an error.
 
+## HTTPS-only (HSTS): one week after launch
+
+Decided 1 Oct 2026 (John left it to Claude): turn it on in two small steps,
+only after the site has run on https for a week with no problems.
+
+1. One week after launch: in `.htaccess`, find the two `Strict-Transport-Security`
+   lines near "Basic hardening". Remove the `#` from the `max-age=86400` line
+   (1 day). Commit, deploy, run `./scripts/post-launch.sh`: it should say
+   "HSTS: present".
+2. One more week later, if nothing broke: put the `#` back on the 1-day line
+   and remove it from the `max-age=31536000` line (1 year). Deploy again.
+
+To back out during step 1, comment the line out again; browsers forget
+within a day. That is why step 1 is short.
+
 ## Good to know
 
 - The old `master` (version 43) stays in GitHub history, so going back is
