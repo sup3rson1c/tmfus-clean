@@ -100,6 +100,15 @@ video {
 img {
   height: auto;
 }
+/* <picture class="pic"> only offers an AVIF twin of the <img> inside it. It
+   generates no box, so the <img> lays out exactly as if it stood alone. */
+.pic {
+  display: contents;
+}
+/* ...and its <source> must not become a stray grid or flex item either. */
+.pic > source {
+  display: none;
+}
 button,
 input,
 select,
