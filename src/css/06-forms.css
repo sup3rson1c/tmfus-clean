@@ -395,7 +395,7 @@ legend.label {
   align-items: baseline;
   gap: 0 10px;
   color: var(--banknote);
-  font: 500 clamp(1.625rem, 1rem + 1.6vw, 2.375rem) / 1.1 var(--font-mono);
+  font: 500 clamp(1.375rem, 0.9rem + 1.6vw, 2.375rem) / 1.1 var(--font-mono);
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
