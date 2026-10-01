@@ -14,7 +14,7 @@ rules still apply. Where this section contradicts it, this section wins.
 |---|---|
 | Hand-written `*.html`, no build | `src/pages` + `src/partials` + `src/css` → `node build.mjs` → flat `*.html` at the root. **Never edit the root `.html` files.** |
 | `assets/app.js` | `assets/js/engine.js`, **generated** by `python tools/vendor-engine.py` from the live `app.js`. Never edit it by hand. |
-| `assets/styles.css` | `assets/css/site.css`, concatenated from `src/css/*.css` by the build |
+| `assets/styles.css` | `assets/css/site.css`, concatenated from `src/css/*.css` by the build, comments and indentation stripped (edit `src/css`, never the built file) |
 | Bump `?v=N` in every page | **Gone.** The build stamps `?v=<sha1 of the file>` on every asset link. `verify.sh` fails if a stamp is stale. |
 | One calculator in `app.js` | The UI is `assets/js/calculator.js` (new design). It calls `window.TMFEngine.estimateAdvance / matchProducts / sendLead` — the live formula, one copy only. `verify.sh` fails if calculator.js grows its own formula. |
 
@@ -34,6 +34,17 @@ python tools/vendor-engine.py   # after any change to the live app.js
 
 `serve.mjs` answers `/api/*.php` from `tools/api-mock.mjs` (there is no PHP on
 this machine). The chat mock speaks the real protocol in "message" mode.
+
+## Images (issue #23)
+
+Every WebP a page shows may have an `.avif` twin next to it, made by
+`node tools/avif.mjs` at the lowest quality within 42 dB of the WebP (and only
+where it saves 12% or more). Pages offer it as
+`<picture class="pic"><source type="image/avif" ...><img ...webp></picture>`;
+`.pic` is `display: contents`, so the `<img>` lays out as if it stood alone and
+existing `img` selectors keep working. After adding or replacing an image in
+`src/`, run `node tools/avif.mjs` and wrap the new `<img>` the same way.
+`node tools/weight.mjs` measures every page's transfer weight.
 
 ## Patches applied to the engine (tools/vendor-engine.py)
 

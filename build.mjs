@@ -12,7 +12,8 @@
 
   {{> name}} includes src/partials/name.html (recursively), {{key}} is replaced
   with a meta value. CSS files in src/css are concatenated, in filename order,
-  into assets/css/site.css. JS is authored directly in assets/js.
+  into assets/css/site.css, comments stripped (see slim()). JS is authored
+  directly in assets/js.
 */
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -34,13 +35,48 @@ function include(html, depth = 0) {
   });
 }
 
+/* Strip comments and indentation from the built stylesheet (issue #23, page
+   weight: about a quarter of site.css was notes for the next developer). The
+   notes stay in src/css, which is what anyone edits. Deliberately not a real
+   minifier: line breaks stay, one rule per line as written, so `grep ^.foo`
+   still works and a declaration's value is never touched. Quoted strings are
+   copied verbatim, so a "/*" inside content: or a data: URI survives. */
+function slim(text) {
+  let out = "";
+  for (let i = 0; i < text.length; ) {
+    const c = text[i];
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < text.length && text[j] !== c) j += text[j] === "\\" ? 2 : 1;
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else if (c === "/" && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2);
+      if (end < 0) throw new Error("unterminated CSS comment");
+      // a/**/b must not become ab
+      if (/\S/.test(out.slice(-1)) && /\S/.test(text[end + 2] ?? "")) out += " ";
+      i = end + 2;
+    } else {
+      out += c;
+      i += 1;
+    }
+  }
+  return out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n") + "\n";
+}
+
 // Stylesheet
 const cssDir = join(SRC, "css");
-const css = readdirSync(cssDir)
-  .filter((f) => f.endsWith(".css"))
-  .sort()
-  .map((f) => `/* ${f} */\n${read(join(cssDir, f))}`)
-  .join("\n");
+const css = slim(
+  readdirSync(cssDir)
+    .filter((f) => f.endsWith(".css"))
+    .sort()
+    .map((f) => read(join(cssDir, f)))
+    .join("\n")
+);
 mkdirSync(join(ROOT, "assets", "css"), { recursive: true });
 writeFileSync(join(ROOT, "assets", "css", "site.css"), css);
 console.log(`built /assets/css/site.css (${(css.length / 1024).toFixed(1)} KB)`);

@@ -26,7 +26,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=37c6d16ed0">
+<link rel="stylesheet" href="/assets/css/site.css?v=1852f12514">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -144,7 +144,9 @@
         <div class="hero__plane" data-plane="plate">
           <div class="hero__layer">
             <picture>
+              <source type="image/avif" media="(max-width: 767px)" srcset="/assets/img/m4b-hero-plate-768.avif 768w, /assets/img/m4b-hero-plate-1152.avif 1152w, /assets/img/m4b-hero-plate-1520.avif 1520w" sizes="135vw" width="1520" height="2688">
               <source media="(max-width: 767px)" srcset="/assets/img/m4b-hero-plate-768.webp 768w, /assets/img/m4b-hero-plate-1152.webp 1152w, /assets/img/m4b-hero-plate-1520.webp 1520w" sizes="135vw" width="1520" height="2688">
+              <source type="image/avif" srcset="/assets/img/m2-hero-plate-1280.avif 1280w, /assets/img/m2-hero-plate-1920.avif 1920w, /assets/img/m2-hero-plate-2688.avif 2688w" sizes="(min-width: 1024px) max(135vw, 210svh), 150vw">
               <img class="hero__plate" src="/assets/img/m2-hero-plate-1920.webp" srcset="/assets/img/m2-hero-plate-1280.webp 1280w, /assets/img/m2-hero-plate-1920.webp 1920w, /assets/img/m2-hero-plate-2688.webp 2688w" sizes="(min-width: 1024px) max(135vw, 210svh), 150vw" width="2688" height="1520" alt="" fetchpriority="high" decoding="async">
             </picture>
             <span class="hero__exposure"></span>
@@ -187,7 +189,7 @@
     </div>
     <div class="hero__scrim" aria-hidden="true"></div>
     <div class="hero__slab" aria-hidden="true">
-      <img src="/assets/img/m5-slab-1440.webp" srcset="/assets/img/m5-slab-1440.webp 1440w, /assets/img/m5-slab-2160.webp 2160w, /assets/img/m5-slab-2688.webp 2688w" sizes="104vw" width="2688" height="1152" alt="" decoding="async">
+      <picture class="pic"><source type="image/avif" srcset="/assets/img/m5-slab-1440.avif 1440w, /assets/img/m5-slab-2160.avif 2160w, /assets/img/m5-slab-2688.avif 2688w" sizes="104vw"><img src="/assets/img/m5-slab-1440.webp" srcset="/assets/img/m5-slab-1440.webp 1440w, /assets/img/m5-slab-2160.webp 2160w, /assets/img/m5-slab-2688.webp 2688w" sizes="104vw" width="2688" height="1152" alt="" decoding="async"></picture>
     </div>
 
     <div class="hero__copy">
@@ -238,15 +240,16 @@
 
   <div class="film__stage" data-film-stage>
     <canvas class="film__canvas" data-film-canvas aria-hidden="true"></canvas>
-    <img
+    <picture class="pic"><source type="image/avif" srcset="/media/film/k1.avif"><img
       class="film__poster"
       data-film-poster
       src="/media/film/k1.webp"
       alt=""
       width="2048"
       height="1143"
+      loading="lazy"
       decoding="async"
-    />
+    /></picture>
     <div class="film__veil" aria-hidden="true"></div>
     <!-- The funded total. Rendered here rather than baked into the footage:
          the video model animates a split-flap board arbitrarily (it counted
@@ -267,27 +270,27 @@
 
   <ol class="film__board" data-film-board>
     <li>
-      <img src="/media/film/k1.webp" srcset="/media/film/k1-640.webp 640w, /media/film/k1-960.webp 960w, /media/film/k1-1280.webp 1280w, /media/film/k1.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A business owner at a desk, filling out an application on screen." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k1-640.avif 640w, /media/film/k1-960.avif 960w, /media/film/k1-1280.avif 1280w, /media/film/k1.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k1.webp" srcset="/media/film/k1-640.webp 640w, /media/film/k1-960.webp 960w, /media/film/k1-1280.webp 1280w, /media/film/k1.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A business owner at a desk, filling out an application on screen." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>One application. Revenue, time in business, what you already owe.</span>
     </li>
     <li>
-      <img src="/media/film/k3.webp" srcset="/media/film/k3-640.webp 640w, /media/film/k3-960.webp 960w, /media/film/k3-1280.webp 1280w, /media/film/k3.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="The application resolving into an engraved steel disc inside the TMF system." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k3-640.webp 640w, /media/film/k3-960.webp 960w, /media/film/k3-1280.avif 1280w, /media/film/k3.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k3.webp" srcset="/media/film/k3-640.webp 640w, /media/film/k3-960.webp 960w, /media/film/k3-1280.webp 1280w, /media/film/k3.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="The application resolving into an engraved steel disc inside the TMF system." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>It comes to us, not to a lender. Nothing touches your credit file.</span>
     </li>
     <li>
-      <img src="/media/film/k5.webp" srcset="/media/film/k5-640.webp 640w, /media/film/k5-960.webp 960w, /media/film/k5-1280.webp 1280w, /media/film/k5.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="Five figures in suits around a table, discussing the file between them." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k5-640.avif 640w, /media/film/k5-960.avif 960w, /media/film/k5-1280.avif 1280w, /media/film/k5.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k5.webp" srcset="/media/film/k5-640.webp 640w, /media/film/k5-960.webp 960w, /media/film/k5-1280.webp 1280w, /media/film/k5.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="Five figures in suits around a table, discussing the file between them." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>Several funders send offers for your file.</span>
     </li>
     <li>
-      <img src="/media/film/k-seal.webp" srcset="/media/film/k-seal-640.webp 640w, /media/film/k-seal-960.webp 960w, /media/film/k-seal-1280.webp 1280w, /media/film/k-seal.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="The approval seal stamped in ink on the lower corner of the document." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k-seal-640.avif 640w, /media/film/k-seal-960.avif 960w, /media/film/k-seal-1280.avif 1280w, /media/film/k-seal.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k-seal.webp" srcset="/media/film/k-seal-640.webp 640w, /media/film/k-seal-960.webp 960w, /media/film/k-seal-1280.webp 1280w, /media/film/k-seal.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="The approval seal stamped in ink on the lower corner of the document." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>The funder approves it. Not us — we are the brokerage.</span>
     </li>
     <li>
-      <img src="/media/film/k-signed.webp" srcset="/media/film/k-signed-640.webp 640w, /media/film/k-signed-960.webp 960w, /media/film/k-signed-1280.webp 1280w, /media/film/k-signed.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A hand signing the same document with a pen, next to the seal." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k-signed-640.avif 640w, /media/film/k-signed-960.avif 960w, /media/film/k-signed-1280.avif 1280w, /media/film/k-signed.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k-signed.webp" srcset="/media/film/k-signed-640.webp 640w, /media/film/k-signed-960.webp 960w, /media/film/k-signed-1280.webp 1280w, /media/film/k-signed.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A hand signing the same document with a pen, next to the seal." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>You sign only once you have seen the full cost.</span>
     </li>
     <li>
-      <img src="/media/film/k-funded.webp" srcset="/media/film/k-funded-640.webp 640w, /media/film/k-funded-960.webp 960w, /media/film/k-funded-1280.webp 1280w, /media/film/k-funded.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A steel syringe full of glowing banknotes and coins, its needle in the side of a safe." width="2048" height="1143" loading="lazy" decoding="async" />
+      <picture class="pic"><source type="image/avif" srcset="/media/film/k-funded-640.webp 640w, /media/film/k-funded-960.webp 960w, /media/film/k-funded-1280.avif 1280w, /media/film/k-funded.avif 2048w" sizes="(min-width: 768px) 34vw, 100vw"><img src="/media/film/k-funded.webp" srcset="/media/film/k-funded-640.webp 640w, /media/film/k-funded-960.webp 960w, /media/film/k-funded-1280.webp 1280w, /media/film/k-funded.webp 2048w" sizes="(min-width: 768px) 34vw, 100vw" alt="A steel syringe full of glowing banknotes and coins, its needle in the side of a safe." width="2048" height="1143" loading="lazy" decoding="async" /></picture>
       <span>Funds land in your account, usually within 24–48 hours.</span>
     </li>
   </ol>
@@ -341,7 +344,7 @@
             <span class="statement__cell"><span class="sr-only">Term: </span>10–25 years</span>
             <span class="statement__cell"><span class="sr-only">Decision: </span>30–90 days</span>
             <span class="statement__fit"><span class="sr-only">Best for: </span>The lowest rates, if you can wait for them</span>
-            <img class="statement__thumb" src="/assets/img/a3-sba-480.webp" width="480" height="600" alt="" loading="lazy" decoding="async">
+            <picture class="pic"><source type="image/avif" srcset="/assets/img/a3-sba-480.avif"><img class="statement__thumb" src="/assets/img/a3-sba-480.webp" width="480" height="600" alt="" loading="lazy" decoding="async"></picture>
             <svg class="statement__go" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </li>
@@ -352,7 +355,7 @@
             <span class="statement__cell"><span class="sr-only">Term: </span>10–30 years</span>
             <span class="statement__cell"><span class="sr-only">Decision: </span>Offer inside the hour</span>
             <span class="statement__fit"><span class="sr-only">Best for: </span>Owners with home equity and time for a cheaper rate</span>
-            <img class="statement__thumb" src="/assets/img/a4-home-equity-480.webp" width="480" height="600" alt="" loading="lazy" decoding="async">
+            <picture class="pic"><source type="image/avif" srcset="/assets/img/a4-home-equity-480.avif"><img class="statement__thumb" src="/assets/img/a4-home-equity-480.webp" width="480" height="600" alt="" loading="lazy" decoding="async"></picture>
             <svg class="statement__go" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </li>
@@ -363,7 +366,7 @@
             <span class="statement__cell"><span class="sr-only">Term: </span>Revolving</span>
             <span class="statement__cell"><span class="sr-only">Decision: </span>Varies by funder</span>
             <span class="statement__fit"><span class="sr-only">Best for: </span>Drawing what you need, and paying only for what you use</span>
-            <img class="statement__thumb" src="/assets/img/a5-line-of-credit-480.webp" width="480" height="480" alt="" loading="lazy" decoding="async">
+            <picture class="pic"><source type="image/avif" srcset="/assets/img/a5-line-of-credit-480.avif"><img class="statement__thumb" src="/assets/img/a5-line-of-credit-480.webp" width="480" height="480" alt="" loading="lazy" decoding="async"></picture>
             <svg class="statement__go" width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
         </li>
@@ -412,7 +415,7 @@
     <div class="container hours__grid">
       <div class="hours__dial-wrap">
         <div class="clock" data-clock-dial>
-          <img class="clock__plate" src="/assets/img/m6-dial-plate-1080.webp" srcset="/assets/img/m6-dial-plate-720.webp 720w, /assets/img/m6-dial-plate-1080.webp 1080w, /assets/img/m6-dial-plate-1440.webp 1440w" sizes="(min-width: 1024px) min(72svh, 44vw, 640px), min(64vw, 320px)" width="1440" height="1440" alt="" loading="lazy" decoding="async">
+          <picture class="pic"><source type="image/avif" srcset="/assets/img/m6-dial-plate-720.avif 720w, /assets/img/m6-dial-plate-1080.avif 1080w, /assets/img/m6-dial-plate-1440.avif 1440w" sizes="(min-width: 1024px) min(72svh, 44vw, 640px), min(64vw, 320px)"><img class="clock__plate" src="/assets/img/m6-dial-plate-1080.webp" srcset="/assets/img/m6-dial-plate-720.webp 720w, /assets/img/m6-dial-plate-1080.webp 1080w, /assets/img/m6-dial-plate-1440.webp 1440w" sizes="(min-width: 1024px) min(72svh, 44vw, 640px), min(64vw, 320px)" width="1440" height="1440" alt="" loading="lazy" decoding="async"></picture>
           <canvas class="clock__cut" aria-hidden="true"></canvas>
           <svg class="clock__ring" viewBox="-250 -250 500 500" aria-hidden="true" focusable="false"></svg>
           <p class="clock__readout" aria-hidden="true"><span class="clock__hour" data-clock-hour>48h</span><span class="clock__label" data-clock-label>From apply to funds</span></p>
@@ -551,7 +554,7 @@
 
 <section class="security" aria-labelledby="security-title">
   <div class="security__media" aria-hidden="true">
-    <img src="/assets/img/a7-security-1600.webp" srcset="/assets/img/a7-security-1080.webp 1080w, /assets/img/a7-security-1600.webp 1600w, /assets/img/a7-security-2400.webp 2400w" sizes="100vw" width="2400" height="1357" alt="" loading="lazy" decoding="async">
+    <picture class="pic"><source type="image/avif" srcset="/assets/img/a7-security-1080.webp 1080w, /assets/img/a7-security-1600.avif 1600w, /assets/img/a7-security-2400.avif 2400w" sizes="100vw"><img src="/assets/img/a7-security-1600.webp" srcset="/assets/img/a7-security-1080.webp 1080w, /assets/img/a7-security-1600.webp 1600w, /assets/img/a7-security-2400.webp 2400w" sizes="100vw" width="2400" height="1357" alt="" loading="lazy" decoding="async"></picture>
   </div>
   <div class="container security__inner">
     <div class="security__head">
@@ -638,7 +641,7 @@
 
 <section class="cta" aria-labelledby="cta-title">
   <div class="cta__media" aria-hidden="true">
-    <img src="/assets/img/a9-cta-horizon-1600.webp" srcset="/assets/img/a9-cta-horizon-1080.webp 1080w, /assets/img/a9-cta-horizon-1600.webp 1600w, /assets/img/a9-cta-horizon-2400.webp 2400w" sizes="100vw" width="2400" height="1029" alt="" loading="lazy" decoding="async">
+    <picture class="pic"><source type="image/avif" srcset="/assets/img/a9-cta-horizon-1080.avif 1080w, /assets/img/a9-cta-horizon-1600.avif 1600w, /assets/img/a9-cta-horizon-2400.avif 2400w" sizes="100vw"><img src="/assets/img/a9-cta-horizon-1600.webp" srcset="/assets/img/a9-cta-horizon-1080.webp 1080w, /assets/img/a9-cta-horizon-1600.webp 1600w, /assets/img/a9-cta-horizon-2400.webp 2400w" sizes="100vw" width="2400" height="1029" alt="" loading="lazy" decoding="async"></picture>
     <span class="cta__horizon"></span>
   </div>
   <div class="container cta__inner">

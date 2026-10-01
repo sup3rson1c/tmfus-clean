@@ -5,7 +5,9 @@
         <div class="hero__plane" data-plane="plate">
           <div class="hero__layer">
             <picture>
+              <source type="image/avif" media="(max-width: 767px)" srcset="/assets/img/m4b-hero-plate-768.avif 768w, /assets/img/m4b-hero-plate-1152.avif 1152w, /assets/img/m4b-hero-plate-1520.avif 1520w" sizes="135vw" width="1520" height="2688">
               <source media="(max-width: 767px)" srcset="/assets/img/m4b-hero-plate-768.webp 768w, /assets/img/m4b-hero-plate-1152.webp 1152w, /assets/img/m4b-hero-plate-1520.webp 1520w" sizes="135vw" width="1520" height="2688">
+              <source type="image/avif" srcset="/assets/img/m2-hero-plate-1280.avif 1280w, /assets/img/m2-hero-plate-1920.avif 1920w, /assets/img/m2-hero-plate-2688.avif 2688w" sizes="(min-width: 1024px) max(135vw, 210svh), 150vw">
               <img class="hero__plate" src="/assets/img/m2-hero-plate-1920.webp" srcset="/assets/img/m2-hero-plate-1280.webp 1280w, /assets/img/m2-hero-plate-1920.webp 1920w, /assets/img/m2-hero-plate-2688.webp 2688w" sizes="(min-width: 1024px) max(135vw, 210svh), 150vw" width="2688" height="1520" alt="" fetchpriority="high" decoding="async">
             </picture>
             <span class="hero__exposure"></span>
@@ -48,7 +50,7 @@
     </div>
     <div class="hero__scrim" aria-hidden="true"></div>
     <div class="hero__slab" aria-hidden="true">
-      <img src="/assets/img/m5-slab-1440.webp" srcset="/assets/img/m5-slab-1440.webp 1440w, /assets/img/m5-slab-2160.webp 2160w, /assets/img/m5-slab-2688.webp 2688w" sizes="104vw" width="2688" height="1152" alt="" decoding="async">
+      <picture class="pic"><source type="image/avif" srcset="/assets/img/m5-slab-1440.avif 1440w, /assets/img/m5-slab-2160.avif 2160w, /assets/img/m5-slab-2688.avif 2688w" sizes="104vw"><img src="/assets/img/m5-slab-1440.webp" srcset="/assets/img/m5-slab-1440.webp 1440w, /assets/img/m5-slab-2160.webp 2160w, /assets/img/m5-slab-2688.webp 2688w" sizes="104vw" width="2688" height="1152" alt="" decoding="async"></picture>
     </div>
 
     <div class="hero__copy">
