@@ -25,11 +25,19 @@ declare(strict_types=1);
  * or, if you would rather not keep it in plain text:
  *     'admin_password_hash' => '<output of PHP password_hash()>',
  * Without one of those this page refuses to run at all.
+ *
+ * TWO OPTIONAL EXTRA LOCKS — both off until api/config.php turns them on:
+ *     'admin_allowed_ips' => ['203.0.113.7', '2001:db8::/32'],
+ *         only these addresses reach the page at all; everyone else: 403
+ *     'admin_totp_secret' => '<from: php tools/totp-setup.php>',
+ *         after the password, a 6-digit code from an authenticator app
+ * The code for both is in api/admin-lock.php. DEPLOY.md has the steps.
  */
 
 const SESSION_NAME     = 'tmfadmin';
 const SESSION_IDLE     = 3600;   // seconds before an idle session is dropped
-const LOGIN_PER_HOUR   = 10;     // attempts per IP
+const LOGIN_PER_HOUR   = 10;     // attempts per IP (passwords and codes each)
+const TOTP_WINDOW      = 300;    // seconds to type the code after the password
 const FOLDER_PATTERN   = '/^\d{4}-\d{2}-\d{2}_\d{6}_[a-z0-9-]+_[A-F0-9]{6}$/';
 const STATEMENT_PATTERN = '/^\d{2}_[A-Za-z0-9._-]+\.(pdf|jpg|png)$/';
 
@@ -79,6 +87,29 @@ const READY_REPLIES = [
    warning carries the server's file paths; the real ones go to the log. */
 ini_set('display_errors', '0');
 
+$cfg = is_readable(__DIR__ . '/api/config.php') ? (require __DIR__ . '/api/config.php') : [];
+require __DIR__ . '/api/admin-lock.php';
+
+/* ---------------------------------------------------------------
+   OPTIONAL LOCK 1 — IP allow-list  (admin_allowed_ips in api/config.php)
+
+   Empty (the default) = off. Once it lists anything, every other address
+   gets a bare 403 here, before a session, a cookie or a login form exists.
+   The address is REMOTE_ADDR; X-Forwarded-For is believed only when the
+   connection comes from a proxy named in trusted_proxy (see
+   tmf_client_ip()). A list of nothing but typos locks everyone out —
+   that is deliberate: a lock that fails open is not a lock.
+   --------------------------------------------------------------- */
+$clientIp = tmf_client_ip($_SERVER, $cfg['trusted_proxy'] ?? '');
+$allowedIps = tmf_list($cfg['admin_allowed_ips'] ?? []);
+if ($allowedIps !== [] && !tmf_ip_in_list($clientIp, $allowedIps)) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo "Forbidden\n";
+    exit;
+}
+
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
@@ -95,10 +126,13 @@ header("Content-Security-Policy: default-src 'self'; script-src 'nonce-{$cspNonc
      . "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
      . "object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
 
-$cfg = is_readable(__DIR__ . '/api/config.php') ? (require __DIR__ . '/api/config.php') : [];
 $storeDir = rtrim((string) ($cfg['application_dir'] ?? ''), '/');
 $passPlain = (string) ($cfg['admin_password'] ?? '');
 $passHash  = (string) ($cfg['admin_password_hash'] ?? '');
+/* OPTIONAL LOCK 2 — a 6-digit code from an authenticator app after the
+   password (admin_totp_secret). Empty = off. */
+$totpSecret = trim((string) ($cfg['admin_totp_secret'] ?? ''));
+$totpKey    = $totpSecret === '' ? null : tmf_base32_decode($totpSecret);
 
 /* ---------------------------------------------------------------
    Refuse to run in states where running would be worse than not.
@@ -127,6 +161,12 @@ if ($passPlain === '' && $passHash === '') {
     bail('No password set', 'Add <code>\'admin_password\' =&gt; \'a long random passphrase\',</code> to '
         . '<code>api/config.php</code>, then reload. Until then this page will not open — '
         . 'an inbox of customer applications with no password is worse than no inbox.');
+}
+if ($totpSecret !== '' && ($totpKey === null || strlen($totpKey) < 10)) {
+    // Fail closed: a secret that cannot be read must not quietly turn 2FA off.
+    bail('The two-step code is misconfigured', '<code>admin_totp_secret</code> in <code>api/config.php</code> '
+        . 'is not a valid secret. Paste it again exactly as <code>tools/totp-setup.php</code> printed it, '
+        . 'or set it back to <code>\'\'</code> to switch the code off.');
 }
 if ($storeDir === '' || $storeDir[0] !== '/') {
     bail('Storage is not configured', 'Set <code>application_dir</code> in <code>api/config.php</code> to an '
@@ -182,10 +222,14 @@ if (!empty($_SESSION['ok']) && (time() - (int) ($_SESSION['seen'] ?? 0)) > SESSI
 }
 
 $loginError = '';
+$totpError  = '';
 
-if ($action === 'login') {
-    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
-    $rateFile = sys_get_temp_dir() . '/tmf_admin_' . sha1($ip) . '.txt';
+/* At most LOGIN_PER_HOUR tries per hour from one address, counted
+   separately for passwords and for codes. Records this try; returns false
+   when the address is already over the limit. */
+function throttle(string $kind, string $ip): bool
+{
+    $rateFile = sys_get_temp_dir() . '/tmf_admin_' . ($kind === 'login' ? '' : $kind . '_') . sha1($ip) . '.txt';
     $hits = [];
     if (is_readable($rateFile)) {
         $hits = array_filter(
@@ -193,13 +237,30 @@ if ($action === 'login') {
             static fn($t) => is_int($t) && $t > time() - 3600
         );
     }
-
     if (count($hits) >= LOGIN_PER_HOUR) {
+        return false;
+    }
+    $hits[] = time();
+    @file_put_contents($rateFile, json_encode(array_values($hits)), LOCK_EX);
+    return true;
+}
+
+/* Everything a fully signed-in session carries. */
+function grantSession(): void
+{
+    session_regenerate_id(true);
+    unset($_SESSION['pw_ok']);
+    $_SESSION['ok'] = true;
+    $_SESSION['seen'] = time();
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+    header('Location: admin.php');
+    exit;
+}
+
+if ($action === 'login') {
+    if (!throttle('login', $clientIp)) {
         $loginError = 'Too many attempts from this connection. Try again in an hour.';
     } else {
-        $hits[] = time();
-        @file_put_contents($rateFile, json_encode(array_values($hits)), LOCK_EX);
-
         $given = (string) ($_POST['password'] ?? '');
         $good = $passHash !== ''
             ? password_verify($given, $passHash)
@@ -208,19 +269,51 @@ if ($action === 'login') {
         // Cheap brute-force tax; also hides timing differences.
         usleep(400000);
 
-        if ($good) {
+        if ($good && $totpKey !== null) {
+            // Password right, code still owed. Not signed in yet: this
+            // session can do nothing but show the code box, for TOTP_WINDOW.
             session_regenerate_id(true);
-            $_SESSION['ok'] = true;
-            $_SESSION['seen'] = time();
-            $_SESSION['csrf'] = bin2hex(random_bytes(32));
+            unset($_SESSION['ok'], $_SESSION['totp']);
+            $_SESSION['pw_ok'] = time();
             header('Location: admin.php');
             exit;
+        }
+        if ($good) {
+            grantSession();
         }
         $loginError = 'That password is not right.';
     }
 }
 
-$authed = !empty($_SESSION['ok']);
+/* Password done, waiting for the 6-digit code. */
+$totpPending = $totpKey !== null && empty($_SESSION['ok'])
+    && (time() - (int) ($_SESSION['pw_ok'] ?? 0)) <= TOTP_WINDOW;
+
+if ($action === 'totp') {
+    if (!$totpPending) {
+        unset($_SESSION['pw_ok']);
+        $loginError = 'That took too long. Enter your password again.';
+    } elseif (!throttle('totp', $clientIp)) {
+        $totpError = 'Too many wrong codes from this connection. Try again in an hour.';
+    } else {
+        $step = tmf_totp_verify((string) $totpKey, (string) ($_POST['code'] ?? ''), time());
+        usleep(400000);
+        // A code works once. Someone who watched it being typed cannot
+        // replay it in the same 90 seconds.
+        $lastFile = sys_get_temp_dir() . '/tmf_admin_totp_last_' . sha1(__DIR__) . '.txt';
+        $last = (int) @file_get_contents($lastFile);
+        if ($step !== null && $step > $last) {
+            @file_put_contents($lastFile, (string) $step, LOCK_EX);
+            $_SESSION['totp'] = true;
+            grantSession();
+        }
+        $totpError = $step !== null
+            ? 'That code was already used. Wait for the next one and type that.'
+            : 'That code is not right. Check the phone\'s clock is set automatically, then try the newest code.';
+    }
+}
+
+$authed = !empty($_SESSION['ok']) && ($totpKey === null || !empty($_SESSION['totp']));
 if ($authed) {
     $_SESSION['seen'] = time();
     // Sessions opened before this token existed get one now.
@@ -565,7 +658,7 @@ if ($authed && $action !== '') {
     }
 }
 
-if (!$authed && $action !== '' && $action !== 'login') {
+if (!$authed && $action !== '' && $action !== 'login' && $action !== 'totp') {
     http_response_code(401);
     header('Content-Type: application/json');
     echo json_encode(['error' => 'not signed in']);
@@ -602,7 +695,7 @@ header('Content-Type: text/html; charset=utf-8');
   .primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#04120e}
   .ghost{background:transparent;border-color:var(--line);color:var(--fg)}
   .ghost:hover{border-color:var(--accent)}
-  input[type=password],input[type=search]{font:inherit;width:100%;background:#08080a;color:var(--fg);
+  input[type=password],input[type=search],input.otp{font:inherit;width:100%;background:#08080a;color:var(--fg);
     border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
   label.file{display:inline-flex;align-items:center;gap:9px;background:var(--panel-2);
     border:1px dashed var(--line);border-radius:var(--radius);padding:10px 16px;cursor:pointer;font-size:.93rem}
@@ -651,7 +744,28 @@ header('Content-Type: text/html; charset=utf-8');
 <body>
 <div class="wrap">
 
-<?php if (!$authed): ?>
+<?php if (!$authed && $totpPending): ?>
+
+  <h1>Application <b>inbox</b></h1>
+  <p class="muted" style="margin-top:6px">TMF Team</p>
+
+  <!-- Step two of two. Same card as the password, one box: the 6-digit
+       code from the authenticator app. No script on this page, so the
+       strict CSP has nothing to allow. -->
+  <div class="card" style="max-width:440px">
+    <form method="post">
+      <input type="hidden" name="action" value="totp">
+      <label class="mono-label" for="code">Code from your authenticator app</label>
+      <div style="margin-top:8px"><input type="text" class="otp" id="code" name="code" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" autofocus></div>
+      <?php if ($totpError !== ''): ?>
+        <p class="bad" style="font-size:.92rem"><?= htmlspecialchars($totpError) ?></p>
+      <?php endif; ?>
+      <button class="primary" style="width:100%;margin-top:14px" type="submit">Continue</button>
+      <p class="muted" style="font-size:.85rem;margin:12px 0 0"><a class="muted" href="admin.php?action=logout">Start again</a></p>
+    </form>
+  </div>
+
+<?php elseif (!$authed): ?>
 
   <h1>Application <b>inbox</b></h1>
   <p class="muted" style="margin-top:6px">TMF Team</p>
