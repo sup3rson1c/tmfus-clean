@@ -758,6 +758,45 @@ sec ".htaccess hides /api/uploads (bank statements fallback)" \
 sec ".htaccess hides src/tools/docs/scripts" \
     'grep -qF "RedirectMatch 404 ^/(src|tools|docs|scripts|node_modules)(/.*)?$" .htaccess'
 
+# --- Content-Security-Policy, public pages (report-only until DEPLOY.md says) ---
+# build.mjs writes the block between "# BEGIN CSP" and "# END CSP"; the policy
+# itself lives in build.mjs. Scoped to .html so admin.php keeps its own.
+# When DEPLOY.md's "switch to enforcing" step is done (CSP_ENFORCE = true in
+# build.mjs), flip the next two checks in the same PR.
+csp_block=$(sed -n '/^# BEGIN CSP/,/^# END CSP/p' .htaccess)
+csp_line=$(printf '%s\n' "$csp_block" | grep 'Header always set Content-Security-Policy')
+sec ".htaccess sends a Content-Security-Policy header for the public pages" '[ -n "$csp_line" ]'
+sec "the public-page CSP is Report-Only (blocks nothing until the DEPLOY.md switch)" \
+    'printf "%s" "$csp_line" | grep -q "Header always set Content-Security-Policy-Report-Only \""'
+sec ".htaccess sends no enforcing Content-Security-Policy anywhere" \
+    '! grep -qE "^[[:space:]]*Header[[:space:]].*Content-Security-Policy[[:space:]]" .htaccess'
+sec "the public-page CSP applies to .html files only (never admin.php or api/)" \
+    'printf "%s\n" "$csp_block" | grep -qF "<FilesMatch \"\.html$\">"'
+sec "the public-page CSP has no unsafe-eval, no unsafe-inline scripts, no report endpoint" \
+    '! printf "%s" "$csp_line" | grep -qE "unsafe-eval|report-uri|report-to|script-src[^;]*unsafe-inline"'
+csp_missing=$(node -e '
+  const fs = require("fs"), crypto = require("crypto");
+  const line = fs.readFileSync(".htaccess", "utf8").match(/Content-Security-Policy(?:-Report-Only)? "([^"]+)"/);
+  const policy = line ? line[1] : "";
+  const missing = new Set();
+  for (const f of fs.readdirSync(".").filter((f) => f.endsWith(".html"))) {
+    for (const [, attrs, body] of fs.readFileSync(f, "utf8").matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+      if (/\bsrc\s*=/i.test(attrs) || /type\s*=\s*["\x27]?application\/ld\+json/i.test(attrs)) continue;
+      const h = "sha256-" + crypto.createHash("sha256").update(body, "utf8").digest("base64");
+      if (!policy.includes("\x27" + h + "\x27")) missing.add(f + " " + h);
+    }
+  }
+  console.log([...missing].join(", "));
+' 2>&1)
+sec "every inline <script> in the built pages is allowed by hash (rebuild if not)" '[ -z "$csp_missing" ]'
+[ -n "$csp_missing" ] && printf '      missing: %s\n' "$csp_missing"
+# admin.php's own enforcing, nonce-based policy (#28) must stay exactly as written.
+sec "admin.php CSP is untouched (nonce scripts, no unsafe-inline scripts, frame-ancestors none)" \
+    'grep -qF "header(\"Content-Security-Policy: default-src '"'"'self'"'"'; script-src '"'"'nonce-{\$cspNonce}'"'"'; \"" admin.php &&
+     grep -qF ". \"style-src '"'"'self'"'"' '"'"'unsafe-inline'"'"'; img-src '"'"'self'"'"' data:; connect-src '"'"'self'"'"'; \"" admin.php &&
+     grep -qF ". \"object-src '"'"'none'"'"'; base-uri '"'"'none'"'"'; form-action '"'"'self'"'"'; frame-ancestors '"'"'none'"'"'\");" admin.php &&
+     [ "$(grep -c "Content-Security-Policy" admin.php)" = "2" ]'
+
 # --- admin.php session and CSRF ---
 # has <file> <literal text> — plain fixed-string grep, no shell expansion.
 has() { grep -qF -- "$2" "$1"; }

@@ -248,6 +248,76 @@ function schema(html, v) {
   return `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@graph": graph })}</script>`;
 }
 
+/* Content-Security-Policy for the public pages (issue: CSP, Oct 2026).
+
+   The policy lives HERE, not in .htaccess: build.mjs rewrites the block
+   between "# BEGIN CSP" and "# END CSP" in .htaccess on every build, because
+   the inline <script> hashes change whenever an inline script does. Edit the
+   directives below and rebuild; never hand-edit that block.
+
+   Ships as Content-Security-Policy-Report-Only: browsers log what the policy
+   WOULD block in the console and block nothing. DEPLOY.md has the step that
+   flips it to enforcing. admin.php is not covered (the header is scoped to
+   .html files) and keeps its own nonce-based policy.
+
+   Inventory behind each directive:
+   - script-src: our /assets/js files; GSAP 3.13.0 from cdnjs and Lenis 1.3.4
+     from jsDelivr, path-pinned so the rest of those CDNs (which host anything
+     anyone publishes) stays out; and the inline scripts, by sha256 hash (the
+     pre-paint motion/loader snippet in partials/head.html, the estimate note
+     on apply, the unsubscribe handler). JSON-LD blocks are data, not script,
+     and CSP does not apply to them. No 'unsafe-inline', no 'unsafe-eval'.
+     GA4/Meta Pixel are NOT allowed: TAGS in engine.js is empty, so no tag
+     loads today. Whoever fills TAGS must add their hosts here first.
+   - style-src: site.css and the Google Fonts stylesheet. No <style> blocks.
+   - style-src-attr 'unsafe-inline': the markup carries style="" attributes
+     that only set CSS custom properties (--mx, --at, --w ...) plus one in
+     engine.js's HELOC empty state. Style attributes cannot run script; moving
+     ~20 of them into classes is churn for no security gain. Element styles
+     set from JS (el.style.x = ..., GSAP) are CSSOM and never need this.
+   - font-src: Google Fonts files. img-src: our images plus data: SVGs in
+     site.css. media-src: the film clips.
+   - connect-src: /api/*.php and the film manifest (same origin), plus the
+     Google Apps Script lead sheet in engine.js (script.google.com answers
+     with a redirect to script.googleusercontent.com, which CSP also checks).
+   - form-action 'self': every form posts by fetch; the no-JS fallback is the
+     page itself. frame-src/object-src 'none': nothing is framed or embedded.
+     frame-ancestors 'self' mirrors X-Frame-Options (and is ignored while
+     report-only, which is why X-Frame-Options stays).
+   - No report-uri: reports would go to a third party or to a new endpoint on
+     our server; the browser console is enough for a one-week watch. */
+/* false = Content-Security-Policy-Report-Only (today). DEPLOY.md: after a
+   week live with no violations in any browser console, set true, rebuild,
+   and flip the two Report-Only checks in scripts/verify.sh in the same PR. */
+const CSP_ENFORCE = false;
+const CSP = [
+  ["default-src", "'self'"],
+  ["script-src", "'self'", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/", "https://cdn.jsdelivr.net/npm/lenis@1.3.4/", "{{inline-hashes}}"],
+  ["style-src", "'self'", "https://fonts.googleapis.com"],
+  ["style-src-attr", "'unsafe-inline'"],
+  ["font-src", "'self'", "https://fonts.gstatic.com"],
+  ["img-src", "'self'", "data:"],
+  ["media-src", "'self'"],
+  ["connect-src", "'self'", "https://script.google.com", "https://script.googleusercontent.com"],
+  ["frame-src", "'none'"],
+  ["object-src", "'none'"],
+  ["base-uri", "'self'"],
+  ["form-action", "'self'"],
+  ["frame-ancestors", "'self'"],
+];
+const inlineHashes = new Set();
+/* Every executable inline <script> (no src, and no non-JS type such as
+   application/ld+json). The hash is over the exact text between the tags,
+   as the browser computes it. */
+function collectInlineScripts(html) {
+  for (const [, attrs, body] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    if (/\bsrc\s*=/i.test(attrs)) continue;
+    const type = /\btype\s*=\s*["']?([^"'\s>]+)/i.exec(attrs)?.[1]?.toLowerCase();
+    if (type && !["text/javascript", "application/javascript", "module"].includes(type)) continue;
+    inlineHashes.add(`'sha256-${createHash("sha256").update(body, "utf8").digest("base64")}'`);
+  }
+}
+
 // Pages
 const pagesDir = join(SRC, "pages");
 for (const file of readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
@@ -290,6 +360,7 @@ for (const file of readdirSync(pagesDir).filter((f) => f.endsWith(".html"))) {
 
   html = bust(html);
   html = html.replace("</head>", () => `${schema(html, vars)}\n</head>`);
+  collectInlineScripts(html);
   const out = slug === "home" ? join(ROOT, "index.html") : join(ROOT, `${slug}.html`);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, html);
@@ -314,3 +385,27 @@ const sitemap = [
 ].join("\n");
 writeFileSync(join(ROOT, "sitemap.xml"), sitemap);
 console.log(`built /sitemap.xml (${SITEMAP.length} URLs)`);
+
+// CSP block in .htaccess (see CSP above)
+const policy = CSP.map((d) => d.flatMap((t) => (t === "{{inline-hashes}}" ? [...inlineHashes].sort() : [t])).join(" ")).join("; ");
+const cspBlock = [
+  "# BEGIN CSP (generated by build.mjs from its CSP list; edit there, then rebuild)",
+  "<IfModule mod_headers.c>",
+  "  # Public pages only. admin.php sends its own, stricter, enforcing policy.",
+  ...(CSP_ENFORCE
+    ? ["  # ENFORCING: the browser blocks anything the policy does not allow."]
+    : ["  # REPORT-ONLY: logs would-be violations in the browser console, blocks",
+       "  # nothing. DEPLOY.md says when and how to switch to enforcing."]),
+  '  <FilesMatch "\\.html$">',
+  `    Header always set ${CSP_ENFORCE ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only"} "${policy}"`,
+  "  </FilesMatch>",
+  "</IfModule>",
+  "# END CSP",
+].join("\n");
+const htaccessPath = join(ROOT, ".htaccess");
+const htaccess = read(htaccessPath);
+const cspRe = /# BEGIN CSP[^\n]*\n[\s\S]*?# END CSP/;
+if (!cspRe.test(htaccess)) throw new Error(".htaccess has no # BEGIN CSP ... # END CSP block");
+const nextHtaccess = htaccess.replace(cspRe, () => cspBlock);
+if (nextHtaccess !== htaccess) writeFileSync(htaccessPath, nextHtaccess);
+console.log(`built .htaccess CSP block (${inlineHashes.size} inline script hashes)`);

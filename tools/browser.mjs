@@ -57,3 +57,16 @@ export async function launch(extraArgs = []) {
     ],
   });
 }
+
+/* Content-Security-Policy violations, report-only ones included, re-logged as
+   console errors so every tool that fails on console errors fails on them too.
+   Chrome's own "[Report Only] Refused to ..." line does not reliably reach
+   puppeteer's console event; the securitypolicyviolation DOM event does. */
+export async function watchCsp(page) {
+  await page.evaluateOnNewDocument(() => {
+    document.addEventListener("securitypolicyviolation", (e) => {
+      console.error(`CSP ${e.disposition} violation: ${e.effectiveDirective} blocked ${e.blockedURI || "(inline)"}` +
+        `${e.sourceFile ? ` at ${e.sourceFile}:${e.lineNumber}` : ""}${e.sample ? ` sample="${e.sample}"` : ""}`);
+    });
+  });
+}

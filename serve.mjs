@@ -11,6 +11,21 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.argv[2] ?? process.env.PORT ?? 3000);
 
+/* The same Content-Security-Policy the live .htaccess sends on .html pages
+   (build.mjs writes it there), so CSP problems show up locally too. It is
+   report-only, as in production today. CSP_ENFORCE=1 sends it as an enforcing
+   header instead: the test tools then fail on anything the policy would
+   block, which is how a policy is proven before production enforces it. */
+const CSP_HEADER = process.env.CSP_ENFORCE === "1" ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only";
+async function cspPolicy() {
+  try {
+    const m = /Header always set Content-Security-Policy(?:-Report-Only)? "([^"]+)"/.exec(await readFile(join(ROOT, ".htaccess"), "utf8"));
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -80,20 +95,24 @@ createServer(async (req, res) => {
       return;
     }
 
-    res.writeHead(200, {
+    const headers = {
       "Content-Type": type,
       "Content-Length": info.size,
       "Accept-Ranges": "bytes",
       "Cache-Control": "no-cache",
-    });
+    };
+    const policy = extname(file).toLowerCase() === ".html" ? await cspPolicy() : null;
+    if (policy) headers[CSP_HEADER] = policy;
+    res.writeHead(200, headers);
     if (info.size > 1_000_000) createReadStream(file).pipe(res);
     else res.end(await readFile(file));
   } catch {
     // As the live .htaccess does: ErrorDocument 404 /404.html
     try {
-      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" }).end(await readFile(join(ROOT, "404.html")));
+      const policy = await cspPolicy();
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8", ...(policy ? { [CSP_HEADER]: policy } : {}) }).end(await readFile(join(ROOT, "404.html")));
     } catch {
       res.writeHead(404, { "Content-Type": "text/plain" }).end("not found");
     }
   }
-}).listen(PORT, () => console.log(`serving ${ROOT} on http://localhost:${PORT}`));
+}).listen(PORT, () => console.log(`serving ${ROOT} on http://localhost:${PORT} (CSP: ${CSP_HEADER})`));

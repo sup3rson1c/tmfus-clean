@@ -4,7 +4,7 @@
      node serve.mjs 3200
      CHROME_PATH=/usr/bin/google-chrome node tools/prelaunch-final.mjs
 */
-import { launch } from "./browser.mjs";
+import { launch, watchCsp } from "./browser.mjs";
 
 const BASE = process.env.BASE_URL || "http://localhost:3200";
 const parsedBase = new URL(BASE);
@@ -52,6 +52,7 @@ const consoleErrors = [];
 const consoleErrorUrls = [];
 const newPage = async (width, height, extra = {}) => {
   const page = await browser.newPage();
+  await watchCsp(page);
   page.consoleErrors = [];
   page.on("pageerror", (error) => {
     const text = `pageerror: ${error.stack || error.message}`;
