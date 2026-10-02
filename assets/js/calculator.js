@@ -92,6 +92,7 @@
     return `
     <div class="calc">
       <form class="card calc__form" novalidate>
+        <div class="hp-field" aria-hidden="true"><label>Company website<input type="text" name="company_website" tabindex="-1" autocomplete="off" value=""></label></div>
         <ol class="stepper" role="list">
           ${STEPS.map((s, i) => `<li class="stepper__item"${i === 0 ? ' aria-current="step"' : ""}><span class="stepper__num">0${i + 1}</span><span class="stepper__label">${s}</span></li>`).join("")}
         </ol>
@@ -341,6 +342,8 @@
       };
       if (a.positions > 0 && form.elements.balance.value) lead.balance = form.elements.balance.value;
       if (a.phone) lead.phone = a.phone;
+      /* Honeypot: people never see this field; if a bot filled it, the server drops the lead. */
+      if (form.elements.company_website && form.elements.company_website.value) lead.company_website = form.elements.company_website.value;
       try {
         lead.estimate = JSON.stringify(est);
       } catch {

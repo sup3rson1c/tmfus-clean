@@ -18,6 +18,7 @@
 
     <div class="card contact__card">
       <form class="contact__form" novalidate data-lead-form="contact" data-success="contact-success" aria-labelledby="form-title">
+        {{> honeypot}}
         <h2 class="h3" id="form-title">Send us a message</h2>
         <p class="small muted form-intro">Fields marked with <span aria-hidden="true" class="req">*</span> are required.</p>
         <div class="error-summary" tabindex="-1" role="alert" data-error-summary hidden></div>

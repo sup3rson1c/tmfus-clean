@@ -14,6 +14,7 @@
              and the encrypted submit to /api/application.php. Keep every data-
              attribute; the classes are free to change. -->
         <form class="app-form" data-application novalidate aria-labelledby="page-title">
+          {{> honeypot}}
           <div class="calc-head">
             <p class="certificate__label" style="margin:0">TMF Team application</p>
             <span class="calc-step" data-step-label>Step 1 of 4</span>

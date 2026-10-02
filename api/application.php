@@ -339,6 +339,18 @@ if (!is_array($app) || $app === []) {
     fail(400, 'The application did not arrive intact. Please try again.');
 }
 
+// Honeypot: a hidden field no person sees. If it is filled, a bot did it.
+// Answer exactly like a stored application, keep nothing, log only a count.
+if (is_scalar($app['company_website'] ?? null) && trim((string) $app['company_website']) !== '') {
+    error_log('application.php: honeypot hit, submission dropped');
+    respond(200, [
+        'ok'        => true,
+        'reference' => strtoupper(bin2hex(random_bytes(3))),
+        'stored'    => 0,
+        'rejected'  => [],
+    ]);
+}
+
 /**
  * $full  — everything, goes only into the sealed envelope.
  * $clean — the non-sensitive subset, safe for the notification email.
