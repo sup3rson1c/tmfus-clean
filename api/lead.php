@@ -122,6 +122,15 @@ $kind = substr($kind, 0, 40);
 
 $data = is_array($in['data'] ?? null) ? $in['data'] : [];
 
+// Honeypot: a hidden field no person sees. If it is filled, a bot did it.
+// Answer exactly like a stored submission so the bot learns nothing, keep
+// nothing, and log only a count (no personal data).
+if (trim((string) ($data['company_website'] ?? '')) !== '') {
+    error_log('lead.php: honeypot hit, submission dropped (kind=' . $kind . ')');
+    $id = strtoupper(bin2hex(random_bytes(3)));
+    respond(200, ['ok' => true, 'id' => $id, 'stored' => $id . '.json']);
+}
+
 $clean = [];
 $dropped = [];
 $n = 0;

@@ -3423,6 +3423,14 @@ gap: 10px;
 justify-self: center;
 color: var(--silver);
 }
+.hp-field {
+position: absolute !important;
+left: -10000px;
+top: auto;
+width: 1px;
+height: 1px;
+overflow: hidden;
+}
 .page-hero .h1 {
 font-size: clamp(2.25rem, 0.6rem + 4.1vw, 4.125rem);
 max-inline-size: 16ch;

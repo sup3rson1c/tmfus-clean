@@ -475,3 +475,13 @@ legend.label {
   justify-self: center;
   color: var(--silver);
 }
+
+/* Honeypot: off-screen, not display:none (some bots skip hidden fields). */
+.hp-field {
+  position: absolute !important;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
