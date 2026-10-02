@@ -1656,7 +1656,8 @@
           if (!ok || !j.ok) throw new Error(j && j.error ? j.error : 'Request failed.');
           render(j);
           // High-intent lead — record it alongside the others.
-          sendLead('figure-heloc', Object.assign({}, body, {
+          const honeypot = document.querySelector('[name="company_website"]');
+          sendLead('figure-heloc', Object.assign({}, body, honeypot && honeypot.value ? { company_website: honeypot.value } : {}, {
             street1: body.address.street1, city: body.address.city,
             state: body.address.state, zip: body.address.zip,
             offerCount: (j.offers || []).length,

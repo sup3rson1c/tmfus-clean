@@ -62,6 +62,13 @@ if "btn-sm" in src:
 once("    if (!LEAD_ENDPOINT) return mine;\n",
      r"    if (!LEAD_ENDPOINT || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return mine;" + "\n")
 
+# 3c. HELOC's Figure lead receives the shared page honeypot too. The redesign
+# keeps the control in the page source; this preserves it if the Figure panel
+# is switched back on.
+once("          sendLead('figure-heloc', Object.assign({}, body, {\n",
+     "          const honeypot = document.querySelector('[name=\"company_website\"]');\n"
+     "          sendLead('figure-heloc', Object.assign({}, body, honeypot && honeypot.value ? { company_website: honeypot.value } : {}, {\n")
+
 # 4. Expose the engine.
 once("  function boot() {\n",
 """  /* Added by tools/vendor-engine.py: the new design's calculator UI calls
