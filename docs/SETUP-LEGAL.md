@@ -179,3 +179,13 @@ a common shape — and it can be built.
 **The FTC Safeguards Rule.** The encryption covers a large part of what it asks
 for. A written security policy, a named person responsible, access limits and a
 breach response plan are not built and cannot be built by a website.
+
+## Security-paper drafts
+
+Three plain-language drafts now live in this folder. They are drafts, not legal
+advice or proof of compliance. John must complete every marked blank, approve
+them, and have appropriate legal or security review before relying on them:
+
+- `WRITTEN-SECURITY-PROGRAM-DRAFT.md`
+- `INCIDENT-RESPONSE-PLAN-DRAFT.md`
+- `VENDOR-ACCESS-LIST-DRAFT.md`
