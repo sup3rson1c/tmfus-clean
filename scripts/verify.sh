@@ -69,7 +69,7 @@ head "Deployment list"
 # .cpanel.yml names files ONE BY ONE. A new top-level file that is not
 # listed silently never reaches the server. This has bitten five times.
 
-for f in ./*.html ./*.php ./robots.txt ./sitemap.xml ./llms.txt; do
+for f in ./*.html ./*.php ./robots.txt ./sitemap.xml ./llms.txt ./favicon.ico; do
   base=$(basename "$f")
   [ -e "$f" ] || continue
   if grep -q "$base" .cpanel.yml; then :; else

@@ -19,6 +19,7 @@ deployment:
     - /bin/cp -f funding-estimator.html $DEPLOYPATH/
     - /bin/cp -f heloc-calculator.html  $DEPLOYPATH/
     - /bin/cp -f index.html             $DEPLOYPATH/
+    - /bin/cp -f favicon.ico            $DEPLOYPATH/
     - /bin/cp -f mca.html               $DEPLOYPATH/
     - /bin/cp -f privacy.html           $DEPLOYPATH/
     - /bin/cp -f sba-loans.html         $DEPLOYPATH/
