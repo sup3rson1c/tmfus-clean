@@ -47,4 +47,26 @@
       dispatchEvent(new Event("tmf:loader-done"));
     }, 4500);
   }
+  /* Campaign and attribution capture: keeps utm_source, utm_medium,
+     utm_campaign, utm_content and ref / sl in sessionStorage across pages. */
+  try {
+    var p = new URLSearchParams(location.search);
+    var keys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "sl", "sl_id", "ref_id"];
+    var current = {};
+    var found = false;
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], v = p.get(k);
+      if (v) { current[k] = v.slice(0, 200); found = true; }
+    }
+    if (found) {
+      var stored = {};
+      try { stored = JSON.parse(sessionStorage.getItem("tmf_attribution") || "{}") || {}; } catch (_) {}
+      for (var ck in current) { stored[ck] = current[ck]; }
+      sessionStorage.setItem("tmf_attribution", JSON.stringify(stored));
+      var last = {};
+      try { last = JSON.parse(sessionStorage.getItem("tmf_last_touch") || "{}") || {}; } catch (_) {}
+      for (var lk in current) { last[lk] = current[lk]; }
+      sessionStorage.setItem("tmf_last_touch", JSON.stringify(last));
+    }
+  } catch (_) {}
 })(document.documentElement);</script>

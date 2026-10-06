@@ -50,6 +50,28 @@
       dispatchEvent(new Event("tmf:loader-done"));
     }, 4500);
   }
+  /* Campaign and attribution capture: keeps utm_source, utm_medium,
+     utm_campaign, utm_content and ref / sl in sessionStorage across pages. */
+  try {
+    var p = new URLSearchParams(location.search);
+    var keys = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "sl", "sl_id", "ref_id"];
+    var current = {};
+    var found = false;
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], v = p.get(k);
+      if (v) { current[k] = v.slice(0, 200); found = true; }
+    }
+    if (found) {
+      var stored = {};
+      try { stored = JSON.parse(sessionStorage.getItem("tmf_attribution") || "{}") || {}; } catch (_) {}
+      for (var ck in current) { stored[ck] = current[ck]; }
+      sessionStorage.setItem("tmf_attribution", JSON.stringify(stored));
+      var last = {};
+      try { last = JSON.parse(sessionStorage.getItem("tmf_last_touch") || "{}") || {}; } catch (_) {}
+      for (var lk in current) { last[lk] = current[lk]; }
+      sessionStorage.setItem("tmf_last_touch", JSON.stringify(last));
+    }
+  } catch (_) {}
 })(document.documentElement);</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":["Organization","FinancialService"],"@id":"https://tmfus.com/#organization","name":"TMF Team","alternateName":"TMF Team Capital Strategy","url":"https://tmfus.com/","logo":{"@type":"ImageObject","url":"https://tmfus.com/assets/logo-mark-512.png","width":512,"height":512},"description":"TMF Team is a US business funding brokerage. It matches business owners to merchant cash advances, SBA 7(a) and 504 loans, equipment financing, and home equity lines of credit, and manages the application end to end.","address":{"@type":"PostalAddress","streetAddress":"550 S Andrews Ave","addressLocality":"Fort Lauderdale","addressRegion":"FL","postalCode":"33301","addressCountry":"US"},"areaServed":{"@type":"Country","name":"United States"},"knowsAbout":["merchant cash advance","SBA 7(a) loans","SBA 504 loans","home equity line of credit","equipment financing","small business working capital","revenue-based financing"],"serviceType":["Business funding brokerage","Merchant cash advance","SBA loan brokerage","Equipment financing","HELOC brokerage"]},{"@type":"WebSite","@id":"https://tmfus.com/#website","url":"https://tmfus.com/","name":"TMF Team","publisher":{"@id":"https://tmfus.com/#organization"},"inLanguage":"en-US"},{"@type":"WebPage","@id":"https://tmfus.com/apply#webpage","url":"https://tmfus.com/apply","name":"Apply for business funding · TMF Team","description":"Apply for business funding in four steps and about ten minutes. Have your EIN, business address and four months of business bank statements ready.","isPartOf":{"@id":"https://tmfus.com/#website"},"about":{"@id":"https://tmfus.com/#organization"},"datePublished":"2026-08-20","dateModified":"2026-09-30","inLanguage":"en-US","breadcrumb":{"@id":"https://tmfus.com/apply#breadcrumb"}},{"@type":"BreadcrumbList","@id":"https://tmfus.com/apply#breadcrumb","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://tmfus.com/"},{"@type":"ListItem","position":2,"name":"Apply","item":"https://tmfus.com/apply"}]},{"@type":"HowTo","@id":"https://tmfus.com/apply#howto","name":"How to apply for business funding with TMF Team","description":"The TMF Team application is four steps and takes about ten minutes. An advisor reviews the file, usually within 3 to 24 hours.","totalTime":"PT10M","supply":[{"@type":"HowToSupply","name":"Business legal name, EIN and business start date"},{"@type":"HowToSupply","name":"Owner name, home address, date of birth and Social Security number"},{"@type":"HowToSupply","name":"Ownership percentages for every owner"},{"@type":"HowToSupply","name":"Four months of business bank statements"}],"step":[{"@type":"HowToStep","position":1,"name":"Business details","text":"Enter the business legal name, DBA, EIN, address, start date and industry."},{"@type":"HowToStep","position":2,"name":"Owner details","text":"Enter the owner name, home address, ownership percentage, email, phone, date of birth and Social Security number. Sensitive details are encrypted as soon as they reach us and are never stored in plain text."},{"@type":"HowToStep","position":3,"name":"Co-owner details","text":"Add a second owner if anyone else holds a share of the business. Ownership across all owners cannot exceed 100 percent."},{"@type":"HowToStep","position":4,"name":"Statements and consent","text":"Attach four months of business bank statements, read the authorization, tick both boxes and sign in the box. Submit, and a reference number comes back straight away."}]}]}</script>
 </head>
@@ -768,8 +790,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/SplitText.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/DrawSVGPlugin.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.4/dist/lenis.min.js" defer></script>
-<script src="/assets/js/site.js?v=09d2060b10" defer></script>
-<script src="/assets/js/engine.js?v=9a874acbae" defer></script>
+<script src="/assets/js/site.js?v=bf48e4fb8b" defer></script>
+<script src="/assets/js/engine.js?v=0ede5fedf6" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
     <script src="/assets/js/motion.js?v=7aeebac17a" defer></script>
   

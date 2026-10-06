@@ -58,6 +58,16 @@ return [
     'application_notify' => '',
 
     // ---------------------------------------------------------------
+    // LEAD EXPORT  (api/export.php, pulled by TMF OS)
+    //
+    // Shared secret for TMF OS to pull submissions from the leads folder.
+    // If empty or unset, api/export.php is disabled and answers 503.
+    // Make this a long random string:
+    //   php -r "echo bin2hex(random_bytes(32));"
+    // ---------------------------------------------------------------
+    'export_key' => '',
+
+    // ---------------------------------------------------------------
     // APPLICATION ENCRYPTION KEY  —  REQUIRED
     //
     // Applications carry Social Security numbers, dates of birth and a

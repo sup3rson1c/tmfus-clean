@@ -257,6 +257,12 @@
         const s = String(v).trim();
         if (s) data[k] = s;
       });
+      try {
+        const attr = JSON.parse(sessionStorage.getItem("tmf_attribution") || "{}") || {};
+        for (const [k, v] of Object.entries(attr)) {
+          if (!data[k]) data[k] = v;
+        }
+      } catch (_) {}
       const button = form.querySelector('[type="submit"]');
       TMF.forms.loading(button, true);
       let ok = false;
