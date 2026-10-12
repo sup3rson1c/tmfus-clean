@@ -67,12 +67,10 @@ $providedKey = '';
 if (str_starts_with($authHeader, 'Bearer ')) {
     $providedKey = substr($authHeader, 7);
 } elseif (!empty($_SERVER['HTTP_X_EXPORT_KEY'])) {
+    // cPanel's Apache often drops Authorization, so TMF OS sends this too.
     $providedKey = (string) $_SERVER['HTTP_X_EXPORT_KEY'];
-} elseif (!empty($_GET['key'])) {
-    $providedKey = (string) $_GET['key'];
-} elseif (!empty($_GET['export_key'])) {
-    $providedKey = (string) $_GET['export_key'];
 }
+// Never from the query string: URLs land in the server's access log.
 
 if ($providedKey === '' || !hash_equals($exportKey, $providedKey)) {
     respond(401, ['ok' => false, 'error' => 'Unauthorized.']);
