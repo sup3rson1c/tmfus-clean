@@ -481,6 +481,10 @@
       const est = renderResult(a);
       const matched = E().matchProducts(profile(a));
       const lead = leadFrom(a, est, matched);
+      try {
+        const attr = JSON.parse(sessionStorage.getItem("tmf_attribution") || "{}") || {};
+        Object.assign(lead, attr);
+      } catch (_) {}
       saveCalc(a, { contact: lead, estimate: lead.estimate || "", matched: lead.matched || "" });
 
       /* One lead per set of contact details. Editing the numbers afterwards

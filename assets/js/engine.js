@@ -57,13 +57,15 @@
   const LEAD_STORE_ENDPOINT = '/api/lead.php';
 
   function sendLead(kind, data) {
+    let sessionAttr = {};
+    try { sessionAttr = JSON.parse(sessionStorage.getItem('tmf_attribution') || '{}') || {}; } catch (_) {}
     const payload = JSON.stringify({
       kind: kind,
       page: location.pathname,
       submittedAt: new Date().toISOString(),
       referrer: document.referrer || '',
       // Campaign tags first, so a real form field always wins a name clash.
-      data: Object.assign({}, attributionForLead(), data)
+      data: Object.assign({}, sessionAttr, attributionForLead(), data)
     });
 
     // Remember what we can, so the applicant does not retype it later.
@@ -2362,6 +2364,7 @@
      goes into a cookie. */
   const ATTR_PARAMS = [
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    'ref', 'sl', 'sl_id', 'ref_id',
     'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid'
   ];
 
@@ -3193,6 +3196,7 @@
 
   function boot() {
     initConsent();                 // first: nothing may track before this runs
+    captureAttribution(false);     // tab-scoped last touch from landing URL
     initCountUp();
     initAccordion();
     initSelects();

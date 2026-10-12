@@ -40,6 +40,7 @@ deployment:
     - /bin/cp -f api/figure-heloc.php    $DEPLOYPATH/api/
     - /bin/cp -f api/application.php     $DEPLOYPATH/api/
     - /bin/cp -f api/lead.php            $DEPLOYPATH/api/
+    - /bin/cp -f api/export.php          $DEPLOYPATH/api/
     - /bin/cp -f api/chat.php            $DEPLOYPATH/api/
     - /bin/cp -f api/unsubscribe.php     $DEPLOYPATH/api/
     # admin.php's optional IP allow-list and 2FA code live here. admin.php

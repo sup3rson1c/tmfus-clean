@@ -74,10 +74,22 @@
     if (campaign) qs.push('c=' + encodeURIComponent(campaign));
     if (qs.length) url += '?' + qs.join('&');
 
+    var payload = { email: email, t: token };
+    try {
+      var attr = JSON.parse(sessionStorage.getItem('tmf_attribution') || '{}') || {};
+      for (var ak in attr) {
+        if (attr.hasOwnProperty(ak) && !payload[ak]) {
+          payload[ak] = attr[ak];
+        }
+      }
+    } catch (_) {}
+    if (!payload.campaign && campaign) { payload.campaign = campaign; }
+    if (!payload.utm_campaign && campaign) { payload.utm_campaign = campaign; }
+
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, t: token })
+      body: JSON.stringify(payload)
     })
       .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
       .then(function (d) {

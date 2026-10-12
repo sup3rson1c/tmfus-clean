@@ -169,11 +169,12 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email
 // ---------------------------------------------------------------
 // Record it
 // ---------------------------------------------------------------
+$rawCampaign = (string) ($in['utm_campaign'] ?? $in['campaign'] ?? $_GET['c'] ?? '');
 $record = [
     'email'    => $email,
     'at'       => gmdate('c'),
     'channel'  => $channel,
-    'campaign' => substr(preg_replace('/[^A-Za-z0-9_\-]/', '', (string) ($_GET['c'] ?? '')) ?: '', 0, 60),
+    'campaign' => substr(preg_replace('/[^A-Za-z0-9_\-]/', '', $rawCampaign) ?: '', 0, 60),
     'ip'       => $ip,
     'ua'       => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200),
 ];
@@ -192,6 +193,47 @@ $seen = is_readable($flat)
     : [];
 if (!isset($seen[$email])) {
     @file_put_contents($flat, $email . "\n", FILE_APPEND | LOCK_EX);
+}
+
+// Also write into the leads store so TMF OS pulls website unsubscribe submissions
+$baseDir = rtrim((string) ($cfg['application_dir'] ?? (__DIR__ . '/uploads')), '/');
+if ($baseDir === '' || $baseDir[0] !== '/') {
+    $baseDir = __DIR__ . '/uploads';
+}
+$monthDir = $baseDir . '/leads/' . date('Y-m');
+if (is_dir($monthDir) || @mkdir($monthDir, 0700, true)) {
+    @file_put_contents($baseDir . '/leads/.htaccess', "Require all denied\nOptions -Indexes\n");
+    @file_put_contents($baseDir . '/leads/index.html', '');
+    $subId = strtoupper(bin2hex(random_bytes(3)));
+    $utmCampaign = (string) ($in['utm_campaign'] ?? $in['campaign'] ?? $_GET['c'] ?? '');
+    $utmSource   = (string) ($in['utm_source'] ?? $_GET['utm_source'] ?? '');
+    $utmMedium   = (string) ($in['utm_medium'] ?? $_GET['utm_medium'] ?? '');
+    $utmContent  = (string) ($in['utm_content'] ?? $_GET['utm_content'] ?? '');
+    $refVal      = (string) ($in['ref'] ?? $in['sl'] ?? $in['sl_id'] ?? $_GET['ref'] ?? $_GET['sl'] ?? '');
+
+    $leadRecord = [
+        'id'          => $subId,
+        'kind'        => 'unsubscribe',
+        'received'    => date('c'),
+        'page'        => '/unsubscribe',
+        'referrer'    => substr((string) ($_SERVER['HTTP_REFERER'] ?? ''), 0, 300),
+        'submittedAt' => gmdate('c'),
+        'ip'          => $ip,
+        'user_agent'  => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 300),
+        'data'        => [
+            'email'        => $email,
+            'channel'      => $channel,
+            'campaign'     => $record['campaign'],
+            'utm_source'   => substr($utmSource, 0, 120),
+            'utm_medium'   => substr($utmMedium, 0, 120),
+            'utm_campaign' => substr($utmCampaign, 0, 120),
+            'utm_content'  => substr($utmContent, 0, 120),
+            'ref'          => substr($refVal, 0, 120),
+        ],
+    ];
+    $leadFile = $monthDir . '/' . date('d_His') . '_unsubscribe_' . $subId . '.json';
+    @file_put_contents($leadFile, json_encode($leadRecord, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    @chmod($leadFile, 0600);
 }
 
 if ($ok === false) {
