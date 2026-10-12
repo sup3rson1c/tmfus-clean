@@ -2696,7 +2696,7 @@
     const launch = document.createElement('button');
     launch.className = 'chat-launch';
     launch.type = 'button';
-    launch.setAttribute('aria-label', 'Open chat');
+    launch.setAttribute('aria-label', 'Questions? Open chat');
     launch.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
       'stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.1' +
       'A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg><span>Questions?</span>';
