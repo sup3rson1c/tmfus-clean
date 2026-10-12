@@ -791,12 +791,14 @@
   const RANGE_SPREAD = 0.15;
 
   /* One multiplier per credit band. These are the midpoints of the old
-     low/high pairs, so overall levels are unchanged — only the width is. */
+     low/high pairs, so overall levels are unchanged — only the width is.
+     Below 600 raised from 0.75 to 0.85 on John's instruction, 12 Oct 2026:
+     those merchants were being shown less than they actually get. */
   const CREDIT_MULT = [
     { min: 740, mult: 1.40 },
     { min: 660, mult: 1.15 },
     { min: 600, mult: 0.925 },
-    { min: 0,   mult: 0.75 }
+    { min: 0,   mult: 0.85 }
   ];
 
   /* Projection =  monthly revenue
