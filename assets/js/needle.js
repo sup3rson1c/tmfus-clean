@@ -60,10 +60,12 @@
   let visible = true;
 
   const size = () => {
-    const r = stage.getBoundingClientRect();
+    // Layout size, not getBoundingClientRect: the page's entrance animation
+    // scales the hero picture for a moment, and a scaled measurement put the
+    // counter beside the screen instead of on it.
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(r.width * dpr);
-    canvas.height = Math.round(r.height * dpr);
+    canvas.width = Math.round(stage.offsetWidth * dpr);
+    canvas.height = Math.round(stage.offsetHeight * dpr);
     shown = -1;
   };
 
@@ -98,7 +100,7 @@
   };
   const placeCounter = () => {
     if (!counter) return;
-    const dpr = canvas.width / (canvas.getBoundingClientRect().width || 1) || 1;
+    const dpr = canvas.width / (stage.offsetWidth || 1) || 1;
     const { x, y, w, h } = placement();
     const quad = QUAD.map(([u, v]) => [(x + u * w) / dpr, (y + v * h) / dpr]);
     const [a, b, c, d, e, f, g, hh] = squareToQuad(quad);
@@ -134,7 +136,7 @@
   };
 
   /* Pushing the plunger ---------------------------------------------- */
-  const travel = () => stage.getBoundingClientRect().width * 0.42; // px for a full push
+  const travel = () => stage.offsetWidth * 0.42; // px for a full push
   stage.addEventListener("pointerdown", (e) => {
     dragging = true;
     dragX = e.clientX;

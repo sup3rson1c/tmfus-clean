@@ -4165,6 +4165,10 @@ visibility: hidden;
 .needle__counter {
 transition: opacity 0.3s ease;
 }
+.page-hero__media--needle .needle__counter span {
+font-size: 128px;
+letter-spacing: 0;
+}
 .page-hero__media--needle.is-funded .needle__counter span {
 animation: needle-funded 1.2s ease-in-out infinite alternate;
 }
