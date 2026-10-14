@@ -684,6 +684,12 @@ else
 ' ' ')"
 fi
 
+if node scripts/chat-relay-test.mjs >/tmp/tmf-chat-relay.log 2>&1; then
+  pass "chat relay tests pass (auth, query string ignored, pending, reply, handoff, wait fallback)"
+else
+  fail "chat relay tests failed: $(tail -3 /tmp/tmf-chat-relay.log | tr ' ' ' ')"
+fi
+
 if grep -q "private" api/config.example.php 2>/dev/null && \
    grep -qi "private key" api/config.example.php && \
    grep -q "application_pubkey" api/config.example.php; then
@@ -820,7 +826,7 @@ chk "admin escapes field labels as well as values"     has admin.php 'esc(pretty
 chk "admin only draws a PNG data: URL as the signature" has admin.php 'data:image\/png;base64,'
 
 # --- endpoints ---
-for f in admin.php api/application.php api/lead.php api/unsubscribe.php api/chat.php api/figure-heloc.php; do
+for f in admin.php api/application.php api/lead.php api/unsubscribe.php api/chat.php api/chat-relay.php api/figure-heloc.php; do
   chk "$f never prints PHP errors to the browser" has "$f" "ini_set('display_errors', '0');"
 done
 if has api/application.php "preg_replace('/[\x00-\x1F\x7F]+/u', ' ', \$business)" && \

@@ -2689,6 +2689,7 @@
     let waiting = false;
     let poller = null;
     let sending = false;
+    let thinking = false;
 
     try { session = sessionStorage.getItem(CHAT_SESSION_KEY) || null; } catch (_) {}
 
@@ -2928,7 +2929,7 @@
        message box, which reads as a fault rather than as the leave-a-message
        box it actually is. */
     function setMode(m) {
-      if (m !== 'assistant' && m !== 'message') return;
+      if (m !== 'assistant' && m !== 'message' && m !== 'relay') return;
       mode = m;
       document.documentElement.setAttribute('data-chat-mode', mode);
       input.placeholder = mode === 'message' ? 'Type your message…' : 'Ask a question…';
@@ -2978,12 +2979,25 @@
       return post({ action: 'poll', session: session, since: seen })
         .then(function (j) {
           const wasHuman = human;
+          const wasWaiting = waiting;
           human = !!j.human;
           waiting = !!j.waiting;
           if (human && !wasHuman) note('An advisor has joined the conversation.');
           if (human) stopWait();
+          else if (waiting && !wasWaiting) {
+            startWait();
+            openCapture();
+          }
           setStatus();
-          (j.messages || []).forEach(function (m) {
+          const newMsgs = j.messages || [];
+          if (typeof j.thinking !== 'undefined') {
+            thinking = !!j.thinking;
+            typing(thinking);
+          } else if (newMsgs.length > 0) {
+            thinking = false;
+            typing(false);
+          }
+          newMsgs.forEach(function (m) {
             if (m.role === 'visitor') return;      // already on screen
             bubble(m.role, m.text);
           });
@@ -3017,14 +3031,22 @@
       ensureSession()
         .then(function () { return post({ action: 'send', session: session, message: text }); })
         .then(function (j) {
-          typing(false);
+          if (j.thinking) {
+            thinking = true;
+            typing(true);
+            startPolling();
+          } else {
+            thinking = false;
+            typing(false);
+          }
           human = !!j.human;
           setStatus();
           (j.messages || []).forEach(function (m) { bubble(m.role, m.text); seen++; });
           if (human) { note('An advisor is reading this.'); stopWait(); }
-          else startWait();
+          else if (!thinking) startWait();
         })
         .catch(function (e) {
+          thinking = false;
           typing(false);
           note('That did not send — ' + (e.message || 'please try again') + '.');
         })
@@ -3126,7 +3148,7 @@
       panel.classList.remove('open');
       launch.hidden = false;
       // Keep polling if a person is involved, so a reply is not missed.
-      if (!human && !waiting) stopPolling();
+      if (!human && !waiting && !thinking) stopPolling();
     }
 
     launch.addEventListener('click', function () { openChat(); });
