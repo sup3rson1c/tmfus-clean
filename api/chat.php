@@ -562,6 +562,24 @@ function askAgent(array $cfg, array $transcript, string $latest): array
     return ['ok' => true, 'reply' => $reply];
 }
 
+/** Determine whether the chat runs as direct assistant, relay, or leave-a-message. */
+function chatMode(array $cfg): string
+{
+    if (($cfg['chat_endpoint'] ?? '') !== '') {
+        return 'assistant';
+    }
+    if (($cfg['chat_relay_key'] ?? '') !== '') {
+        return 'relay';
+    }
+    return 'message';
+}
+
+// If loaded as a library by another script (e.g. api/chat-relay.php or tests),
+// return immediately so only the helper functions and constants are defined.
+if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) !== __FILE__) {
+    return;
+}
+
 /* ---------------------------------------------------------------
    Boot
    --------------------------------------------------------------- */
@@ -628,7 +646,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['selftest'])) {
 
    It reveals only whether chat is switched on. No key, no endpoint, no path. */
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['status'])) {
-    $cfg = is_readable(__DIR__ . '/config.php') ? (require __DIR__ . '/config.php') : [];
+    $configFile = getenv('TMF_CONFIG_FILE') ?: (__DIR__ . '/config.php');
+    $cfg = is_readable($configFile) ? (require $configFile) : [];
     if (!is_array($cfg)) {
         $cfg = [];
     }
@@ -636,7 +655,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['status'])) {
     respond(200, [
         'ok'      => true,
         'enabled' => !empty($cfg['chat_enabled']),
-        'mode'    => ($cfg['chat_endpoint'] ?? '') !== '' ? 'assistant' : 'message',
+        'mode'    => chatMode($cfg),
     ]);
 }
 
@@ -644,7 +663,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     fail(405, 'POST only.');
 }
 
-$cfg = is_readable(__DIR__ . '/config.php') ? (require __DIR__ . '/config.php') : [];
+$configFile = getenv('TMF_CONFIG_FILE') ?: (__DIR__ . '/config.php');
+$cfg = is_readable($configFile) ? (require $configFile) : [];
 if (!is_array($cfg)) {
     $cfg = [];
 }
@@ -709,7 +729,7 @@ if ($action === 'start') {
     respond(200, [
         'ok'      => true,
         'session' => $session,
-        'mode'    => ($cfg['chat_endpoint'] ?? '') !== '' ? 'assistant' : 'message',
+        'mode'    => chatMode($cfg),
     ]);
 }
 
@@ -727,14 +747,36 @@ if ($t === null) {
    poll — the visitor listening for anything new
    --------------------------------------------------------------- */
 if ($action === 'poll') {
+    if (!empty($t['pending'])) {
+        $waitSec = (int) ($cfg['chat_relay_wait'] ?? 60);
+        if ($waitSec <= 0) {
+            $waitSec = 60;
+        }
+        if ((time() - (int) $t['pending']) >= $waitSec) {
+            $fallback = 'I am having trouble reaching our system just now. A rep can pick this up.';
+            $t['messages'][] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];
+            $t['waiting'] = true;
+            unset($t['pending']);
+            notifyWaiting(
+                $cfg,
+                $t,
+                'The assistant could not answer, so this visitor is waiting.'
+            );
+            saveTranscript($baseDir, $t);
+        }
+    }
     $since = max(0, (int) ($in['since'] ?? 0));
-    respond(200, [
+    $res = [
         'ok'       => true,
         'human'    => (bool) $t['human'],
         'waiting'  => (bool) $t['waiting'],
         'total'    => count($t['messages']),
         'messages' => array_values(array_slice($t['messages'], $since)),
-    ]);
+    ];
+    if (!empty($t['pending'])) {
+        $res['thinking'] = true;
+    }
+    respond(200, $res);
 }
 
 /* ---------------------------------------------------------------
@@ -743,6 +785,7 @@ if ($action === 'poll') {
 if ($action === 'human') {
     if (!$t['waiting'] && !$t['human']) {
         $t['waiting'] = true;
+        unset($t['pending']);
         $t['messages'][] = [
             'role' => 'system',
             'text' => 'Visitor asked for a person.',
@@ -798,8 +841,9 @@ $raw = trim((string) ($in['message'] ?? ''));
 if ($raw === '') {
     fail(400, 'Empty message.');
 }
-if (mb_strlen($raw) > MAX_MESSAGE) {
-    $raw = mb_substr($raw, 0, MAX_MESSAGE);
+$len = function_exists('mb_strlen') ? mb_strlen($raw) : strlen($raw);
+if ($len > MAX_MESSAGE) {
+    $raw = function_exists('mb_substr') ? mb_substr($raw, 0, MAX_MESSAGE) : substr($raw, 0, MAX_MESSAGE);
 }
 
 $sensitiveFound = false;
@@ -821,6 +865,17 @@ if ($sensitiveFound) {
 if (!empty($t['human'])) {
     saveTranscript($baseDir, $t);
     respond(200, ['ok' => true, 'human' => true, 'messages' => $out]);
+}
+
+if (chatMode($cfg) === 'relay') {
+    $t['pending'] = time();
+    saveTranscript($baseDir, $t);
+    respond(200, [
+        'ok'       => true,
+        'human'    => false,
+        'messages' => [],
+        'thinking' => true,
+    ]);
 }
 
 $answer = askAgent($cfg, $t, $text);

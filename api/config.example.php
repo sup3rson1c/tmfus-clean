@@ -183,6 +183,20 @@ return [
     'chat_endpoint' => '',
     'chat_api_key'  => '',
 
+    // ---------------------------------------------------------------
+    // RELAY MODE (api/chat-relay.php, polled by VPS)
+    //
+    // Used when chat_endpoint is empty and chat_relay_key is non-empty.
+    // The website cannot call our VPS, so the VPS polls it.
+    // Make this a long random string:
+    //   php -r "echo bin2hex(random_bytes(32));"
+    // Leave empty to use direct assistant or message mode.
+    // ---------------------------------------------------------------
+    'chat_relay_key'  => '',
+    // Seconds to wait for a relay reply before falling back to the
+    // honest advisor-handoff message. Defaults to 60.
+    'chat_relay_wait' => 60,
+
     // 'openai' — POST {model, messages:[{role,content}]}, reply read from
     //            choices[0].message.content. What most hosted model APIs speak.
     // 'simple' — POST {session, message, history, system}, reply read from
