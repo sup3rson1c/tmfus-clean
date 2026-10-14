@@ -129,9 +129,27 @@ $r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/jso
 chk("start reports mode 'relay'", ($r['json']['mode'] ?? '') === 'relay' && !empty($r['json']['session']));
 $session = (string) ($r['json']['session'] ?? '');
 
-// 4. Pending list
+// 4. Pending list — opened conversation
 $r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
-chk('pending list initially empty', $r['status'] === 200 && empty($r['json']['items']));
+chk(
+    'opened conversation listed in pending with kind: opened, opened_at, page',
+    $r['status'] === 200 &&
+    count($r['json']['items'] ?? []) === 1 &&
+    ($r['json']['items'][0]['session'] ?? '') === $session &&
+    ($r['json']['items'][0]['kind'] ?? '') === 'opened' &&
+    !empty($r['json']['items'][0]['opened_at']) &&
+    isset($r['json']['items'][0]['page'])
+);
+
+// POST action: 'seen' hides opened conversation from pending
+$r = req($baseUrl . '/api/chat-relay.php', 'POST', ['Content-Type' => 'application/json', 'X-Relay-Key' => $relayKey], json_encode([
+    'action'  => 'seen',
+    'session' => $session,
+]));
+chk('POST action: seen succeeds', ($r['json']['ok'] ?? false) === true);
+
+$r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
+chk('opened item hidden from pending after seen', empty($r['json']['items']));
 
 $r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], json_encode([
     'action'  => 'send',
@@ -142,10 +160,11 @@ chk('send in relay mode answers thinking: true', ($r['json']['thinking'] ?? fals
 
 $r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
 chk(
-    'pending list includes visitor message',
+    'pending list includes visitor message with kind: message',
     $r['status'] === 200 &&
     count($r['json']['items'] ?? []) === 1 &&
     ($r['json']['items'][0]['session'] ?? '') === $session &&
+    ($r['json']['items'][0]['kind'] ?? '') === 'message' &&
     ($r['json']['items'][0]['messages'][0]['text'] ?? '') === 'Need 75k line of credit'
 );
 
@@ -192,9 +211,16 @@ chk('transcript waiting is true after handoff', ($r['json']['waiting'] ?? false)
 $r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
 chk('waiting session excluded from pending list', empty($r['json']['items']));
 
-// 7. Fallback after wait
+// 7. Holding line and stays pending after wait timeout
 $r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], json_encode(['action' => 'start']));
 $session2 = (string) ($r['json']['session'] ?? '');
+
+// Mark seen so opened doesn't linger
+req($baseUrl . '/api/chat-relay.php', 'POST', ['Content-Type' => 'application/json', 'X-Relay-Key' => $relayKey], json_encode([
+    'action'  => 'seen',
+    'session' => $session2,
+]));
+
 req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], json_encode([
     'action'  => 'send',
     'session' => $session2,
@@ -204,7 +230,7 @@ req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], 
 $r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
 chk('session2 pending before wait', count($r['json']['items'] ?? []) === 1);
 
-// Wait for timeout
+// Wait for timeout (chat_relay_wait is set to 2 seconds)
 usleep(2200000);
 
 $r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], json_encode([
@@ -213,14 +239,36 @@ $r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/jso
     'since'   => 1,
 ]));
 chk(
-    'fallback message added after wait timeout',
-    ($r['json']['waiting'] ?? false) === true &&
+    'holding line delivered after wait timeout, thinking remains true',
+    ($r['json']['waiting'] ?? false) === false &&
+    ($r['json']['thinking'] ?? false) === true &&
     count($r['json']['messages'] ?? []) === 1 &&
-    str_contains($r['json']['messages'][0]['text'] ?? '', 'trouble reaching our system')
+    ($r['json']['messages'][0]['text'] ?? '') === 'One moment, an advisor is checking that for you.'
 );
 
+// Second poll does not duplicate holding line
+$r = req($baseUrl . '/api/chat.php', 'POST', ['Content-Type' => 'application/json'], json_encode([
+    'action'  => 'poll',
+    'session' => $session2,
+    'since'   => 2,
+]));
+chk('holding line delivered only once', empty($r['json']['messages']) && ($r['json']['thinking'] ?? false) === true);
+
+// Conversation stays pending in chat-relay
 $r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
-chk('session2 pending cleared after fallback', empty($r['json']['items']));
+chk('session2 stays pending in relay feed after holding line', count($r['json']['items'] ?? []) === 1 && ($r['json']['items'][0]['session'] ?? '') === $session2);
+
+// Replying clears pending
+$r = req($baseUrl . '/api/chat-relay.php', 'POST', ['Content-Type' => 'application/json', 'X-Relay-Key' => $relayKey], json_encode([
+    'action'  => 'reply',
+    'session' => $session2,
+    'text'    => 'Here is the answer.',
+    'handoff' => false,
+]));
+chk('POST reply to session2 succeeds', ($r['json']['ok'] ?? false) === true);
+
+$r = req($baseUrl . '/api/chat-relay.php?action=pending', 'GET', ['X-Relay-Key' => $relayKey]);
+chk('session2 pending cleared after reply', empty($r['json']['items']));
 
 if ($failures > 0) {
     echo "\n{$failures} test(s) failed.\n";

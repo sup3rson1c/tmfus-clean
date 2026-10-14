@@ -2782,13 +2782,15 @@
 
     let typingEl = null;
     function typing(on) {
-      if (on && !typingEl) {
-        typingEl = document.createElement('div');
-        typingEl.className = 'chat-typing';
-        typingEl.textContent = 'Typing…';
+      if (on) {
+        if (!typingEl) {
+          typingEl = document.createElement('div');
+          typingEl.className = 'chat-typing';
+          typingEl.textContent = 'Typing…';
+        }
         log.appendChild(typingEl);
         log.scrollTop = log.scrollHeight;
-      } else if (!on && typingEl) {
+      } else if (typingEl) {
         typingEl.remove();
         typingEl = null;
       }
@@ -2990,6 +2992,11 @@
           }
           setStatus();
           const newMsgs = j.messages || [];
+          newMsgs.forEach(function (m) {
+            if (m.role === 'visitor') return;      // already on screen
+            bubble(m.role, m.text);
+          });
+          seen = j.total;
           if (typeof j.thinking !== 'undefined') {
             thinking = !!j.thinking;
             typing(thinking);
@@ -2997,11 +3004,6 @@
             thinking = false;
             typing(false);
           }
-          newMsgs.forEach(function (m) {
-            if (m.role === 'visitor') return;      // already on screen
-            bubble(m.role, m.text);
-          });
-          seen = j.total;
         })
         .catch(function () { /* a dropped poll is not worth telling anyone about */ });
     }
