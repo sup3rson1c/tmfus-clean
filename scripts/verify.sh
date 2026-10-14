@@ -230,6 +230,7 @@ required = {
     'index.html': {'Organization', 'FinancialService', 'WebSite', 'WebPage', 'FAQPage'},
     'mca.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
     'sba-loans.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
+    'line-of-credit.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
     'heloc-calculator.html': {'WebPage', 'BreadcrumbList', 'Service', 'LoanOrCredit', 'FAQPage'},
     'funding-estimator.html': {'WebPage', 'BreadcrumbList', 'Service', 'FAQPage'},
     'apply.html': {'WebPage', 'BreadcrumbList', 'HowTo'},
@@ -335,7 +336,7 @@ if expected != actual:
     print('missing from sitemap:', sorted(expected - actual))
     print('unexpected in sitemap:', sorted(actual - expected))
     sys.exit(1)
-if len(actual) != 10 or any(re.search(r'\.(html|php)$', url) for url in actual):
+if len(actual) != 11 or any(re.search(r'\.(html|php)$', url) for url in actual):
     sys.exit(1)
 PY
 then

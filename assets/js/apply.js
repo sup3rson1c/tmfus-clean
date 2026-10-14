@@ -210,3 +210,22 @@
     }
   });
 })();
+
+/* Coming from the Line of credit page (/apply?product=loc): preselect it.
+   The engine's own preset only knows heloc, mca and sba, and engine.js is
+   generated from the live app.js, so it is done here. Only fills an empty
+   select, and only with the listed option. */
+(() => {
+  let key = "";
+  try { key = (new URLSearchParams(location.search).get("product") || "").toLowerCase(); } catch (_) {}
+  if (key !== "loc") return;
+  const set = () => {
+    const sel = document.querySelector('[data-field="product"]');
+    if (sel && !sel.value && [...sel.options].some((o) => o.value === "Line of credit")) {
+      sel.value = "Line of credit";
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", set);
+  else set();
+})();

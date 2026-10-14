@@ -23,6 +23,7 @@ deployment:
     - /bin/cp -f mca.html               $DEPLOYPATH/
     - /bin/cp -f privacy.html           $DEPLOYPATH/
     - /bin/cp -f sba-loans.html         $DEPLOYPATH/
+    - /bin/cp -f line-of-credit.html    $DEPLOYPATH/
     - /bin/cp -f terms.html             $DEPLOYPATH/
     - /bin/cp -f unsubscribe.html       $DEPLOYPATH/
     - /bin/cp -f admin.php              $DEPLOYPATH/

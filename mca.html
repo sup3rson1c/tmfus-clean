@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=40c71a0c18">
+<link rel="stylesheet" href="/assets/css/site.css?v=79a485c8f4">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -116,7 +116,7 @@
               <li><a class="menu__link" href="/mca" data-nav="mca" aria-current="page"><span class="menu__title">Cash injection</span><span class="menu__meta">$5K–$2M · decision in 3–24h</span></a></li>
               <li><a class="menu__link" href="/sba-loans" data-nav="sba-loans"><span class="menu__title">SBA loans</span><span class="menu__meta">Up to $5.5M · 10–25 year terms</span></a></li>
               <li><a class="menu__link" href="/heloc-calculator" data-nav="heloc-calculator"><span class="menu__title">Home equity</span><span class="menu__meta">$25K–$750K · offer inside the hour</span></a></li>
-              <li><a class="menu__link" href="/apply"><span class="menu__title">Line of credit</span><span class="menu__meta">$10K–$250K · apply in about 10 minutes</span></a></li>
+              <li><a class="menu__link" href="/line-of-credit" data-nav="line-of-credit"><span class="menu__title">Line of credit</span><span class="menu__meta">$10K–$250K · revolving</span></a></li>
             </ul>
             <a class="menu__foot" href="/funding-estimator">Not sure which fits? See what you qualify for <span aria-hidden="true">→</span></a>
             </div>
@@ -142,7 +142,7 @@
         <li><a href="/mca" data-nav="mca" aria-current="page"><span class="menu__title">Cash injection</span><span class="menu__meta">$5K–$2M · decision in 3–24h</span></a></li>
         <li><a href="/sba-loans" data-nav="sba-loans"><span class="menu__title">SBA loans</span><span class="menu__meta">Up to $5.5M · 10–25 year terms</span></a></li>
         <li><a href="/heloc-calculator" data-nav="heloc-calculator"><span class="menu__title">Home equity</span><span class="menu__meta">$25K–$750K · offer inside the hour</span></a></li>
-        <li><a href="/apply"><span class="menu__title">Line of credit</span><span class="menu__meta">$10K–$250K · apply in about 10 minutes</span></a></li>
+        <li><a href="/line-of-credit" data-nav="line-of-credit"><span class="menu__title">Line of credit</span><span class="menu__meta">$10K–$250K · revolving</span></a></li>
       </ul>
       <a class="mobile-menu__cta" href="/funding-estimator" data-nav="funding-estimator"><span class="nav__cta-dot" aria-hidden="true"></span>Funding calculator<span class="menu__meta">See what you qualify for in 60 seconds</span></a>
       <p class="eyebrow">Solutions</p>
@@ -171,12 +171,10 @@
         <a class="link-arrow" href="/apply">Apply now <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
     </div>
-    <div class="page-hero__media page-hero__media--needle" data-needle tabindex="0" role="img" aria-label="A glass syringe full of gold coins and dollar bills, its needle in the side of a steel safe. Drag sideways to push the plunger.">
-      <div class="needle__tilt">
-        <img src="/media/film/frames/m/b11/0031.webp" width="960" height="536" alt="" fetchpriority="high" decoding="async">
-        <canvas aria-hidden="true"></canvas>
-      </div>
-      <p class="needle__hint" aria-hidden="true"><span class="needle__hint-dot"></span>Drag to inject</p>
+    <div class="page-hero__media page-hero__media--needle" data-needle tabindex="0" role="img" aria-label="A 3D glass syringe full of gold coins and dollar bills, injecting into a steel safe whose screen counts the dollars. Drag to spin it.">
+      <img class="needle__poster" src="/media/film/frames/m/b11/0031.webp" width="960" height="536" alt="" fetchpriority="high" decoding="async">
+      <div class="needle__canvas"></div>
+      <p class="needle__hint" aria-hidden="true"><span class="needle__hint-dot"></span>Drag to spin</p>
     </div>
   </div>
   <div class="container">
@@ -363,7 +361,7 @@
           <li><a href="/mca">Cash injection (MCA)</a></li>
           <li><a href="/sba-loans">SBA loans</a></li>
           <li><a href="/heloc-calculator">Home equity (HELOC)</a></li>
-          <li><a href="/apply">Line of credit</a></li>
+          <li><a href="/line-of-credit">Line of credit</a></li>
         </ul>
       </nav>
 
@@ -415,7 +413,7 @@
 <script src="/assets/js/engine.js?v=a64f414a2a" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
     <script src="/assets/js/motion.js?v=25b7eff40f" defer></script>
-  <script src="/assets/js/needle.js?v=1764a80b68" defer></script>
+  <script src="/assets/js/needle.js?v=62c37feaf1" defer></script>
 <script src="/assets/js/moments.js?v=527518f9c0" defer></script>
 </body>
 </html>

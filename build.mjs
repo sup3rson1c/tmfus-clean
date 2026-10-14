@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, "src");
-const SOLUTIONS = ["mca", "sba-loans", "heloc-calculator"];
+const SOLUTIONS = ["mca", "sba-loans", "heloc-calculator", "line-of-credit"];
 
 const read = (p) => readFileSync(p, "utf8");
 
@@ -109,6 +109,7 @@ const CRUMBS = {
   "funding-estimator": "Cash injection calculator",
   "heloc-calculator": "Home equity",
   "sba-loans": "SBA loans",
+  "line-of-credit": "Line of credit",
   mca: "Merchant cash advance",
   terms: "Terms of Use",
   privacy: "Privacy Policy",
@@ -117,6 +118,7 @@ const SERVICES = {
   mca: ["Merchant Cash Advance", "Revenue-based business funding from $5K to $2M with remittances aligned to card and bank receipts."],
   "sba-loans": ["SBA 7(a) and 504 Loans", "SBA-guaranteed business lending: 7(a) for working capital and acquisitions, 504 for property and long-life equipment financing."],
   "heloc-calculator": ["Home Equity Line of Credit", "A line secured against home equity for business owners, up to $750K, valued without an appraisal appointment."],
+  "line-of-credit": ["Business Line of Credit", "A revolving business line of credit from $10K to $250K: draw what you need and pay only on what is drawn."],
   "funding-estimator": ["Business Funding Estimate", "A four-step estimate of the cash injection a business may qualify for, based on revenue, time in business and credit."],
 };
 const LOAN_PRODUCTS = {
@@ -136,6 +138,12 @@ const LOAN_PRODUCTS = {
     description: "A revolving line secured against the equity in a home, for business owners who would rather use personal equity than business credit.",
     minValue: 25000,
     maxValue: 750000,
+  },
+  "line-of-credit": {
+    name: "Business Line of Credit",
+    description: "A revolving line for working capital. The business draws against a limit, pays on the amount drawn, and can draw again as it repays.",
+    minValue: 10000,
+    maxValue: 250000,
   },
 };
 const HOW_TO = {
@@ -160,6 +168,7 @@ const SITEMAP = [
   ["/sba-loans", "0.9", "monthly"],
   ["/mca", "0.9", "monthly"],
   ["/heloc-calculator", "0.9", "monthly"],
+  ["/line-of-credit", "0.9", "monthly"],
   ["/funding-estimator", "0.9", "monthly"],
   ["/apply", "0.8", "monthly"],
   ["/about", "0.6", "yearly"],
@@ -292,7 +301,7 @@ function schema(html, v) {
 const CSP_ENFORCE = false;
 const CSP = [
   ["default-src", "'self'"],
-  ["script-src", "'self'", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/", "https://cdn.jsdelivr.net/npm/lenis@1.3.4/", "{{inline-hashes}}"],
+  ["script-src", "'self'", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/", "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/", "https://cdn.jsdelivr.net/npm/lenis@1.3.4/", "{{inline-hashes}}"],
   ["style-src", "'self'", "https://fonts.googleapis.com"],
   ["style-src-attr", "'unsafe-inline'"],
   ["font-src", "'self'", "https://fonts.gstatic.com"],
