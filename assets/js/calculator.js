@@ -382,7 +382,7 @@
 
       extra.innerHTML = `<dl class="certificate__inputs certificate__inputs--result">
           ${est && est.deduction > 0 ? `<div><dt>Less existing positions</dt><dd>− ${money(est.deduction)}</dd></div>` : ""}
-          <div><dt>Typical decision</dt><dd>3–24h</dd></div>
+          <div><dt>Typical offers</dt><dd>2–4h</dd></div>
         </dl>
         <p class="certificate__disclaimer"><strong>This is a projection, not an offer.</strong> The figures above are an estimate based on the details you entered. They are not a quote, not a commitment to lend, and not the exact amount you will be offered. Real terms depend on underwriting, your bank statements and the funder — and can land above or below this range.</p>`;
       extra.hidden = false;

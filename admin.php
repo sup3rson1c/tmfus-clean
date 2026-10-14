@@ -71,7 +71,7 @@ const READY_REPLIES = [
         "Good that you mentioned it. Open positions do not rule you out, and being upfront about them helps — funders see them on the statements anyway, and a file that left one out is the one that gets declined.",
 
     'Timeline' =>
-        "An advisor reviews the file, usually within 3 to 24 hours. If it is approved, funding commonly lands 24 to 48 hours after you accept. SBA is a different animal, 30 to 90 days.",
+        "Funders review the file and send offers, usually within 2 to 4 hours. Funding usually lands within 4 to 24 hours of applying, often a couple of hours after you accept. SBA is a different animal, 30 to 90 days.",
 
     'No numbers yet' =>
         "I would rather not guess at a number before seeing the statements — anything I said now would just be a number you would hold me to. Send those over and you will get a real answer, not an estimate.",

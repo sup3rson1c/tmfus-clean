@@ -36,8 +36,8 @@ Last updated: 2026-08-20.
 
 - [Application](https://tmfus.com/apply): four steps, about ten minutes.
   Requires EIN, business and owner details, and **four months of business bank
-  statements**. An advisor reviews the file, usually within 3–24 hours. On
-  approval, funding can land in 24–48 hours.
+  statements**. Funders review the file and send offers, usually within 2–4
+  hours. Funding usually lands within 4–24 hours of applying.
 
 ## About
 
@@ -60,8 +60,8 @@ Last updated: 2026-08-20.
   and is compensated by the funder when a transaction funds.
 - Cash injection range: **$5,000 to $2,000,000**. HELOC ceiling: **$750,000**.
 - **Four months of business bank statements are required**, in every state.
-- Typical decision on a complete cash-injection file: **3–24 hours**. Typical
-  funding after acceptance: **24–48 hours**. SBA: **30–90 days**.
+- Typical offers on a complete cash-injection file: **2–4 hours**. Typical
+  funding: **within 4–24 hours of applying**, often a couple of hours after acceptance. SBA: **30–90 days**.
 - The application collects Social Security number, date of birth and an
   electronic signature. Those three are **encrypted on arrival with a key the
   web server does not hold**, and are never emailed or stored in plain text.

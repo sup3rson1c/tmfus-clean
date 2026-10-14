@@ -1,6 +1,6 @@
 /* TMF Team · home hero: layered depth (docs/motion-phase2-direction.md §6).
    Planes, back to front: clean plate, rear atmosphere, contact shadow, the
-   disc (with its 48-hour ring, chips and sheen), front atmosphere, stone
+   disc (with its 24-hour ring, chips and sheen), front atmosphere, stone
    slab, copy. Large screens: the stage sticks for 70svh while the planes
    separate at different rates, plus pointer depth on fine pointers.
    Phones: the scene flows under the copy with light parallax.
@@ -13,7 +13,7 @@
   const { gsap } = window;
   const on = Boolean(M.on);
   const NS = "http://www.w3.org/2000/svg";
-  const TOTAL = 48;
+  const TOTAL = 24; // apply 0h, offers 2-4h, funded 4-24h (John, 14 Oct 2026)
   // Disc top face in the 2048px A1 frame: centre and radii in px. The ring sits 16% outside it.
   const FACE = { cx: 973, cy: 895, rx: 620, ry: 283, ring: 1.16 };
 
@@ -36,7 +36,7 @@
   const next = $(".hero__next");
   const facts = [...hero.querySelectorAll(".hero__facts .fact")];
 
-  /* The 48-hour ring, drawn in the frame's own pixels so it sits on the
+  /* The 24-hour ring, drawn in the frame's own pixels so it sits on the
      disc's face in perspective. Hour 0 is at the top, running clockwise. */
   const make = (tag, attrs, parent = svg) => {
     const node = document.createElementNS(NS, tag);
@@ -68,8 +68,8 @@
     ticks.push(make("line", { class: major ? "d-tick d-tick--major" : "d-tick", x1, y1, x2, y2 }));
   }
   const arcs = [
-    make("path", { class: "d-arc d-arc--decision", d: arcPath(3, 23.4, 1.075) }),
-    make("path", { class: "d-arc d-arc--funds", d: arcPath(24.6, 47.4, 1.075) }),
+    make("path", { class: "d-arc d-arc--decision", d: arcPath(2.1, 3.85, 1.075) }),
+    make("path", { class: "d-arc d-arc--funds", d: arcPath(4.15, 23.7, 1.075) }),
   ];
   const hand = make("line", { class: "d-hand" });
   make("ellipse", { class: "d-hub", cx: FACE.cx, cy: FACE.cy, rx: RX * 0.026, ry: RY * 0.026 });
@@ -107,9 +107,9 @@
   document.fonts?.ready.then(place);
 
   /* Intro (≤ 1.6s): exposure lifts, the headline rises, the ring traces,
-     the hand sweeps to 13.5h and the chips strike in order. */
+     the hand sweeps to 14h and the chips strike in order. */
   if (!on || M.late) {
-    state.h = 13.5;
+    state.h = 14;
     setHand();
     [title, ...bits, ...chips].forEach((el) => (el.style.opacity = 1));
     exposure.style.opacity = 0;
@@ -124,7 +124,7 @@
       tl.fromTo(bits, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: "expo.out", stagger: 0.08 }, 0.3);
       tl.fromTo(ring, { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.9, ease: "power2.inOut" }, 0.3);
       tl.from([etch, ...ticks], { opacity: 0, duration: 0.5, stagger: 0.006 }, 0.35);
-      tl.to(state, { h: 13.5, duration: 1.1, ease: "power3.inOut", onUpdate: setHand }, 0.45);
+      tl.to(state, { h: 14, duration: 1.1, ease: "power3.inOut", onUpdate: setHand }, 0.45);
       tl.fromTo(arcs, { drawSVG: "0%" }, { drawSVG: "100%", duration: 0.7, ease: "power2.out", stagger: 0.25 }, 0.75);
       [0.5, 1.05, 1.3].forEach((t, i) => {
         if (chips[i]) tl.fromTo(chips[i], { opacity: 0, scale: 1.035 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, t);

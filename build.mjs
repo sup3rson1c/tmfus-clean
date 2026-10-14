@@ -148,7 +148,7 @@ const LOAN_PRODUCTS = {
 };
 const HOW_TO = {
   name: "How to apply for business funding with TMF Team",
-  description: "The TMF Team application is four steps and takes about ten minutes. An advisor reviews the file, usually within 3 to 24 hours.",
+  description: "The TMF Team application is four steps and takes about ten minutes. Funders review the file and send offers, usually within 2 to 4 hours, and funding typically follows within 4 to 24 hours of applying.",
   totalTime: "PT10M",
   supply: [
     "Business legal name, EIN and business start date",

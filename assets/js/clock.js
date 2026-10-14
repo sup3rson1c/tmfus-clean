@@ -1,7 +1,7 @@
 /* TMF Team · the engraving clock, "Where the hours go" (docs/motion-phase2-direction.md §7).
-   The 48-hour hand is the cutter of a rose engine: as it sweeps it engraves
+   The 24-hour hand is the cutter of a rose engine: as it sweeps it engraves
    a guilloché band into the blackened steel behind it. Every track is
-   periodic around the dial, so the band closes exactly at hour 48.
+   periodic around the dial, so the band closes exactly at hour 24.
    The hand is a real slider. Scroll, drag, click and keys drive the same
    instrument, and while motion is on the page scroll stays the single
    source of truth (every control scrolls to its hour). */
@@ -13,7 +13,11 @@
   const { gsap, ScrollTrigger: ST } = window;
   const on = Boolean(M.on);
   const NS = "http://www.w3.org/2000/svg";
-  const TOTAL = 48;
+  // The funding timeline (John, 14 Oct 2026): apply at hour 0, offers in
+  // 2-4 hours, funded within 4-24 hours. It used to be a 48-hour dial.
+  const TOTAL = 24;
+  const OFFERS = [2, 4];
+  const FUNDS = [4, 24];
   const TAU = Math.PI * 2;
   const VIEW = 250; // SVG viewBox is ±250 units
   const R = 186; // ring radius in SVG units, inside the plate's bevel
@@ -62,12 +66,12 @@
     const [x2, y2] = pt(h, R * 0.985);
     make("line", { class: major ? "c-tick c-tick--major" : "c-tick", x1: x1.toFixed(2), y1: y1.toFixed(2), x2: x2.toFixed(2), y2: y2.toFixed(2) });
   }
-  for (const h of [0, 12, 24, 36]) {
+  for (const h of [0, 6, 12, 18]) {
     const [x, y] = pt(h, R * 0.845);
     make("text", { class: "c-num", x: x.toFixed(1), y: y.toFixed(1), "text-anchor": "middle", "dominant-baseline": "central" }).textContent = String(h);
   }
-  make("path", { class: "c-track", d: arcD(3, 24, WINDOW_R) });
-  make("path", { class: "c-track", d: arcD(24, 48, WINDOW_R) });
+  make("path", { class: "c-track", d: arcD(OFFERS[0], OFFERS[1], WINDOW_R) });
+  make("path", { class: "c-track", d: arcD(FUNDS[0], FUNDS[1], WINDOW_R) });
   const decisionArc = make("path", { class: "c-arc c-arc--decision" });
   const fundsArc = make("path", { class: "c-arc c-arc--funds" });
   // The hand starts outside the readout, so the hour stays legible under it
@@ -160,20 +164,20 @@
   };
 
   /* Paint one frame of the instrument */
-  const NAMES = ["see your options", "talk to a specialist", "get funded"];
-  const stageAt = (h) => (h < 6 ? 0 : h < 26 ? 1 : 2);
-  const labelAt = (h) => (h >= TOTAL ? "From apply to funds" : h >= 24 ? "Funding window" : h >= 3 ? "Decision window" : "See your options");
+  const NAMES = ["quick application", "review and offers", "get funded"];
+  const stageAt = (h) => (h < 2 ? 0 : h < 4 ? 1 : 2);
+  const labelAt = (h) => (h >= TOTAL ? "From apply to funds" : h >= 4 ? "Funding window" : h >= 2 ? "Offers window" : "Quick application");
   const ramp = (x, a, b) => Math.min(1, Math.max(0, (x - a) / (b - a)));
   // Stacked stage cues: one leaves before the next arrives; the last one holds.
-  const cue = (h, i) => (i === 0 ? 1 - ramp(h, 5, 6) : i === 1 ? ramp(h, 6, 7) * (1 - ramp(h, 25, 26)) : ramp(h, 26, 27));
-  const CENTRE = [3, 16, 37];
+  const cue = (h, i) => (i === 0 ? 1 - ramp(h, 1.5, 2) : i === 1 ? ramp(h, 2, 2.5) * (1 - ramp(h, 3.6, 4)) : ramp(h, 4, 4.6));
+  const CENTRE = [1, 3, 14];
   let pinned = false;
   let shown = -1;
   const paint = (h) => {
     draw(h);
     hand.setAttribute("transform", `rotate(${((h / TOTAL) * 360).toFixed(2)})`);
-    decisionArc.setAttribute("d", h > 3 ? arcD(3, Math.min(h, 24), WINDOW_R) : "");
-    fundsArc.setAttribute("d", h > 24 ? arcD(24, Math.min(h, TOTAL), WINDOW_R) : "");
+    decisionArc.setAttribute("d", h > OFFERS[0] ? arcD(OFFERS[0], Math.min(h, OFFERS[1]), WINDOW_R) : "");
+    fundsArc.setAttribute("d", h > FUNDS[0] ? arcD(FUNDS[0], Math.min(h, FUNDS[1]), WINDOW_R) : "");
     const [hx, hy] = pt(h, WINDOW_R);
     const k = clock.clientWidth / (2 * VIEW);
     handle.style.transform = `translate(${((hx + VIEW) * k).toFixed(1)}px, ${((hy + VIEW) * k).toFixed(1)}px)`;
@@ -191,11 +195,11 @@
     hourEl.textContent = `${whole}h`;
     labelEl.textContent = labelAt(whole);
     handle.setAttribute("aria-valuenow", String(whole));
-    handle.setAttribute("aria-valuetext", `Hour ${whole} of 48: ${NAMES[s]}`);
+    handle.setAttribute("aria-valuetext", `Hour ${whole} of ${TOTAL}: ${NAMES[s]}`);
     stages.forEach((el, i) => el.classList.toggle("is-active", i === s));
     jumps.forEach((btn, i) => btn.setAttribute("aria-current", String(i === s)));
-    const decision = Math.round((Math.min(Math.max(whole - 3, 0), 21) / 21) * 10);
-    const funds = Math.round((Math.min(Math.max(whole - 24, 0), 24) / 24) * 10);
+    const decision = Math.round((Math.min(Math.max(whole - OFFERS[0], 0), 2) / 2) * 10);
+    const funds = Math.round((Math.min(Math.max(whole - FUNDS[0], 0), 20) / 20) * 10);
     stage.setAttribute("data-sc-verify-state", `h${whole}|d${decision}|f${funds}|s${s}`);
   };
 
@@ -231,17 +235,17 @@
     }
   };
 
-  /* Scroll → hour. Holds at both ends and small detents at 3h and 24h are
+  /* Scroll → hour. Holds at both ends and small detents at 2h and 4h are
      authored silence (BRIEF.md): the dial greets at rest, and the closed
      engraving is given a moment. */
   const SEGMENTS = [
     [0, 0.06, 0, 0],
-    [0.06, 0.11, 0, 3],
-    [0.11, 0.13, 3, 3],
-    [0.13, 0.5, 3, 24],
-    [0.5, 0.52, 24, 24],
-    [0.52, 0.94, 24, 48],
-    [0.94, 1, 48, 48],
+    [0.06, 0.16, 0, 2],
+    [0.16, 0.18, 2, 2],
+    [0.18, 0.42, 2, 4],
+    [0.42, 0.44, 4, 4],
+    [0.44, 0.94, 4, 24],
+    [0.94, 1, 24, 24],
   ];
   const hourAt = (p) => {
     for (const [p0, p1, h0, h1] of SEGMENTS) if (p <= p1) return h0 + ((h1 - h0) * (p - p0)) / (p1 - p0);
