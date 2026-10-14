@@ -193,8 +193,8 @@ return [
     // Leave empty to use direct assistant or message mode.
     // ---------------------------------------------------------------
     'chat_relay_key'  => '',
-    // Seconds to wait for a relay reply before falling back to the
-    // honest advisor-handoff message. Defaults to 60.
+    // Seconds to wait for a relay reply before giving the visitor a holding
+    // line ('One moment, an advisor is checking that for you.'). Defaults to 60.
     'chat_relay_wait' => 60,
 
     // 'openai' — POST {model, messages:[{role,content}]}, reply read from

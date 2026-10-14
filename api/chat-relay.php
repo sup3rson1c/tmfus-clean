@@ -99,39 +99,63 @@ if ($method === 'GET') {
                         continue;
                     }
 
-                    // Must have pending set, not waiting for a human, not human, not closed
-                    if (empty($t['pending']) || !empty($t['waiting']) || !empty($t['human']) || !empty($t['closed'])) {
+                    // Exclude closed, human-taken-over, or waiting for human
+                    if (!empty($t['closed']) || !empty($t['human']) || !empty($t['waiting'])) {
                         continue;
                     }
 
-                    // Must have a visitor message with no reply yet
                     $messages = (array) ($t['messages'] ?? []);
-                    $lastRole = '';
+                    $hasVisitorMsg = false;
+                    $lastNonHoldingRole = '';
+
                     for ($i = count($messages) - 1; $i >= 0; $i--) {
-                        $role = (string) ($messages[$i]['role'] ?? '');
-                        if ($role !== 'system') {
-                            $lastRole = $role;
-                            break;
+                        $m = $messages[$i];
+                        $role = (string) ($m['role'] ?? '');
+                        if ($role === 'visitor') {
+                            $hasVisitorMsg = true;
+                        }
+                        if ($lastNonHoldingRole === '') {
+                            if ($role !== 'system' && empty($m['holding']) && (string) ($m['text'] ?? '') !== 'One moment, an advisor is checking that for you.') {
+                                $lastNonHoldingRole = $role;
+                            }
                         }
                     }
-                    if ($lastRole !== 'visitor') {
-                        continue;
-                    }
 
-                    $candidates[] = $t;
+                    if ($hasVisitorMsg) {
+                        // Pending visitor message waiting for an assistant/advisor reply
+                        if (!empty($t['pending']) && $lastNonHoldingRole === 'visitor') {
+                            $candidates[] = [
+                                'transcript' => $t,
+                                'kind'       => 'message',
+                                'time'       => (int) $t['pending'],
+                            ];
+                        }
+                    } else {
+                        // Opened conversation with no visitor message yet, not yet marked seen
+                        if (empty($t['seen'])) {
+                            $time = (int) ($t['opened_time'] ?? (isset($t['opened_at']) ? strtotime($t['opened_at']) : (isset($t['created']) ? strtotime($t['created']) : 0)));
+                            $candidates[] = [
+                                'transcript' => $t,
+                                'kind'       => 'opened',
+                                'time'       => $time,
+                            ];
+                        }
+                    }
                 }
             }
         }
     }
 
     // Sort oldest pending first
-    usort($candidates, static fn($a, $b) => ((int) ($a['pending'] ?? 0)) <=> ((int) ($b['pending'] ?? 0)));
+    usort($candidates, static fn($a, $b) => ((int) ($a['time'] ?? 0)) <=> ((int) ($b['time'] ?? 0)));
 
     // At most 10 transcripts
     $candidates = array_slice($candidates, 0, 10);
 
     $items = [];
-    foreach ($candidates as $t) {
+    foreach ($candidates as $cand) {
+        $t = $cand['transcript'];
+        $kind = $cand['kind'];
         $itemMessages = [];
         foreach ((array) ($t['messages'] ?? []) as $m) {
             $role = (string) ($m['role'] ?? '');
@@ -144,8 +168,11 @@ if ($method === 'GET') {
             }
         }
         $items[] = [
-            'session'  => (string) ($t['session'] ?? ''),
-            'messages' => $itemMessages,
+            'session'   => (string) ($t['session'] ?? ''),
+            'kind'      => $kind,
+            'opened_at' => (string) ($t['opened_at'] ?? $t['created'] ?? ''),
+            'page'      => (string) ($t['page'] ?? ''),
+            'messages'  => $itemMessages,
         ];
     }
 
@@ -156,7 +183,10 @@ if ($method === 'GET') {
 }
 
 // ---------------------------------------------------------------
-// POST JSON {action:'reply', session, text, handoff:true|false}
+// POST JSON
+// Actions:
+//   reply -> {action:'reply', session, text, handoff:true|false}
+//   seen  -> {action:'seen', session}
 // ---------------------------------------------------------------
 if ($method === 'POST') {
     $rawInput = (string) file_get_contents('php://input');
@@ -166,7 +196,7 @@ if ($method === 'POST') {
     }
 
     $action = (string) ($in['action'] ?? '');
-    if ($action !== 'reply') {
+    if ($action !== 'reply' && $action !== 'seen') {
         fail(400, 'Unknown action.');
     }
 
@@ -180,6 +210,14 @@ if ($method === 'POST') {
         fail(404, 'Conversation not found.');
     }
 
+    if ($action === 'seen') {
+        $t['seen'] = true;
+        $t['seen_at'] = date('c');
+        $t['updated'] = date('c');
+        saveTranscript($baseDir, $t);
+        respond(200, ['ok' => true]);
+    }
+
     $text = trim((string) ($in['text'] ?? ''));
     $cleanText = stripSensitive($text);
     $t['messages'][] = [
@@ -189,6 +227,7 @@ if ($method === 'POST') {
     ];
 
     unset($t['pending']);
+    unset($t['holding_sent']);
 
     $handoff = !empty($in['handoff']);
     if ($handoff) {

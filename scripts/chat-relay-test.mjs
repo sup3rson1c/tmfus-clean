@@ -135,13 +135,36 @@ try {
   check("start reports mode 'relay'", startJson.ok && startJson.mode === 'relay' && !!startJson.session);
   const session = startJson.session;
 
-  /* ---------------- 4. Pending list ---------------- */
-  // Before sending visitor message, pending list should be empty
-  const pendingEmptyRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
+  /* ---------------- 4. Pending list & Seen ---------------- */
+  // Right after start (opened chat), pending list should include the opened conversation
+  const pendingOpenedRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
     headers: { 'X-Relay-Key': RELAY_KEY },
   });
-  const pendingEmptyJson = await pendingEmptyRes.json();
-  check('pending list initially empty', pendingEmptyJson.ok && pendingEmptyJson.items.length === 0);
+  const pendingOpenedJson = await pendingOpenedRes.json();
+  check(
+    'opened conversation listed in pending with kind: opened, opened_at, page',
+    pendingOpenedJson.ok &&
+    pendingOpenedJson.items.length === 1 &&
+    pendingOpenedJson.items[0].session === session &&
+    pendingOpenedJson.items[0].kind === 'opened' &&
+    !!pendingOpenedJson.items[0].opened_at &&
+    typeof pendingOpenedJson.items[0].page === 'string'
+  );
+
+  // POST action: 'seen' hides opened conversation from pending
+  const seenRes = await fetch(`${baseUrl}/api/chat-relay.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Relay-Key': RELAY_KEY },
+    body: JSON.stringify({ action: 'seen', session }),
+  });
+  const seenJson = await seenRes.json();
+  check('POST action: seen succeeds', seenJson.ok === true);
+
+  const pendingAfterSeenRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
+    headers: { 'X-Relay-Key': RELAY_KEY },
+  });
+  const pendingAfterSeenJson = await pendingAfterSeenRes.json();
+  check('opened item hidden from pending after seen', pendingAfterSeenJson.ok && pendingAfterSeenJson.items.length === 0);
 
   // Send visitor message
   const sendRes = await fetch(`${baseUrl}/api/chat.php`, {
@@ -155,16 +178,17 @@ try {
     sendJson.ok === true && sendJson.thinking === true && Array.isArray(sendJson.messages) && sendJson.messages.length === 0
   );
 
-  // GET ?action=pending should now list this session
+  // GET ?action=pending should now list this session with kind: 'message'
   const pendingRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
     headers: { 'X-Relay-Key': RELAY_KEY },
   });
   const pendingJson = await pendingRes.json();
   check(
-    'pending list returns pending item',
+    'pending list returns pending item with kind: message',
     pendingJson.ok &&
     pendingJson.items.length === 1 &&
     pendingJson.items[0].session === session &&
+    pendingJson.items[0].kind === 'message' &&
     pendingJson.items[0].messages.length === 1 &&
     pendingJson.items[0].messages[0].role === 'visitor' &&
     pendingJson.items[0].messages[0].text === 'Need $100k equipment loan'
@@ -258,6 +282,13 @@ try {
   const s2StartJson = await s2StartRes.json();
   const session2 = s2StartJson.session;
 
+  // Mark seen so opened does not linger in pending feed
+  await fetch(`${baseUrl}/api/chat-relay.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Relay-Key': RELAY_KEY },
+    body: JSON.stringify({ action: 'seen', session: session2 }),
+  });
+
   // Send a message
   await fetch(`${baseUrl}/api/chat.php`, {
     method: 'POST',
@@ -275,7 +306,7 @@ try {
   // Wait for timeout (chat_relay_wait is set to 2 seconds)
   await new Promise((r) => setTimeout(r, 2200));
 
-  // Poll should trigger the honest fallback
+  // Poll should trigger the holding line
   const s2PollRes = await fetch(`${baseUrl}/api/chat.php`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -283,20 +314,42 @@ try {
   });
   const s2PollJson = await s2PollRes.json();
   check(
-    'fallback message added after wait timeout',
+    'holding line delivered after wait timeout, thinking remains true',
     s2PollJson.ok &&
-    s2PollJson.waiting === true &&
+    s2PollJson.waiting === false &&
+    s2PollJson.thinking === true &&
     s2PollJson.messages.length === 1 &&
     s2PollJson.messages[0].role === 'assistant' &&
-    s2PollJson.messages[0].text === 'I am having trouble reaching our system just now. A rep can pick this up.'
+    s2PollJson.messages[0].text === 'One moment, an advisor is checking that for you.'
   );
 
-  // Session2 should no longer be in pending
+  // Second poll does not duplicate holding line
+  const s2Poll2Res = await fetch(`${baseUrl}/api/chat.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'poll', session: session2, since: 2 }),
+  });
+  const s2Poll2Json = await s2Poll2Res.json();
+  check('holding line delivered only once', s2Poll2Json.messages.length === 0 && s2Poll2Json.thinking === true);
+
+  // Session2 stays in pending feed
   const s2PendingAfterRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
     headers: { 'X-Relay-Key': RELAY_KEY },
   });
   const s2PendingAfterJson = await s2PendingAfterRes.json();
-  check('pending cleared after fallback', !s2PendingAfterJson.items.some((it) => it.session === session2));
+  check('session2 stays pending in relay feed after holding line', s2PendingAfterJson.items.some((it) => it.session === session2));
+
+  // Replying clears pending
+  await fetch(`${baseUrl}/api/chat-relay.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Relay-Key': RELAY_KEY },
+    body: JSON.stringify({ action: 'reply', session: session2, text: 'Here is your answer.' }),
+  });
+  const s2PendingClearedRes = await fetch(`${baseUrl}/api/chat-relay.php?action=pending`, {
+    headers: { 'X-Relay-Key': RELAY_KEY },
+  });
+  const s2PendingClearedJson = await s2PendingClearedRes.json();
+  check('pending cleared after reply', !s2PendingClearedJson.items.some((it) => it.session === session2));
 } finally {
   cleanup();
 }

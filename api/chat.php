@@ -707,20 +707,23 @@ if ($action !== 'poll') {
 if ($action === 'start') {
     $session = bin2hex(random_bytes(16));
     $calc = cleanCalc($in['calc'] ?? null);
+    $now = date('c');
     $t = [
-        'session'  => $session,
-        'created'  => date('c'),
-        'updated'  => date('c'),
-        'ip'       => $ip,
-        'user_agent' => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 250),
-        'page'     => substr((string) ($in['page'] ?? ''), 0, 200),
-        'human'    => false,
-        'waiting'  => false,
-        'closed'   => false,
-        'visitor'  => ['name' => '', 'phone' => '', 'email' => ''],
-        'calc'      => $calc,
-        'calc_text' => calcSummary($calc),
-        'messages' => [],
+        'session'     => $session,
+        'created'     => $now,
+        'opened_at'   => $now,
+        'opened_time' => time(),
+        'updated'     => $now,
+        'ip'          => $ip,
+        'user_agent'  => substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 250),
+        'page'        => substr((string) ($in['page'] ?? ''), 0, 200),
+        'human'       => false,
+        'waiting'     => false,
+        'closed'      => false,
+        'visitor'     => ['name' => '', 'phone' => '', 'email' => ''],
+        'calc'        => $calc,
+        'calc_text'   => calcSummary($calc),
+        'messages'    => [],
     ];
     if (!saveTranscript($baseDir, $t)) {
         error_log('chat.php: could not write a transcript into ' . $baseDir . '/chats');
@@ -753,16 +756,22 @@ if ($action === 'poll') {
             $waitSec = 60;
         }
         if ((time() - (int) $t['pending']) >= $waitSec) {
-            $fallback = 'I am having trouble reaching our system just now. A rep can pick this up.';
-            $t['messages'][] = ['role' => 'assistant', 'text' => $fallback, 'at' => date('c')];
-            $t['waiting'] = true;
-            unset($t['pending']);
-            notifyWaiting(
-                $cfg,
-                $t,
-                'The assistant could not answer, so this visitor is waiting.'
-            );
-            saveTranscript($baseDir, $t);
+            if (empty($t['holding_sent'])) {
+                $holding = 'One moment, an advisor is checking that for you.';
+                $t['messages'][] = [
+                    'role'    => 'assistant',
+                    'text'    => $holding,
+                    'at'      => date('c'),
+                    'holding' => true,
+                ];
+                $t['holding_sent'] = true;
+                notifyWaiting(
+                    $cfg,
+                    $t,
+                    'The assistant could not answer, so this visitor is waiting.'
+                );
+                saveTranscript($baseDir, $t);
+            }
         }
     }
     $since = max(0, (int) ($in['since'] ?? 0));
@@ -869,6 +878,7 @@ if (!empty($t['human'])) {
 
 if (chatMode($cfg) === 'relay') {
     $t['pending'] = time();
+    unset($t['holding_sent']);
     saveTranscript($baseDir, $t);
     respond(200, [
         'ok'       => true,
