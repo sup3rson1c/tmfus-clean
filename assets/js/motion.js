@@ -51,6 +51,14 @@
     lenis.on("scroll", ST.update);
     gsap.ticker.add((t) => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
+  }
+
+  /* In-page jumps (e.g. "Start the calculator") glide there visibly instead
+     of shooting down (John, 14 Oct 2026): 1.7s, eased in and out so the
+     start is gentle too. Lenis does it on desktop; phones and anything
+     without Lenis get the same curve from a small rAF tween. */
+  const glide = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  if (on) {
     document.addEventListener("click", (e) => {
       const link = e.target.closest('a[href^="#"]');
       const hash = link?.getAttribute("href");
@@ -58,7 +66,20 @@
       const target = document.querySelector(hash);
       if (!target) return;
       e.preventDefault();
-      lenis.scrollTo(target, { offset: -((header?.offsetHeight || 72) + 12) });
+      const offset = -((header?.offsetHeight || 72) + 12);
+      if (TMF.lenis) {
+        TMF.lenis.scrollTo(target, { offset, duration: 1.7, easing: glide });
+      } else {
+        const from = window.scrollY;
+        const to = Math.max(0, target.getBoundingClientRect().top + from + offset);
+        const t0 = performance.now();
+        const step = (now) => {
+          const t = Math.min(1, (now - t0) / 1700);
+          window.scrollTo(0, from + (to - from) * glide(t));
+          if (t < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }
       history.pushState(null, "", hash);
       if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
       target.focus({ preventScroll: true });

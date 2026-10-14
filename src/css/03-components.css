@@ -373,6 +373,21 @@
   gap: var(--s-7);
   align-items: center;
 }
+/* The hero's buttons must sit fully on the first screen (John, 14 Oct 2026:
+   "the buttons are kind of cut"). On a laptop (1366x657 viewport) they sat on
+   the bottom edge. On desktop the headline and the top gap now also scale
+   with the window's height, so short screens get a shorter hero. */
+@media (min-width: 1024px) {
+  .page-hero {
+    padding-top: calc(var(--header-h) + clamp(20px, 5svh, 88px));
+  }
+  .page-hero__copy {
+    gap: clamp(14px, 2.6svh, var(--s-5));
+  }
+  .page-hero .lede {
+    line-height: 1.6;
+  }
+}
 @media (min-width: 1024px) {
   .page-hero__grid {
     grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);

@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=6b57cc1f0b">
+<link rel="stylesheet" href="/assets/css/site.css?v=40c71a0c18">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -104,6 +104,7 @@
 
     <nav class="nav" aria-label="Primary">
       <ul class="nav__list" role="list">
+        <li class="nav__item"><a class="nav__link nav__link--cta" href="/funding-estimator" data-nav="funding-estimator" aria-current="page"><span class="nav__cta-dot" aria-hidden="true"></span>Calculator</a></li>
         <li class="nav__item" data-menu>
           <button class="nav__link" type="button" aria-expanded="false" aria-controls="solutions-menu" data-nav-group="solutions" data-menu-button>
             Solutions
@@ -121,7 +122,6 @@
             </div>
           </div>
         </li>
-        <li class="nav__item"><a class="nav__link" href="/funding-estimator" data-nav="funding-estimator" aria-current="page">Calculator</a></li>
         <li class="nav__item"><a class="nav__link" href="/about" data-nav="about">About</a></li>
         <li class="nav__item"><a class="nav__link" href="/contact" data-nav="contact">Contact</a></li>
       </ul>
@@ -138,15 +138,15 @@
 
   <div class="mobile-menu" id="mobile-menu" hidden data-mobile-menu>
     <div class="container mobile-menu__inner">
-      <p class="eyebrow">Solutions</p>
       <ul class="mobile-menu__solutions" role="list">
         <li><a href="/mca" data-nav="mca"><span class="menu__title">Cash injection</span><span class="menu__meta">$5K–$2M · decision in 3–24h</span></a></li>
         <li><a href="/sba-loans" data-nav="sba-loans"><span class="menu__title">SBA loans</span><span class="menu__meta">Up to $5.5M · 10–25 year terms</span></a></li>
         <li><a href="/heloc-calculator" data-nav="heloc-calculator"><span class="menu__title">Home equity</span><span class="menu__meta">$25K–$750K · offer inside the hour</span></a></li>
         <li><a href="/apply"><span class="menu__title">Line of credit</span><span class="menu__meta">$10K–$250K · revolving</span></a></li>
       </ul>
+      <a class="mobile-menu__cta" href="/funding-estimator" data-nav="funding-estimator" aria-current="page"><span class="nav__cta-dot" aria-hidden="true"></span>Funding calculator<span class="menu__meta">See what you qualify for in 60 seconds</span></a>
+      <p class="eyebrow">Solutions</p>
       <ul class="mobile-menu__links" role="list">
-        <li><a href="/funding-estimator" data-nav="funding-estimator" aria-current="page">Calculator</a></li>
         <li><a href="/about" data-nav="about">About</a></li>
         <li><a href="/contact" data-nav="contact">Contact</a></li>
       </ul>
@@ -160,7 +160,7 @@
 </header>
 
 <main id="main" tabindex="-1">
-<section class="page-hero grain" aria-labelledby="page-title">
+<section class="page-hero page-hero--text grain" aria-labelledby="page-title">
   <div class="container page-hero__grid">
     <div class="page-hero__copy">
       <p class="eyebrow">Funding calculator</p>
@@ -174,9 +174,6 @@
       <div class="page-hero__actions">
         <a class="btn btn--primary btn--lg" href="#estimate">Start the calculator</a>
       </div>
-    </div>
-    <div class="page-hero__media page-hero__media--square media">
-      <picture class="pic"><source type="image/avif" srcset="/assets/img/a6-calculator-dial-480.webp 480w, /assets/img/a6-calculator-dial-960.webp 960w, /assets/img/a6-calculator-dial-1440.avif 1440w" sizes="(min-width: 1024px) 44vw, 100vw"><img src="/assets/img/a6-calculator-dial-960.webp" srcset="/assets/img/a6-calculator-dial-480.webp 480w, /assets/img/a6-calculator-dial-960.webp 960w, /assets/img/a6-calculator-dial-1440.webp 1440w" sizes="(min-width: 1024px) 44vw, 100vw" width="1440" height="1440" alt="A machined steel control dial with a knurled edge on a black anodized base." fetchpriority="high" decoding="async"></picture>
     </div>
   </div>
 </section>
@@ -332,7 +329,7 @@
 <script src="/assets/js/site.js?v=bf48e4fb8b" defer></script>
 <script src="/assets/js/engine.js?v=a64f414a2a" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
-    <script src="/assets/js/motion.js?v=7aeebac17a" defer></script>
+    <script src="/assets/js/motion.js?v=25b7eff40f" defer></script>
   <script src="/assets/js/calculator.js?v=b2e640beba" defer></script>
 <script src="/assets/js/moments.js?v=527518f9c0" defer></script>
 </body>
