@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=79a485c8f4">
+<link rel="stylesheet" href="/assets/css/site.css?v=2d498e1fdc">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -171,10 +171,11 @@
         <a class="link-arrow" href="/apply">Apply now <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
     </div>
-    <div class="page-hero__media page-hero__media--needle" data-needle tabindex="0" role="img" aria-label="A 3D glass syringe full of gold coins and dollar bills, injecting into a steel safe whose screen counts the dollars. Drag to spin it.">
-      <img class="needle__poster" src="/media/film/frames/m/b11/0031.webp" width="960" height="536" alt="" fetchpriority="high" decoding="async">
-      <div class="needle__canvas"></div>
-      <p class="needle__hint" aria-hidden="true"><span class="needle__hint-dot"></span>Drag to spin</p>
+    <div class="page-hero__media page-hero__media--needle" data-needle tabindex="0" role="img" aria-label="A glass syringe full of gold coins and dollar bills, its needle in the side of a steel safe. Drag sideways to push the plunger; the safe's screen counts the dollars going in.">
+      <img class="needle__poster" src="/media/film/frames/m/b11/0001.webp" width="960" height="536" alt="" fetchpriority="high" decoding="async">
+      <canvas aria-hidden="true"></canvas>
+      <div class="film__counter needle__counter" data-needle-counter aria-hidden="true"><span data-needle-counter-value>$0</span></div>
+      <p class="needle__hint" aria-hidden="true"><span class="needle__hint-dot"></span>Drag the plunger to inject <span aria-hidden="true">→</span></p>
     </div>
   </div>
   <div class="container">
@@ -413,7 +414,7 @@
 <script src="/assets/js/engine.js?v=a64f414a2a" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
     <script src="/assets/js/motion.js?v=25b7eff40f" defer></script>
-  <script src="/assets/js/needle.js?v=62c37feaf1" defer></script>
+  <script src="/assets/js/needle.js?v=76f21eb273" defer></script>
 <script src="/assets/js/moments.js?v=527518f9c0" defer></script>
 </body>
 </html>

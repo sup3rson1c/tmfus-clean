@@ -127,7 +127,7 @@ DirectoryIndex index.html
   # REPORT-ONLY: logs would-be violations in the browser console, blocks
   # nothing. DEPLOY.md says when and how to switch to enforcing.
   <FilesMatch "\.html$">
-    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/ https://cdn.jsdelivr.net/npm/lenis@1.3.4/ 'sha256-0oibnCHPgFPvfOt7IYptVHPk2boHBYI5fHYi5EDMw38=' 'sha256-IgBRinzi/ye8TwzmdKTzsJ3SAh6GGdagkFHMZTubz6k=' 'sha256-bMZiLsCX3tP1RADc9WGOIWBqZ2M614MA7GLZQq3X/bM='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://script.google.com https://script.googleusercontent.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ https://cdn.jsdelivr.net/npm/lenis@1.3.4/ 'sha256-0oibnCHPgFPvfOt7IYptVHPk2boHBYI5fHYi5EDMw38=' 'sha256-IgBRinzi/ye8TwzmdKTzsJ3SAh6GGdagkFHMZTubz6k=' 'sha256-bMZiLsCX3tP1RADc9WGOIWBqZ2M614MA7GLZQq3X/bM='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://script.google.com https://script.googleusercontent.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
   </FilesMatch>
 </IfModule>
 # END CSP

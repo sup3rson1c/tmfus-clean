@@ -301,7 +301,7 @@ function schema(html, v) {
 const CSP_ENFORCE = false;
 const CSP = [
   ["default-src", "'self'"],
-  ["script-src", "'self'", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/", "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/", "https://cdn.jsdelivr.net/npm/lenis@1.3.4/", "{{inline-hashes}}"],
+  ["script-src", "'self'", "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/", "https://cdn.jsdelivr.net/npm/lenis@1.3.4/", "{{inline-hashes}}"],
   ["style-src", "'self'", "https://fonts.googleapis.com"],
   ["style-src-attr", "'unsafe-inline'"],
   ["font-src", "'self'", "https://fonts.gstatic.com"],

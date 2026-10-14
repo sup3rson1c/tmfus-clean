@@ -588,33 +588,41 @@
   }
 }
 
-/* Cash injection: a 3D syringe of money injecting into a safe, built in
-   three.js (assets/js/needle.js). The canvas is transparent, so the object
-   sits straight on the page: no box, no mask, nothing cropped, nothing
-   moving except the object itself. */
+/* Cash injection: the film's syringe, pushed by the visitor
+   (assets/js/needle.js). The whole frame is drawn (contain), so nothing is
+   cropped; the box has the frame's own shape, and only its outer edge
+   dissolves into the page. Nothing tilts or moves except the plunger. */
 .page-hero__media--needle {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1920 / 1072;
   max-height: none;
+  overflow: hidden;
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
-  -webkit-mask-image: none;
-  mask-image: none;
+  /* Only the outer band fades: 5% at the sides, 14% top and bottom, so
+     the plunger and the safe stay whole and no edge shows. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
   outline: none;
 }
 @media (min-width: 1024px) {
+  /* Kept inside the column: bleeding off the window cut the safe off. */
   .page-hero__media--needle {
-    margin-left: -6%;
+    width: 100%;
+    margin-right: 0;
   }
 }
 .page-hero__media--needle.is-grabbing {
   cursor: grabbing;
 }
 .needle__poster,
-.needle__canvas,
-.needle__canvas canvas {
+.page-hero__media--needle canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -622,35 +630,39 @@
 }
 .page-hero__media--needle .needle__poster {
   object-fit: contain;
-  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 60%, transparent 100%);
-  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 60%, transparent 100%);
-  transition: opacity 0.5s ease;
 }
 .page-hero__media--needle.is-live .needle__poster {
-  opacity: 0;
+  visibility: hidden;
 }
-.needle__canvas canvas {
-  display: block;
+.needle__counter {
+  transition: opacity 0.3s ease;
+}
+.page-hero__media--needle.is-funded .needle__counter span {
+  animation: needle-funded 1.2s ease-in-out infinite alternate;
+}
+@keyframes needle-funded {
+  to {
+    filter: blur(1.4px) brightness(1.35);
+  }
 }
 .needle__hint {
   position: absolute;
-  left: 50%;
-  bottom: 2%;
-  translate: -50% 0;
+  left: 22%;
+  bottom: 9%;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   margin: 0;
   padding: 7px 14px;
-  border: 1px solid rgba(241, 242, 236, 0.18);
+  border: 1px solid rgba(241, 242, 236, 0.2);
   border-radius: 999px;
-  background: rgba(12, 13, 12, 0.55);
+  background: rgba(12, 13, 12, 0.6);
   backdrop-filter: blur(6px);
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--silver);
+  color: var(--banknote);
   pointer-events: none;
   transition: opacity 0.5s ease;
 }
