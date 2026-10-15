@@ -3,6 +3,14 @@
   font-size: clamp(2.25rem, 0.6rem + 4.1vw, 4.125rem);
   max-inline-size: 16ch;
 }
+/* Desktop: the headline also scales with the window's height and uses the
+   whole column, so the hero buttons stay on the first screen (14 Oct 2026). */
+@media (min-width: 1024px) {
+  .page-hero .h1 {
+    font-size: min(clamp(2.25rem, 0.6rem + 4.1vw, 4.125rem), 7.4svh);
+    max-inline-size: 100%;
+  }
+}
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -544,4 +552,142 @@
 }
 .legal .prose p {
   color: var(--silver);
+}
+
+/* Text-only page heroes (SBA and the calculator, John 14 Oct 2026: no
+   picture). One column; the copy keeps a readable measure. */
+.page-hero--text .page-hero__grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.page-hero--text .page-hero__copy {
+  max-inline-size: 60rem;
+}
+@media (min-width: 1024px) {
+  .page-hero--text .h1 {
+    max-inline-size: 18ch;
+  }
+}
+
+/* Home equity: the glass house runs larger and dissolves into the page
+   (John, 14 Oct 2026: "expand the picture ... merge it into the background
+   just for a bit"). The mask reaches fully transparent before every edge of
+   the box, so no seam shows. */
+.page-hero__media--blend {
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 52% 52%, #000 38%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 52% 52%, #000 38%, rgba(0, 0, 0, 0.55) 68%, transparent 100%);
+}
+.page-hero__media--blend img {
+  object-fit: cover;
+  transform: scale(1.12);
+  transform-origin: 55% 55%;
+}
+@media (min-width: 1024px) {
+  .page-hero__media--blend {
+    max-height: min(820px, 92svh);
+    margin-block: calc(var(--s-7) * -1);
+  }
+}
+
+/* Cash injection: the film's syringe, pushed by the visitor
+   (assets/js/needle.js). The whole frame is drawn (contain), so nothing is
+   cropped; the box has the frame's own shape, and only its outer edge
+   dissolves into the page. Nothing tilts or moves except the plunger. */
+.page-hero__media--needle {
+  position: relative;
+  aspect-ratio: 1920 / 1072;
+  max-height: none;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Only the outer band fades: 5% at the sides, 14% top and bottom, so
+     the plunger and the safe stay whole and no edge shows. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
+  outline: none;
+}
+@media (min-width: 1024px) {
+  /* Kept inside the column: bleeding off the window cut the safe off. */
+  .page-hero__media--needle {
+    width: 100%;
+    margin-right: 0;
+  }
+}
+.page-hero__media--needle.is-grabbing {
+  cursor: grabbing;
+}
+.needle__poster,
+.page-hero__media--needle canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.page-hero__media--needle .needle__poster {
+  object-fit: contain;
+}
+.page-hero__media--needle.is-live .needle__poster {
+  visibility: hidden;
+}
+.needle__counter {
+  transition: opacity 0.3s ease;
+}
+/* "$250,000" has two more characters than the film's digits: smaller type
+   and tighter spacing keep it inside the screen's glass (John, 14 Oct). */
+.page-hero__media--needle .needle__counter span {
+  font-size: 128px;
+  letter-spacing: 0;
+}
+.page-hero__media--needle.is-funded .needle__counter span {
+  animation: needle-funded 1.2s ease-in-out infinite alternate;
+}
+@keyframes needle-funded {
+  to {
+    filter: blur(1.4px) brightness(1.35);
+  }
+}
+.needle__hint {
+  position: absolute;
+  left: 22%;
+  bottom: 9%;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border: 1px solid rgba(241, 242, 236, 0.2);
+  border-radius: 999px;
+  background: rgba(12, 13, 12, 0.6);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--banknote);
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.needle__hint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e2b866;
+  box-shadow: 0 0 10px #e2b866;
+}
+.page-hero__media--needle.was-touched .needle__hint {
+  opacity: 0;
+}
+.page-hero__media--needle:focus-visible {
+  outline: 2px solid var(--silver);
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .needle__hint {
+    display: none;
+  }
 }

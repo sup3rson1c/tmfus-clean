@@ -151,9 +151,9 @@
    not decoration, so it works by keyboard and says where it goes. */
 .scroll-cue {
   position: absolute;
-  /* Right-aligned, not centred. The stat line now occupies the bottom-left of
-     the hero and a centred cue lands straight on top of it. */
-  right: var(--gutter);
+  /* Centred and larger, so people see it (John, 14 Oct 2026). */
+  left: 50%;
+  translate: -50% 0;
   bottom: clamp(var(--s-5), 4vh, var(--s-7));
   z-index: 3;
   display: grid;
@@ -163,10 +163,11 @@
   border-radius: var(--r-sm);
   color: var(--silver);
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 12px;
+  letter-spacing: 0.2em;
   text-decoration: none;
   text-transform: uppercase;
+  color: var(--banknote);
   transition: color 200ms var(--ease-out);
 }
 .scroll-cue:hover {
@@ -179,8 +180,8 @@
 
 .scroll-cue__rail {
   position: relative;
-  width: 1px;
-  height: 34px;
+  width: 2px;
+  height: 48px;
   overflow: hidden;
   background: var(--hair);
 }
@@ -190,8 +191,8 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 1px;
-  height: 12px;
+  width: 2px;
+  height: 18px;
   background: linear-gradient(to bottom, transparent, var(--greenback));
   animation: scroll-cue-fall 1.9s var(--ease-out) infinite;
 }
@@ -204,7 +205,7 @@
     opacity: 1;
   }
   100% {
-    transform: translateY(34px);
+    transform: translateY(48px);
     opacity: 0;
   }
 }

@@ -382,7 +382,7 @@
 
       extra.innerHTML = `<dl class="certificate__inputs certificate__inputs--result">
           ${est && est.deduction > 0 ? `<div><dt>Less existing positions</dt><dd>− ${money(est.deduction)}</dd></div>` : ""}
-          <div><dt>Typical decision</dt><dd>3–24h</dd></div>
+          <div><dt>Typical offers</dt><dd>2–4h</dd></div>
         </dl>
         <p class="certificate__disclaimer"><strong>This is a projection, not an offer.</strong> The figures above are an estimate based on the details you entered. They are not a quote, not a commitment to lend, and not the exact amount you will be offered. Real terms depend on underwriting, your bank statements and the funder — and can land above or below this range.</p>`;
       extra.hidden = false;
@@ -414,7 +414,7 @@
       const opt = (inner, attrs, primary) =>
         `<${attrs.href ? "a" : "button"} class="decision-opt${primary ? " is-primary" : ""}" ${attrs.href ? `href="${attrs.href}"` : `type="button" data-open-chat="${attrs.chat}"`}><span class="decision-n">${++n}</span><span class="decision-txt">${inner}</span><span class="decision-arrow" aria-hidden="true">→</span></${attrs.href ? "a" : "button"}>`;
       actions.innerHTML = `<p class="certificate__label">Where would you like to go from here?</p><div class="decision">
-          ${opt("<b>Apply now</b><span>Do you like the numbers? Start the application — about ten minutes.</span>", { href: "/apply" }, true)}
+          ${opt("<b>Apply now</b><span>Do you like the numbers? Start the application — about four minutes.</span>", { href: "/apply" }, true)}
           ${chatOn ? opt(`<b>I am not sure yet — talk with us</b><span>${chatBlurb}</span>`, { chat: greeting }) : opt("<b>I am not sure yet — talk with us</b><span>Send a message and an advisor comes back to you within one business day.</span>", { href: "/contact" })}
           ${a.credit >= 650 ? opt("<b>Own your home?</b><span>Use your home equity — up to $750K, with an offer inside the hour.</span>", { href: "/heloc-calculator" }) : ""}
         </div>

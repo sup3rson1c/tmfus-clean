@@ -45,3 +45,7 @@ leads/
 # Dev only
 node_modules/
 temporary screenshots/
+
+# Higgsfield API credentials (HF_CREDENTIALS) - never commit
+.env
+.env.*

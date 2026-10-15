@@ -596,3 +596,98 @@ html.menu-open .cookie-bar {
   user-select: none;
   pointer-events: none;
 }
+
+/* Calculator: first in the nav and a small call to action of its own (John,
+   14 Oct 2026). Quieter than "Apply now" (no solid fill) but clearly more
+   inviting than the plain links: a green hairline pill, a live dot, and a
+   slow sheen that crosses it every few seconds. */
+.nav__link--cta {
+  color: var(--banknote);
+  margin-right: 6px;
+  padding: 0 16px 0 13px;
+  min-height: 38px;
+  overflow: hidden;
+  border: 1px solid rgba(134, 183, 154, 0.55);
+  background: linear-gradient(180deg, rgba(134, 183, 154, 0.16), rgba(134, 183, 154, 0.06));
+  box-shadow: 0 0 0 0 rgba(134, 183, 154, 0), inset 0 1px 0 rgba(241, 242, 236, 0.08);
+  transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out),
+    background var(--dur-base) var(--ease-out);
+}
+.nav__link--cta::before {
+  opacity: 1;
+  background: linear-gradient(100deg, transparent 30%, rgba(241, 242, 236, 0.16) 50%, transparent 70%);
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  animation: tmf-cta-sheen 5.5s ease-in-out 2s infinite;
+}
+@keyframes tmf-cta-sheen {
+  0%, 72% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+.nav__cta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--greenback);
+  box-shadow: 0 0 0 0 rgba(134, 183, 154, 0.6);
+  animation: tmf-cta-pulse 2.4s ease-out infinite;
+}
+@keyframes tmf-cta-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(134, 183, 154, 0.55);
+  }
+  70%, 100% {
+    box-shadow: 0 0 0 7px rgba(134, 183, 154, 0);
+  }
+}
+@media (hover: hover) {
+  .nav__link--cta:hover {
+    border-color: var(--greenback);
+    background: linear-gradient(180deg, rgba(134, 183, 154, 0.26), rgba(134, 183, 154, 0.1));
+    box-shadow: 0 0 22px -4px rgba(134, 183, 154, 0.55), inset 0 1px 0 rgba(241, 242, 236, 0.1);
+  }
+}
+.nav__link--cta[aria-current="page"]::after,
+.nav__link--cta[data-active]::after {
+  display: none;
+}
+.nav__link--cta[aria-current="page"] {
+  border-color: var(--greenback);
+}
+.mobile-menu__cta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  margin-bottom: var(--s-5);
+  padding: 16px 18px;
+  border: 1px solid rgba(134, 183, 154, 0.55);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(134, 183, 154, 0.16), rgba(134, 183, 154, 0.05));
+  color: var(--banknote);
+  font-family: var(--font-display);
+  font-stretch: 125%;
+  font-size: 1.25rem;
+  font-weight: 620;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.mobile-menu__cta .menu__meta {
+  grid-column: 2;
+  font-family: var(--font-body, inherit);
+  font-stretch: 100%;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-transform: none;
+  color: var(--silver);
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav__link--cta::before,
+  .nav__cta-dot {
+    animation: none;
+  }
+}
