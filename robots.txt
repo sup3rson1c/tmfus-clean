@@ -58,6 +58,6 @@ Allow: /
 # The plain-text summary written for language models. Not a standard,
 # but ChatGPT, Claude and Perplexity all fetch it when it exists, and it
 # is the cheapest way to control how TMF Team gets described.
-# https://tmfus.com/llms.txt
+# https://tmfus.com/llms.txt (short) and https://tmfus.com/llms-full.txt (all Q&A)
 
 Sitemap: https://tmfus.com/sitemap.xml

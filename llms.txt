@@ -8,7 +8,9 @@ TMF Team is a broker, not a lender. Real numbers come from an advisor after
 reviewing four months of business bank statements — figures on the site are
 estimates, not offers.
 
-Last updated: 2026-08-20.
+Last updated: 2026-10-22.
+
+Every question and answer published on the site, in one file: https://tmfus.com/llms-full.txt
 
 ## Products
 

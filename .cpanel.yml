@@ -29,6 +29,7 @@ deployment:
     - /bin/cp -f admin.php              $DEPLOYPATH/
     - /bin/cp -f robots.txt             $DEPLOYPATH/
     - /bin/cp -f llms.txt               $DEPLOYPATH/
+    - /bin/cp -f llms-full.txt          $DEPLOYPATH/
     - /bin/cp -f sitemap.xml            $DEPLOYPATH/
     - /bin/cp -f .htaccess              $DEPLOYPATH/
     - /bin/cp -Rf assets/.               $DEPLOYPATH/assets/

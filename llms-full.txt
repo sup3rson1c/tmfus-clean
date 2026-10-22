@@ -1,0 +1,169 @@
+# TMF Team: full question and answer text
+
+> Every question and answer published on tmfus.com, copied from the pages
+> themselves. TMF Team is a business funding brokerage, not a lender. Figures
+> are estimates, not offers. Short version: https://tmfus.com/llms.txt
+
+## Home
+
+Source: https://tmfus.com/
+
+### How much funding can my business get?
+
+A cash injection through TMF Team runs from $5,000 to $2 million, and a home equity line of credit up to $750,000. What you actually qualify for depends on monthly revenue, industry, time in business, credit profile and anything you already owe on existing advances. The funding calculator gives an indicative range in about a minute.
+
+### What will it cost?
+
+TMF Team does not set the price. The funder does, after underwriting your file, which is why shopping it to several funders matters more than any rate a broker quotes upfront. What drives it differs by product. An SBA loan carries the lowest rates and longest terms available to most small businesses, and takes 30 to 90 days to get. A home equity line is priced off your credit score, improving at roughly 660, 700, 740 and 780. A cash injection is priced mainly off revenue and the health of your bank statements, so imperfect personal credit affects the pricing more than it affects eligibility. Whichever route fits, the rate, the amount and the term come to you in writing from the funder before you sign, and the commission is paid by the funder rather than added to your balance.
+
+### How fast can I be funded?
+
+For a cash injection, you apply on day one and offers typically come back within 2 to 4 hours of a complete file. You are usually funded within 4 to 24 hours of applying, and often a couple of hours after you accept an offer. SBA loans are a different shape entirely: expect 30 to 90 days, because the paperwork and the government guarantee take that long.
+
+### What do you need from me to apply?
+
+Business legal name, EIN and start date; owner name, home address, ownership split and date of birth; and four months of business bank statements, which are required in every state. Your Social Security number and signature are entered in the application and encrypted before storage. The application is four steps and takes about four minutes.
+
+### Is TMF Team a lender?
+
+No. TMF Team is a business funding brokerage. It prepares your file, presents it to funders and lenders, and manages the process, but every credit decision, and every rate, amount and term, belongs to the funder. TMF Team is paid a commission by the funder when a transaction funds, not by you.
+
+### What credit score do I need?
+
+There is no single cutoff. A cash injection is underwritten mainly on revenue and the health of your bank statements, so businesses with imperfect personal credit are regularly funded; the score affects pricing more than eligibility. A home equity line is the opposite: it is priced off the score, and the rate improves at roughly 660, 700, 740 and 780.
+
+### Can I still get funding if I already have advances outstanding?
+
+Often yes, but every open position reduces what is left to advance against, and the balance you still owe comes straight off the projection. If what you owe outweighs what you bring in, the honest answer is that a new advance is the wrong tool, and the conversation should be about consolidation or a payoff structure instead.
+
+## Merchant cash advance
+
+Source: https://tmfus.com/mca
+
+### Is a cash injection a loan?
+
+No. A merchant cash advance is a purchase of future receivables. The funder advances capital now and collects an agreed percentage of your revenue until the purchased amount has been remitted.
+
+### How is it priced?
+
+With a factor rate applied to the advance rather than an interest rate. Your offer shows the remittance structure and the total cost of capital before you accept anything.
+
+### What happens if sales slow down?
+
+Because remittances are percentage-based, they fall alongside revenue. Slower days mean lower remittances, and payoff simply takes longer.
+
+### What do I need to apply?
+
+Basic business information and four months of business bank statements. The full application is four steps and takes about four minutes.
+
+### Can I get one if I already have advances outstanding?
+
+Often yes, but every open position reduces what is left to advance against, and the balance you still owe comes straight off the projection. If what you owe outweighs what you bring in, the conversation should be about consolidation or a payoff structure instead.
+
+## SBA 7(a) and 504 loans
+
+Source: https://tmfus.com/sba-loans
+
+### How long does an SBA loan take?
+
+Commonly 30 to 90 days from a complete application to funding. The paperwork and the government guarantee take that long, which is why SBA suits planned investments better than urgent needs. If you need capital this week, an SBA loan is the wrong instrument.
+
+### Should I use 7(a) or 504?
+
+7(a) is flexible: working capital, equipment, real estate, refinancing eligible debt and changes of ownership. 504 is built for major fixed assets such as buildings, land and long-life equipment, with long fixed rates, but it can't fund working capital or inventory. Some deals use both.
+
+### Is a personal guarantee required?
+
+Yes. SBA loans require a personal guarantee from principal owners, typically anyone holding 20% or more of the business, and lenders often ask for collateral as well.
+
+### What is the "credit elsewhere" test?
+
+The SBA only guarantees loans when the business can't get comparable credit on reasonable terms from non-government sources. The lender documents this as part of underwriting. It rarely blocks a real small business, because the program exists for deals conventional lenders decline.
+
+### Can I get an SBA loan with open cash advance positions?
+
+Not necessarily. 7(a) proceeds can't be used to refinance merchant cash advances or factoring agreements, but having them does not automatically disqualify you from an SBA loan for another purpose. What matters is whether your cash flow still services the new debt with the advances in place. A specialist can help you work out the order of operations.
+
+## Home equity line of credit
+
+Source: https://tmfus.com/heloc-calculator
+
+### Do I need an appraisal?
+
+Not to get started. The first valuation comes from an automated model, so there's no appraisal appointment. A formal appraisal may still be required before anything funds.
+
+### How fast is the offer?
+
+Inside the hour during business hours, Monday to Friday, 9am to 6pm EST. You enter the address, a representative reviews the result, and we call you back with the available terms and costs.
+
+### What will I need?
+
+Your EIN, four months of business bank statements, and the address of the property you're borrowing against.
+
+### What if the answer is no?
+
+You'll hear that just as fast. A specialist can talk you through other routes, such as a cash injection or an SBA loan.
+
+### Where did the calculator go?
+
+It is being rebuilt. The old one asked you for six figures and handed back arithmetic done on your own guesses, which is not the same thing as knowing what a lender would do. Rather than dress that up, we took it down. Starting the application gets you a real answer faster than the calculator ever did.
+
+### Is an offer inside the hour real?
+
+In working hours, yes, and a no comes just as fast. What arrives in that hour is an indication of what is available on the information you gave us, not a signed commitment. Verification of income, title and the property comes after, and the final terms can move. Anyone promising you a binding number on a home-secured loan in under an hour is not telling you the truth.
+
+### Can I use a HELOC for business capital?
+
+Yes, and many owners do, because home equity usually prices better than unsecured business credit. The trade is real though: the loan is secured against where you live, so a bad quarter in the business becomes a risk to the house. Weigh it against an unsecured product before you decide, and ask us to price both.
+
+### How does a HELOC work?
+
+You borrow against the equity in your home. During the draw period, often five to ten years, you take what you need up to your limit and typically pay interest only on what you have used. When the repayment period starts the line closes to new draws and you repay principal plus interest on a schedule.
+
+### Should I send personal details in the chat?
+
+No. Do not send your Social Security number, your date of birth or any account number in the chat. The application is the place for those, and it encrypts them.
+
+## Line of credit
+
+Source: https://tmfus.com/line-of-credit
+
+### Do I pay on the whole limit?
+
+No. Cost is charged on what you have drawn. A $100K line with $20K drawn costs you on the $20K. Some funders also charge a fee per draw or a small maintenance fee; your offer lists every cost.
+
+### What do I need to apply?
+
+Basic business information and four months of business bank statements. The application is four steps and takes about four minutes.
+
+### How fast can I draw?
+
+It depends on the funder. Your offer says how a draw is requested and how long it takes to reach your business account.
+
+### Does applying affect my credit?
+
+Checking what you qualify for with our calculator does not. A funder may run a credit check before making a final offer.
+
+## Cash injection calculator
+
+Source: https://tmfus.com/funding-estimator
+
+### How does the cash injection calculator work?
+
+It takes your monthly revenue, adjusts it for your industry and your credit band, subtracts what you still owe on any existing advances, and shows the result as a range of plus or minus 15 percent. It is deliberately simple, and it is the same arithmetic a funder starts from before looking at your bank statements.
+
+### Is the number I get an offer?
+
+No. It is a projection, not a quote and not a commitment to lend. Real terms come from a funder after underwriting your bank statements, and they can land above or below the range shown.
+
+### Why did it tell me I am over leveraged?
+
+Because the balance you still owe on existing positions is larger than what your revenue supports advancing. That is not a decline — it means a new advance is the wrong tool right now. A specialist can look at consolidation or a payoff structure instead, and that conversation is usually worth having.
+
+### Does running the calculator affect my credit score?
+
+No. The calculator never touches your credit file; it uses the band you select yourself. A credit report is only pulled later, with your written authorization, once an application is being underwritten.
+
+### What happens after I get my answer?
+
+You choose. Start the application, which takes about four minutes and needs four months of business bank statements. Or open the chat and ask questions first — an advisor can join it. Or, if you are looking for a larger line and you own your home, look at home equity instead. A funding specialist also reaches out within 24 hours either way.
