@@ -232,7 +232,7 @@
   const MANIFEST = "/media/film/frames/manifest.json";
   const WINDOW = 1; // beats either side of the current one to keep resident
 
-  /** @type {{beat:number,count:number,pattern:string,start:number,frames:Array,state:string}[]} */
+  /** @type {{beat:number,count:number,pattern:string,start:number,frames:Array,loaded:number,failed:number,gen:number}[]} */
   let beats = [];
   let total = 0;
   let current = -1;
@@ -240,7 +240,7 @@
   let trigger = null;
   // Draw the film at a scroll progress. Assigned once the trigger exists; also
   // called when a beat finishes loading, so frames that arrive after the
-  // playhead has passed them still get on screen (see loadBeat).
+  // playhead has passed them still get on screen (see repaint).
   let render = () => {};
   let steps = [];
   let mobileSet = false; // true when the half-rate mobile frame sets are in use
@@ -306,70 +306,106 @@
 
   /* Windowed loading --------------------------------------------------- */
 
-  // Sequential within a beat: dozens of parallel requests stall the connection
-  // and starve whatever else the page is still fetching.
-  const loadBeat = async (beat) => {
-    if (beat.state !== "idle") return;
-    beat.state = "loading";
-    section.classList.add("film--loading");
+  // Measured on the live site (24 Oct 2026): every frame costs ~250ms of
+  // round trip no matter how small it is, so fetching one at a time took ~19s
+  // per beat. Anyone scrolling at a normal pace ran straight off the end of
+  // what had arrived, and the film froze, then jumped to whatever frame was
+  // nearest - often from another shot. A few requests at once over HTTP/2
+  // cuts that several-fold without flooding the connection.
+  const POOL = 6;
 
-    for (let i = 0; i < beat.count; i += 1) {
-      if (beat.state === "dropped") return;
-      const url = beat.pattern.replace("%d", String(i + 1).padStart(4, "0"));
-      try {
-        const img = new Image();
-        img.decoding = "async";
-        img.src = url;
-        await img.decode();
-        beat.frames[i] = img;
-      } catch {
-        // One missing frame is survivable — nearest() covers it. Two in a row
-        // means the set is broken, so stop spending on it.
-        if (i > 0 && !beat.frames[i - 1]) break;
+  // Coarse to fine: every 8th frame of a beat first, then every 4th, 2nd and
+  // the rest. Within half a second the whole shot is covered, choppy but in
+  // the right place, so a fast scroll never lands on a frame from the wrong
+  // scene; the gaps then fill in behind it.
+  const passOf = (i) => (i % 8 === 0 ? 0 : i % 4 === 0 ? 1 : i % 2 === 0 ? 2 : 3);
+
+  let queue = []; // {beat, i, gen}, in fetch order
+  let inFlight = 0;
+  let paintQueued = false;
+
+  // Frames that land while the reader is holding still still have to reach
+  // the screen - and the counter reads the painted frame, so without this it
+  // can rest one frame short of the funded figure until the next scroll.
+  const repaint = () => {
+    if (paintQueued || !trigger) return;
+    paintQueued = true;
+    requestAnimationFrame(() => {
+      paintQueued = false;
+      render(trigger.progress);
+    });
+  };
+
+  const loaded = () => beats.reduce((n, b) => n + b.loaded, 0);
+
+  const fetchFrame = async ({ beat, i, gen }) => {
+    const url = beat.pattern.replace("%d", String(i + 1).padStart(4, "0"));
+    try {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+      await img.decode();
+      if (beat.gen !== gen) return; // retired while it was in flight
+      beat.frames[i] = img;
+      beat.loaded += 1;
+    } catch {
+      // One missing frame is survivable - nearest() covers it. A beat whose
+      // first few all fail is a broken set, so stop spending on it.
+      beat.failed += 1;
+      if (!beat.loaded && beat.failed >= 3) {
+        queue = queue.filter((q) => q.beat !== beat);
       }
-      if (bar) {
-        const done = beats.reduce((n, b) => n + b.frames.filter(Boolean).length, 0);
-        bar.style.width = `${Math.round((done / total) * 100)}%`;
-      }
-      if (!trigger && beat.frames.filter(Boolean).length > 2) activate();
+      return;
     }
+    if (bar) bar.style.width = `${Math.round((loaded() / total) * 100)}%`;
+    if (!trigger && beat.loaded > 2) activate();
+    repaint();
+  };
 
-    beat.state = "ready";
-    // Frames that arrived after the playhead had already passed them. Without
-    // this the film can come to rest one frame short of the end - and since
-    // the counter reads the painted frame, it stops just short of the funded
-    // figure and stays there until the next scroll.
-    if (trigger) render(trigger.progress);
-    if (!beats.some((b) => b.state === "loading")) section.classList.remove("film--loading");
+  const pump = () => {
+    while (inFlight < POOL && queue.length) {
+      const job = queue.shift();
+      if (job.beat.gen !== job.gen || job.beat.frames[job.i]) continue;
+      inFlight += 1;
+      fetchFrame(job).finally(() => {
+        inFlight -= 1;
+        pump();
+      });
+    }
+    section.classList.toggle("film--loading", inFlight > 0 || queue.length > 0);
   };
 
   // Release beats outside the window so nine beats never sit in memory at
   // once. Dropping the Image references lets the browser reclaim the decode.
   //
-  // The beat in view loads first and its neighbours only once it is done, so
-  // on a thin connection the frames you are looking at are not sharing the
-  // pipe with the ones you are not. The total fetched is the same.
-  let lastCentre = 1;
+  // The beat in view comes first, then the one you are scrolling toward, then
+  // the one behind - interleaved pass by pass, so the next shot is already
+  // roughly there by the time the current one is finishing its fine frames.
+  let lastCentre = -1;
   const retire = (centre) => {
+    if (centre === lastCentre) return;
+    const back = centre < lastCentre;
     lastCentre = centre;
     beats.forEach((b) => {
-      const near = Math.abs(b.beat - centre) <= WINDOW;
-      if (!near && b.state !== "idle") {
-        b.state = "dropped";
+      if (Math.abs(b.beat - centre) <= WINDOW) return;
+      if (b.loaded || b.failed) {
+        b.gen += 1;
         b.frames = new Array(b.count);
+        b.loaded = 0;
+        b.failed = 0;
       }
-      if (near && b.state === "dropped") b.state = "idle";
     });
-    const main = beats.find((b) => b.beat === centre);
-    if (main && main.state !== "ready") {
-      // Once it is ready, come back for the neighbours. render() does this on
-      // the next scroll anyway; this covers a reader who has stopped scrolling.
-      if (main.state === "idle") loadBeat(main).then(() => main.state === "ready" && retire(lastCentre));
-      return;
+    const order = back ? [centre, centre - 1, centre + 1] : [centre, centre + 1, centre - 1];
+    const wanted = order.map((n) => beats.find((b) => b.beat === n)).filter(Boolean);
+    queue = [];
+    for (let pass = 0; pass < 4; pass += 1) {
+      for (const b of wanted) {
+        for (let i = 0; i < b.count; i += 1) {
+          if (passOf(i) === pass && !b.frames[i]) queue.push({ beat: b, i, gen: b.gen });
+        }
+      }
     }
-    beats.forEach((b) => {
-      if (b.state === "idle" && Math.abs(b.beat - centre) <= WINDOW) loadBeat(b);
-    });
+    pump();
   };
 
   /* Captions ----------------------------------------------------------- */
@@ -607,7 +643,7 @@
       .map((b) => {
         const set = mobile && b.mobile?.count ? b.mobile : b.desktop;
         if (!set?.count || !set.pattern) return null;
-        const entry = { beat: b.beat, count: set.count, pattern: set.pattern, start: at, frames: new Array(set.count), state: "idle", drain: b.drain };
+        const entry = { beat: b.beat, count: set.count, pattern: set.pattern, start: at, frames: new Array(set.count), loaded: 0, failed: 0, gen: 0, drain: b.drain };
         at += set.count;
         return entry;
       })
