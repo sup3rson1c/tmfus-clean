@@ -32,6 +32,14 @@ deployment:
     - /bin/cp -f how-fast-can-a-business-get-funded.html $DEPLOYPATH/
     - /bin/cp -f business-funding-broker-vs-lender.html $DEPLOYPATH/
     - /bin/cp -f heloc-for-business-owners.html $DEPLOYPATH/
+    - /bin/cp -f business-funding-options.html $DEPLOYPATH/
+    - /bin/cp -f how-to-get-a-small-business-loan.html $DEPLOYPATH/
+    - /bin/cp -f how-does-a-business-line-of-credit-work.html $DEPLOYPATH/
+    - /bin/cp -f what-is-a-cash-injection.html $DEPLOYPATH/
+    - /bin/cp -f working-capital-loans.html $DEPLOYPATH/
+    - /bin/cp -f how-to-get-an-sba-loan.html $DEPLOYPATH/
+    - /bin/cp -f mca-consolidation.html $DEPLOYPATH/
+    - /bin/cp -f business-funding-glossary.html $DEPLOYPATH/
     - /bin/cp -f terms.html             $DEPLOYPATH/
     - /bin/cp -f unsubscribe.html       $DEPLOYPATH/
     - /bin/cp -f admin.php              $DEPLOYPATH/

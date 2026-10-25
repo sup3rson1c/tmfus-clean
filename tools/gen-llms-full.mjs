@@ -17,6 +17,14 @@ const PAGES = [
   ['business-funding-with-bad-credit', 'Guide: Business funding with bad credit'],
   ['how-fast-can-a-business-get-funded', 'Guide: How fast can a business get funded?'],
   ['business-funding-broker-vs-lender', 'Guide: Broker vs lender'],
+  ['business-funding-options', 'Guide: Business funding options'],
+  ['how-to-get-a-small-business-loan', 'Guide: How to get a small business loan'],
+  ['how-does-a-business-line-of-credit-work', 'Guide: How a business line of credit works'],
+  ['what-is-a-cash-injection', 'Guide: What is a cash injection?'],
+  ['working-capital-loans', 'Guide: Working capital loans'],
+  ['how-to-get-an-sba-loan', 'Guide: How to get an SBA loan'],
+  ['mca-consolidation', 'Guide: MCA consolidation'],
+  ['business-funding-glossary', 'Guide: Business funding glossary'],
   ['heloc-for-business-owners', 'Guide: HELOC for business owners'],
 ];
 

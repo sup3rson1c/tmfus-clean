@@ -1245,3 +1245,22 @@ select.input option {
   list-style: none;
   padding: 0;
 }
+.guide-group {
+  margin: 48px 0 20px;
+}
+.guide-group:first-child {
+  margin-top: 0;
+}
+.glossary dt {
+  margin-top: 22px;
+  color: var(--banknote);
+  font-weight: 600;
+}
+.glossary dd {
+  margin: 6px 0 0;
+  color: var(--silver);
+  line-height: 1.65;
+}
+.learn-links {
+  margin: 16px 0 18px;
+}
