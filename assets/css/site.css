@@ -6141,3 +6141,65 @@ width: 100%;
 .heloc-handoff .small a {
 color: var(--banknote);
 }
+.guide-page .eyebrow a {
+color: inherit;
+text-decoration: none;
+}
+.guide-page .eyebrow a:hover {
+text-decoration: underline;
+}
+.guide-answer {
+margin: 24px 0 8px;
+padding: 18px 20px;
+border: 1px solid var(--hair-2);
+border-left: 3px solid var(--banknote);
+border-radius: 6px;
+background: var(--intaglio);
+}
+.guide-answer p {
+margin: 0;
+color: var(--banknote);
+line-height: 1.65;
+}
+.guide-answer .guide-answer__label {
+margin-bottom: 6px;
+color: var(--silver);
+font-size: 0.75rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+}
+.guide ul {
+margin: 12px 0 0;
+padding-left: 1.2em;
+}
+.guide li + li {
+margin-top: 8px;
+}
+.guide-related {
+margin-top: 40px;
+padding-top: 20px;
+border-top: 1px solid var(--hair-2);
+}
+.guide-related ul {
+list-style: none;
+padding: 0;
+}
+.guide-group {
+margin: 48px 0 20px;
+}
+.guide-group:first-child {
+margin-top: 0;
+}
+.glossary dt {
+margin-top: 22px;
+color: var(--banknote);
+font-weight: 600;
+}
+.glossary dd {
+margin: 6px 0 0;
+color: var(--silver);
+line-height: 1.65;
+}
+.learn-links {
+margin: 16px 0 18px;
+}

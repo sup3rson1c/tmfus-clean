@@ -113,7 +113,28 @@ const CRUMBS = {
   mca: "Merchant cash advance",
   terms: "Terms of Use",
   privacy: "Privacy Policy",
+  guides: "Guides",
+  "what-is-a-merchant-cash-advance": "What is a merchant cash advance?",
+  "mca-vs-sba-loan-vs-line-of-credit": "MCA vs SBA loan vs line of credit",
+  "what-funders-look-for-in-bank-statements": "What funders look for in bank statements",
+  "business-funding-with-bad-credit": "Business funding with bad credit",
+  "how-fast-can-a-business-get-funded": "How fast can a business get funded?",
+  "business-funding-broker-vs-lender": "Broker vs lender",
+  "heloc-for-business-owners": "HELOC for business owners",
+  "business-funding-options": "Business funding options",
+  "how-to-get-a-small-business-loan": "How to get a small business loan",
+  "how-does-a-business-line-of-credit-work": "How a business line of credit works",
+  "what-is-a-cash-injection": "What is a cash injection?",
+  "working-capital-loans": "Working capital loans",
+  "how-to-get-an-sba-loan": "How to get an SBA loan",
+  "mca-consolidation": "MCA consolidation",
+  "business-funding-glossary": "Business funding glossary",
 };
+/* Guide pages (25 Oct 2026, AI-search plan): question-led articles that
+   reuse the site's published facts. They get Article schema and a three-step
+   breadcrumb through /guides. */
+const GUIDES = new Set(["what-is-a-merchant-cash-advance", "mca-vs-sba-loan-vs-line-of-credit", "what-funders-look-for-in-bank-statements", "business-funding-with-bad-credit", "how-fast-can-a-business-get-funded", "business-funding-broker-vs-lender", "heloc-for-business-owners", "business-funding-options", "how-to-get-a-small-business-loan", "how-does-a-business-line-of-credit-work", "what-is-a-cash-injection", "working-capital-loans", "how-to-get-an-sba-loan", "mca-consolidation", "business-funding-glossary"]);
+const GUIDE_DATE = "2026-10-25";
 const SERVICES = {
   mca: ["Merchant Cash Advance", "Revenue-based business funding from $5K to $2M with remittances aligned to card and bank receipts."],
   "sba-loans": ["SBA 7(a) and 504 Loans", "SBA-guaranteed business lending: 7(a) for working capital and acquisitions, 504 for property and long-life equipment financing."],
@@ -171,6 +192,22 @@ const SITEMAP = [
   ["/line-of-credit", "0.9", "monthly"],
   ["/funding-estimator", "0.9", "monthly"],
   ["/apply", "0.8", "monthly"],
+  ["/guides", "0.7", "monthly"],
+  ["/what-is-a-merchant-cash-advance", "0.7", "monthly"],
+  ["/mca-vs-sba-loan-vs-line-of-credit", "0.7", "monthly"],
+  ["/what-funders-look-for-in-bank-statements", "0.7", "monthly"],
+  ["/business-funding-with-bad-credit", "0.7", "monthly"],
+  ["/how-fast-can-a-business-get-funded", "0.7", "monthly"],
+  ["/business-funding-broker-vs-lender", "0.7", "monthly"],
+  ["/heloc-for-business-owners", "0.7", "monthly"],
+  ["/business-funding-options", "0.7", "monthly"],
+  ["/how-to-get-a-small-business-loan", "0.7", "monthly"],
+  ["/how-does-a-business-line-of-credit-work", "0.7", "monthly"],
+  ["/what-is-a-cash-injection", "0.7", "monthly"],
+  ["/working-capital-loans", "0.7", "monthly"],
+  ["/how-to-get-an-sba-loan", "0.7", "monthly"],
+  ["/mca-consolidation", "0.7", "monthly"],
+  ["/business-funding-glossary", "0.7", "monthly"],
   ["/about", "0.6", "yearly"],
   ["/contact", "0.6", "yearly"],
   ["/terms", "0.3", "yearly"],
@@ -220,8 +257,23 @@ function schema(html, v) {
       "@id": `${url}#breadcrumb`,
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
-        { "@type": "ListItem", position: 2, name: CRUMBS[v.slug] ?? v.title, item: url },
+        ...(GUIDES.has(v.slug) ? [{ "@type": "ListItem", position: 2, name: "Guides", item: `${SITE}/guides` }] : []),
+        { "@type": "ListItem", position: GUIDES.has(v.slug) ? 3 : 2, name: CRUMBS[v.slug] ?? v.title, item: url },
       ],
+    });
+  }
+  if (GUIDES.has(v.slug)) {
+    graph.push({
+      "@type": "Article",
+      "@id": `${url}#article`,
+      headline: text(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? v.title),
+      description: v.description,
+      author: { "@id": `${SITE}/#organization` },
+      publisher: { "@id": `${SITE}/#organization` },
+      datePublished: GUIDE_DATE,
+      dateModified: GUIDE_DATE,
+      mainEntityOfPage: { "@id": `${url}#webpage` },
+      inLanguage: "en-US",
     });
   }
   if (SERVICES[v.slug]) {

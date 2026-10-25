@@ -336,7 +336,8 @@ if expected != actual:
     print('missing from sitemap:', sorted(expected - actual))
     print('unexpected in sitemap:', sorted(actual - expected))
     sys.exit(1)
-if len(actual) != 11 or any(re.search(r'\.(html|php)$', url) for url in actual):
+# 11 core pages + the guides hub and 15 guides (25 Oct 2026). Change this when a page is added.
+if len(actual) != 27 or any(re.search(r'\.(html|php)$', url) for url in actual):
     sys.exit(1)
 PY
 then
