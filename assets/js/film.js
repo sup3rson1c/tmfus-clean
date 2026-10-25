@@ -310,9 +310,10 @@
   // round trip no matter how small it is, so fetching one at a time took ~19s
   // per beat. Anyone scrolling at a normal pace ran straight off the end of
   // what had arrived, and the film froze, then jumped to whatever frame was
-  // nearest - often from another shot. A few requests at once over HTTP/2
-  // cuts that several-fold without flooding the connection.
-  const POOL = 6;
+  // nearest - often from another shot. Several requests at once over HTTP/2
+  // hide that wait. Six capped the live site at ~24 frames a second, short of
+  // the ~33 a brisk scroll asks for, with bandwidth to spare; twelve clears it.
+  const POOL = 12;
 
   // Coarse to fine: every 8th frame of a beat first, then every 4th, 2nd and
   // the rest. Within half a second the whole shot is covered, choppy but in
