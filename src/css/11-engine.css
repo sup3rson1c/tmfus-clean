@@ -1198,3 +1198,50 @@ select.input option {
 .heloc-handoff .small a {
   color: var(--banknote);
 }
+
+/* Guide pages (25 Oct 2026; GUIDES in build.mjs): the legal reading
+   column plus a short-answer box up top, which is the passage assistants
+   quote, and a read-next list. */
+.guide-page .eyebrow a {
+  color: inherit;
+  text-decoration: none;
+}
+.guide-page .eyebrow a:hover {
+  text-decoration: underline;
+}
+.guide-answer {
+  margin: 24px 0 8px;
+  padding: 18px 20px;
+  border: 1px solid var(--hair-2);
+  border-left: 3px solid var(--banknote);
+  border-radius: 6px;
+  background: var(--intaglio);
+}
+.guide-answer p {
+  margin: 0;
+  color: var(--banknote);
+  line-height: 1.65;
+}
+.guide-answer .guide-answer__label {
+  margin-bottom: 6px;
+  color: var(--silver);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.guide ul {
+  margin: 12px 0 0;
+  padding-left: 1.2em;
+}
+.guide li + li {
+  margin-top: 8px;
+}
+.guide-related {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hair-2);
+}
+.guide-related ul {
+  list-style: none;
+  padding: 0;
+}

@@ -11,6 +11,13 @@ const PAGES = [
   ['heloc-calculator', 'Home equity line of credit'],
   ['line-of-credit', 'Line of credit'],
   ['funding-estimator', 'Cash injection calculator'],
+  ['what-is-a-merchant-cash-advance', 'Guide: What is a merchant cash advance?'],
+  ['mca-vs-sba-loan-vs-line-of-credit', 'Guide: MCA vs SBA loan vs line of credit'],
+  ['what-funders-look-for-in-bank-statements', 'Guide: What funders look for in bank statements'],
+  ['business-funding-with-bad-credit', 'Guide: Business funding with bad credit'],
+  ['how-fast-can-a-business-get-funded', 'Guide: How fast can a business get funded?'],
+  ['business-funding-broker-vs-lender', 'Guide: Broker vs lender'],
+  ['heloc-for-business-owners', 'Guide: HELOC for business owners'],
 ];
 
 const out = [
