@@ -30,6 +30,7 @@ deployment:
     - /bin/cp -f robots.txt             $DEPLOYPATH/
     - /bin/cp -f llms.txt               $DEPLOYPATH/
     - /bin/cp -f llms-full.txt          $DEPLOYPATH/
+    - /bin/cp -f ea2d0f4bd120bbfac1028578d8a51057.txt $DEPLOYPATH/   # IndexNow key (scripts/indexnow.sh)
     - /bin/cp -f sitemap.xml            $DEPLOYPATH/
     - /bin/cp -f .htaccess              $DEPLOYPATH/
     - /bin/cp -Rf assets/.               $DEPLOYPATH/assets/

@@ -29,8 +29,11 @@
   if (!ctx) return;
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  // Sharp frames on desktop, the half-size set on phones.
-  const big = Math.max(window.innerWidth, window.innerHeight) * (window.devicePixelRatio || 1) > 1400;
+  // Sharp frames on desktop, the half-size set on phones. Judged on the
+  // picture's own width at the canvas's capped density (size() stops at 2x):
+  // judging on the window times the raw density sent every 3x phone the
+  // 1920px set - ~12 MB on page load for a picture about 390px wide.
+  const big = Math.min(stage.offsetWidth || window.innerWidth, window.innerWidth) * Math.min(window.devicePixelRatio || 1, 2) > 960; // the phone set is 960px wide
   const SET = big
     ? { count: 173, dir: "/media/film/frames/d/b11/", w: 1920, h: 1072 }
     : { count: 87, dir: "/media/film/frames/m/b11/", w: 960, h: 536 };
@@ -202,29 +205,39 @@
     requestAnimationFrame(tick);
   };
 
-  /* Loading: the first frame at once, then a rough strip, then the rest. */
+  /* Loading: the first frame at once, then the frames the idle nudge plays
+     (the first tenth of the push) and a rough strip across the whole push.
+     That is all most visitors ever see. The rest waits for a hand on the
+     plunger: fetching every frame up front cost ~9.5 MB on desktop before
+     anyone touched it, and nearest() keeps a drag moving on the rough strip
+     while the gaps fill in. */
+  const load = (i) => {
+    if (frames[i]) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => {
+      if (shown < 0) draw();
+    };
+    img.src = src(i);
+    frames[i] = img;
+  };
+  let full = false;
+  const loadAll = () => {
+    if (full) return;
+    full = true;
+    for (const step of [4, 2, 1]) for (let i = 0; i < SET.count; i += step) load(i);
+  };
+  stage.addEventListener("pointerdown", loadAll, { once: true });
+  stage.addEventListener("keydown", loadAll, { once: true });
+  stage.addEventListener("focus", loadAll, { once: true });
+
   const start = () => {
     size();
     placeCounter();
-    const order = [];
-    const seen = new Set();
-    for (const step of [16, 8, 4, 2, 1]) {
-      for (let i = 0; i < SET.count; i += step) {
-        if (!seen.has(i)) {
-          seen.add(i);
-          order.push(i);
-        }
-      }
-    }
-    for (const i of order) {
-      const img = new Image();
-      img.decoding = "async";
-      img.onload = () => {
-        if (shown < 0) draw();
-      };
-      img.src = src(i);
-      frames[i] = img;
-    }
+    load(0);
+    const nudge = Math.ceil(SET.count * 0.12);
+    for (let i = 1; i <= nudge; i += 1) load(i);
+    for (let i = 0; i < SET.count; i += 8) load(i);
     fetch("/media/film/frames/manifest.json")
       .then((r) => r.json())
       .then((m) => {
@@ -233,6 +246,7 @@
       .catch(() => {});
     if (reduced) {
       p = target = 0.55;
+      load(Math.round(0.55 * (SET.count - 1)));
       frames[Math.round(0.55 * (SET.count - 1))].addEventListener(
         "load",
         () => {

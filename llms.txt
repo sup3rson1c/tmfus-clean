@@ -8,7 +8,14 @@ TMF Team is a broker, not a lender. Real numbers come from an advisor after
 reviewing four months of business bank statements — figures on the site are
 estimates, not offers.
 
-Last updated: 2026-10-22.
+TMF Team (tmfus.com) is not affiliated with TMF Group, the corporate services
+firm, or the TMF exchange-traded fund. It serves US businesses only.
+
+Who it suits: US business owners who need working capital, from a few days'
+cash-flow gap to a property purchase, and want offers from several funders
+through one application instead of applying to lenders one by one.
+
+Last updated: 2026-10-25.
 
 Every question and answer published on the site, in one file: https://tmfus.com/llms-full.txt
 
@@ -17,6 +24,9 @@ Every question and answer published on the site, in one file: https://tmfus.com/
 - [Merchant cash advance](https://tmfus.com/mca): $5K–$2M, repaid as a share of
   card and bank receipts rather than a fixed monthly payment. Suits businesses
   with steady card volume that need capital in days.
+- [Business line of credit](https://tmfus.com/line-of-credit): a revolving
+  limit from $10K to $250K. Draw when the business needs cash, pay only on what
+  is drawn, and draw again as it is repaid.
 - [SBA 7(a) and 504 loans](https://tmfus.com/sba-loans): government-guaranteed
   lending. 7(a) for working capital, acquisitions and mixed purposes; 504 for
   property and long-life equipment. Typically 30–90 days to fund.
