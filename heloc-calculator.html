@@ -30,7 +30,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,500..700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/assets/css/site.css?v=fd7209f760">
+<link rel="stylesheet" href="/assets/css/site.css?v=ef16f45a0c">
 <script>(function (d) {
   d.classList.add("js");
   var motion = matchMedia("(prefers-reduced-motion: no-preference)").matches;
@@ -172,7 +172,7 @@
       <h1 class="h1" id="page-title">Cheaper capital, secured by your home.</h1>
       <p class="lede">Home equity usually prices better than unsecured business credit, and the term runs 10 to 30 years instead of months. The trade is real: the line is secured against where you live. Valuation is automated, so there's no appraisal appointment to get started.</p>
       <div class="page-hero__actions">
-        <a class="btn btn--primary btn--lg" href="/apply?product=heloc">Apply now</a>
+        <a class="btn btn--primary btn--lg" href="#instant-offer">See my offer now</a>
         <a class="link-arrow" href="/contact">Talk to a specialist <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8h9.5M8.5 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
       </div>
     </div>
@@ -184,7 +184,7 @@
     <dl class="fact-rail">
       <div class="fact"><dt>Line amount</dt><dd>$25K–$750K</dd></div>
       <div class="fact"><dt>Term</dt><dd>10–30 yrs</dd></div>
-      <div class="fact"><dt>Offer, during business hours</dt><dd>Within 1h</dd></div>
+      <div class="fact"><dt>Pre-qualified answer, online</dt><dd>Minutes</dd></div>
       <div class="fact"><dt>Appraisal appointments to get started</dt><dd>None</dd></div>
     </dl>
   </div>
@@ -193,32 +193,108 @@
 <div class="hp-field" aria-hidden="true"><label>Company website<input type="text" name="company_website" data-field="company_website" tabindex="-1" autocomplete="off" value=""></label></div>
 
 
-<!-- The live site's HELOC estimator is switched off ("being rebuilt"), so
-     this page hands off to the one application instead of running a second
-     pipeline. Copy is the live page's. -->
-<section class="section section--tight" aria-labelledby="offer-title">
-  <div class="container heloc-handoff">
-    <div class="card heloc-handoff__note">
-      <p class="tag tag--sample"><span class="heloc-handoff__pulse" aria-hidden="true"></span>Still in construction</p>
-      <h2 class="h3">The instant estimator is being rebuilt.</h2>
-      <p class="muted">The old version asked for six figures and handed back a guess built out of them. The replacement values the property itself, so the number you see is a number worth talking about. It is not finished, and we would rather show you nothing than show you something we cannot stand behind.</p>
-      <p class="muted">None of that stops you today. The application is the same one every TMF deal goes through, and the valuation starts the moment it lands.</p>
-      <p class="secure-note"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5.2a2.5 2.5 0 0 1 5 0V7"/></svg>The sensitive half of an application is encrypted and can only be opened by us.</p>
+<!-- Instant HELOC offer (14 Nov 2026, D-093 in tmf-os). The merchant fills
+     this in; TMF OS sends it to the lender with its own robot and the page
+     shows the answer here. assets/js/heloc-offer.js does the talking. -->
+<section class="section section--tight" id="instant-offer" aria-labelledby="offer-title">
+  <div class="container heloc-handoff heloc-handoff--instant">
+    <div class="card heloc-handoff__go heloc-instant">
+      <p class="tag tag--sample"><span class="heloc-handoff__pulse" aria-hidden="true"></span>Live · soft credit check only</p>
+      <h2 class="h3" id="offer-title">See your HELOC offer in a few minutes.</h2>
+      <p class="muted">Fill this in and we check it with our home-equity lender right now. You stay on this page and the answer appears here. It is a soft check, so it does not affect your credit score.</p>
+
+      <form class="form-stack heloc-instant__form" data-heloc-offer data-endpoint="https://tmfverification.com/public/heloc" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label class="label field-label" for="ho-first">First name *</label>
+            <input class="input" id="ho-first" name="first_name" autocomplete="given-name" required>
+          </div>
+          <div class="field">
+            <label class="label field-label" for="ho-last">Last name *</label>
+            <input class="input" id="ho-last" name="last_name" autocomplete="family-name" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="label field-label" for="ho-email">Email *</label>
+            <input class="input" id="ho-email" name="email" type="email" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <label class="label field-label" for="ho-phone">Mobile phone *</label>
+            <input class="input mono-input" id="ho-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(305) 555-0142" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="label field-label" for="ho-dob">Date of birth *</label>
+            <input class="input mono-input" id="ho-dob" name="dob" type="date" autocomplete="bday" required>
+          </div>
+          <div class="field">
+            <label class="label field-label" for="ho-biz">Business legal name *</label>
+            <input class="input" id="ho-biz" name="business" autocomplete="organization" placeholder="Acme Logistics LLC" required>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label field-label" for="ho-street">Home address (the property you own) *</label>
+          <input class="input" id="ho-street" name="street" autocomplete="address-line1" placeholder="140 Palm Ave" required>
+          <span class="field-hint">The home you live in and own. It is what the line is secured against.</span>
+        </div>
+        <div class="field-row heloc-instant__city">
+          <div class="field">
+            <label class="label field-label" for="ho-city">City *</label>
+            <input class="input" id="ho-city" name="city" autocomplete="address-level2" required>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="label field-label" for="ho-state">State *</label>
+              <select class="input" id="ho-state" name="state" autocomplete="address-level1" required>
+                <option value="">Choose</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="label field-label" for="ho-zip">ZIP *</label>
+              <input class="input mono-input" id="ho-zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" required>
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label class="label field-label" for="ho-rev">Business monthly revenue *</label>
+            <input class="input mono-input" id="ho-rev" name="monthly_revenue" inputmode="numeric" placeholder="$60,000" required>
+            <span class="field-hint">Average deposits a month, before expenses.</span>
+          </div>
+          <div class="field">
+            <label class="label field-label" for="ho-hv">Home value (optional)</label>
+            <input class="input mono-input" id="ho-hv" name="home_value" inputmode="numeric" placeholder="$450,000">
+            <span class="field-hint">We value the home ourselves. Add yours in case we can't find it.</span>
+          </div>
+        </div>
+        <label class="check">
+          <input type="checkbox" name="consent" required>
+          <span class="check__text" data-consent-text>I authorize TMF Team to send these details to its home-equity lending partner, Figure, and I authorize Figure to check my credit with a soft inquiry, which does not affect my credit score, to see if I pre-qualify. TMF Team and its partners may contact me about this request by phone, email and text. <span class="req" aria-hidden="true">*</span></span>
+        </label>
+        <div class="hp-field" aria-hidden="true"><label>Company website <input name="company_website" tabindex="-1" autocomplete="off"></label></div>
+        <p class="err" data-err role="alert"></p>
+        <button class="btn btn--primary btn--lg btn--block" type="submit" data-submit>Check my offer</button>
+        <p class="small muted">Pre-qualification is not a commitment to lend. Any offer is subject to the lender's review and verification. Borrowing against your home puts your home at risk. See our <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
+      </form>
+
+      <div class="heloc-result" data-result hidden aria-live="polite"></div>
     </div>
-    <div class="card heloc-handoff__go">
-      <p class="eyebrow">Get your offer</p>
-      <h2 class="h3" id="offer-title">An offer inside the hour.</h2>
-      <p class="muted">The property valuation is done by AI, so there is no appraisal appointment to book and nobody has to visit the house. Start the application and a rep comes back with what is available.</p>
+
+    <div class="card heloc-handoff__note">
+      <p class="eyebrow">How it works</p>
+      <h2 class="h3">Your answer, on this page.</h2>
       <ol class="heloc-points" role="list">
-        <li><span class="stage__num">01</span><span><strong>About four minutes.</strong> Four steps: the business, you, any co-owner, then statements and signature.</span></li>
-        <li><span class="stage__num">02</span><span><strong>Have ready.</strong> Your EIN, four months of business bank statements, and the address of the property you are borrowing against.</span></li>
-        <li><span class="stage__num">03</span><span><strong>Encrypted before it is stored.</strong> The sensitive half can only be opened on one machine, and that machine is not our web server.</span></li>
+        <li><span class="stage__num">01</span><span><strong>About two minutes to fill in.</strong> No bank statements, no SSN, no documents.</span></li>
+        <li><span class="stage__num">02</span><span><strong>We value your home automatically.</strong> No appraisal appointment, nobody visits the house.</span></li>
+        <li><span class="stage__num">03</span><span><strong>The lender answers in a few minutes.</strong> Keep this page open: your amount and rate appear here.</span></li>
+        <li><span class="stage__num">04</span><span><strong>A specialist calls you.</strong> They walk you through the offer and the next step. Nothing is final until you say so.</span></li>
       </ol>
       <div class="heloc-handoff__actions">
-        <a class="btn btn--primary btn--lg btn--block" href="/apply?product=heloc">Start my application</a>
+        <a class="btn btn--ghost btn--lg btn--block" href="/apply?product=heloc">Prefer the full application?</a>
         <button class="btn btn--ghost btn--lg btn--block" type="button" data-open-chat="">Ask a rep first</button>
       </div>
-      <p class="small muted">Any offer is subject to review and verification of what you tell us, and is not a commitment to lend. Borrowing against your home puts your home at risk. See our <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
     </div>
   </div>
 </section>
@@ -442,7 +518,7 @@
 <script src="/assets/js/engine.js?v=a64f414a2a" defer></script>
 <script src="/assets/js/loader.js?v=02e43c61ac" defer></script>
     <script src="/assets/js/motion.js?v=1638d7bc9e" defer></script>
-  
+  <script src="/assets/js/heloc-offer.js?v=628750c249" defer></script>
 <script src="/assets/js/moments.js?v=527518f9c0" defer></script>
 </body>
 </html>

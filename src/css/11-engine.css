@@ -1264,3 +1264,103 @@ select.input option {
 .learn-links {
   margin: 16px 0 18px;
 }
+
+/* Instant HELOC offer (14 Nov 2026): the form on /heloc-calculator that
+   TMF OS answers live (assets/js/heloc-offer.js). */
+@media (min-width: 1024px) {
+  .heloc-handoff--instant {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  }
+}
+.heloc-instant,
+.heloc-instant__form {
+  width: 100%;
+}
+.heloc-instant__form .check {
+  margin-top: var(--s-2);
+}
+@media (min-width: 600px) {
+  .heloc-instant__city {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.heloc-instant__city .field-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.heloc-result {
+  display: grid;
+  gap: var(--s-4);
+  width: 100%;
+}
+.heloc-result[hidden] {
+  display: none;
+}
+.heloc-steps {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.heloc-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--control);
+  font-size: 0.9375rem;
+}
+.heloc-steps li::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--control);
+}
+.heloc-steps li.is-done {
+  color: var(--silver);
+}
+.heloc-steps li.is-done::before {
+  background: var(--greenback);
+  box-shadow: none;
+}
+.heloc-steps li.is-now {
+  color: var(--banknote);
+}
+.heloc-steps li.is-now::before {
+  background: #d9a86a;
+  box-shadow: none;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .heloc-steps li.is-now::before {
+    animation: none;
+  }
+}
+.heloc-amount {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 7vw, 4rem);
+  line-height: 1;
+  color: var(--greenback);
+  font-variant-numeric: tabular-nums;
+}
+.heloc-terms {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+.heloc-terms th,
+.heloc-terms td {
+  padding: 10px 8px;
+  text-align: left;
+  box-shadow: inset 0 -1px 0 var(--hair);
+}
+.heloc-terms th {
+  color: var(--silver);
+  font-weight: 500;
+}
+.heloc-terms td:last-child,
+.heloc-terms th:last-child {
+  text-align: right;
+}

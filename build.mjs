@@ -360,7 +360,7 @@ const CSP = [
   ["font-src", "'self'", "https://fonts.gstatic.com"],
   ["img-src", "'self'", "data:"],
   ["media-src", "'self'"],
-  ["connect-src", "'self'", "https://script.google.com", "https://script.googleusercontent.com"],
+  ["connect-src", "'self'", "https://script.google.com", "https://script.googleusercontent.com", "https://tmfverification.com"],
   ["frame-src", "'none'"],
   ["object-src", "'none'"],
   ["base-uri", "'self'"],
