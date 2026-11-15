@@ -46,9 +46,30 @@
     clear: function () { try { sessionStorage.removeItem(KEY); } catch (e) { /* private mode */ } }
   };
 
-  var STEPS = ['We received your details', 'Checking your state', 'Valuing your home',
-    'Sending your request to the lender', 'Waiting for the lender' + Q + 's answer'];
+  /* The waiting screen (16 Nov 2026, John: "I don't want people to leave
+     the website instantly after filling it"). Built once and then only
+     updated, so its animations run smoothly instead of restarting on every
+     poll. The ring fills on a curve that slows down (it never claims 100%
+     until the answer is here), the steps tick over, a "good to know" line
+     changes every few seconds, the tab title counts the minutes, and the
+     browser asks before the page is closed. */
+  var STEPS = [[0, 'We received your details'], [6, 'Checking your state'],
+    [16, 'Valuing your home'], [38, 'Sending your request to the lender'],
+    [62, 'Waiting for the lender' + Q + 's answer']];
+  var TIPS = [
+    'This is a soft credit check. It does not affect your credit score.',
+    'Your home is valued automatically. No appraisal appointment, nobody visits.',
+    'Lines run from $25K up to $750K, with 10 to 30 year terms.',
+    'Nothing is final until you choose an offer and say yes.',
+    'Home equity usually prices below unsecured business credit.',
+    'A TMF specialist calls you to walk through every option.'
+  ];
+  var RING = 2 * Math.PI * 52;
   var started = 0;
+  var ahead = 0;
+  var tick = null;
+  var tipAt = 0;
+  var baseTitle = document.title;
 
   function show(html) {
     form.hidden = true;
@@ -56,16 +77,104 @@
     out.innerHTML = html;
   }
 
-  function waiting(ahead) {
+  function guard(e) {
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+
+  function pct() {
     var secs = (Date.now() - started) / 1000;
-    var at = ahead ? 0 : Math.min(STEPS.length - 1, 1 + Math.floor(secs / 35));
-    var list = STEPS.map(function (s, i) {
-      return '<li class="' + (i < at ? 'is-done' : i === at ? 'is-now' : '') + '">' + s + '</li>';
-    }).join('');
-    show('<h3 class="h3">Checking your offer&hellip;</h3>' +
-      '<p class="muted">' + (ahead ? 'You are number ' + (ahead + 1) + ' in line. ' : '') +
-      'This usually takes 2 to 5 minutes. Keep this page open; your answer appears right here.</p>' +
-      '<ol class="heloc-steps" role="list">' + list + '</ol>');
+    return 95 * (1 - Math.exp(-secs / 110));
+  }
+
+  function clock() {
+    var s = Math.max(0, Math.floor((Date.now() - started) / 1000));
+    return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  function buildWaiting() {
+    show('<div class="hw">' +
+      '<div class="hw-visual" aria-hidden="true">' +
+        '<svg viewBox="0 0 120 120" class="hw-ring">' +
+          '<circle class="hw-track" cx="60" cy="60" r="52"/>' +
+          '<circle class="hw-fill" cx="60" cy="60" r="52" stroke-dasharray="' + RING.toFixed(1) +
+            '" stroke-dashoffset="' + RING.toFixed(1) + '"/>' +
+        '</svg>' +
+        '<svg viewBox="0 0 48 48" class="hw-house">' +
+          '<path class="hw-roof" d="M6 23 24 8l18 15"/>' +
+          '<path class="hw-walls" d="M11 20v19h26V20"/>' +
+          '<rect class="hw-glow" x="20" y="26" width="8" height="13" rx="1"/>' +
+        '</svg>' +
+        '<span class="hw-orbit"><i></i></span>' +
+        '<span class="hw-pct" data-hw-pct>0%</span>' +
+      '</div>' +
+      '<h3 class="h3 hw-title" data-hw-title>Checking your offer&hellip;</h3>' +
+      '<p class="muted hw-sub" data-hw-sub></p>' +
+      '<ol class="heloc-steps" role="list" data-hw-steps>' +
+        STEPS.map(function (s) { return '<li>' + s[1] + '</li>'; }).join('') +
+      '</ol>' +
+      '<div class="hw-tip"><span class="hw-tip__label">Good to know</span>' +
+        '<p data-hw-tip>' + TIPS[0] + '</p></div>' +
+      '<p class="small muted hw-clock">Time so far <b data-hw-clock>0:00</b>. Please keep this page open.</p>' +
+    '</div>');
+    window.addEventListener('beforeunload', guard);
+    tick = setInterval(update, 500);
+    update();
+  }
+
+  function update() {
+    var p = ahead ? Math.min(pct(), 5) : pct();
+    var fill = out.querySelector('.hw-fill');
+    if (!fill) return;
+    fill.style.strokeDashoffset = (RING * (1 - p / 100)).toFixed(1);
+    out.querySelector('[data-hw-pct]').textContent = Math.floor(p) + '%';
+    var at = 0;
+    STEPS.forEach(function (s, i) { if (p >= s[0]) at = i; });
+    Array.prototype.forEach.call(out.querySelectorAll('[data-hw-steps] li'), function (li, i) {
+      li.className = i < at ? 'is-done' : i === at ? 'is-now' : '';
+    });
+    out.querySelector('[data-hw-title]').textContent =
+      ahead ? 'You' + Q + 're next in line' : STEPS[at][1] + '\u2026';
+    out.querySelector('[data-hw-sub]').textContent = ahead
+      ? 'You are number ' + (ahead + 1) + ' in line. It starts in a minute or two.'
+      : 'This usually takes 2 to 5 minutes. Your offer appears right here.';
+    out.querySelector('[data-hw-clock]').textContent = clock();
+    var t = Math.floor((Date.now() - started) / 7000) % TIPS.length;
+    if (t !== tipAt) {
+      tipAt = t;
+      var tip = out.querySelector('[data-hw-tip]');
+      tip.classList.add('is-out');
+      setTimeout(function () { tip.textContent = TIPS[t]; tip.classList.remove('is-out'); }, 350);
+    }
+    document.title = '(' + clock() + ') Checking your offer\u2026';
+  }
+
+  function waiting(n) {
+    ahead = n || 0;
+    if (!out.querySelector('.hw')) buildWaiting();
+    else update();
+  }
+
+  /* The answer is in: fill the ring, then show it. */
+  function finish(render) {
+    window.removeEventListener('beforeunload', guard);
+    if (tick) clearInterval(tick);
+    tick = null;
+    var fill = out.querySelector('.hw-fill');
+    if (fill) {
+      fill.style.strokeDashoffset = '0';
+      out.querySelector('[data-hw-pct]').textContent = '100%';
+      out.querySelector('[data-hw-title]').textContent = 'Your answer is ready';
+      Array.prototype.forEach.call(out.querySelectorAll('[data-hw-steps] li'), function (li) {
+        li.className = 'is-done';
+      });
+      setTimeout(render, 900);
+    } else {
+      render();
+    }
+    document.title = 'Your HELOC answer is ready \u00b7 TMF Team';
+    setTimeout(function () { document.title = baseTitle; }, 15000);
   }
 
   function offers(r) {
@@ -103,17 +212,20 @@
           return;
         }
         store.clear();
-        if (r.state === 'offers') {
-          offers(r);
-        } else if (r.state === 'no_offer') {
-          done('No home-equity offer this time.',
-            'The lender couldn' + Q + 't make a home-equity offer on these details today. That doesn' + Q +
-            't close the door: a TMF specialist will call you about the other ways we can fund your business.');
-        } else {
-          done('Thanks, we' + Q + 're on it.',
-            'We have your details, and a specialist is finishing this one by hand. Expect a call shortly, ' +
-            'usually within the hour during business hours.');
-        }
+        finish(function () {
+          if (r.state === 'offers') {
+            offers(r);
+          } else if (r.state === 'no_offer') {
+            done('No home-equity offer this time.',
+              'The lender couldn' + Q + 't make a home-equity offer on these details today. That doesn' + Q +
+              't close the door: a TMF specialist will call you about the other ways we can fund your business.');
+          } else {
+            done('Thanks, we' + Q + 're on it.',
+              'We have your details, and a specialist is finishing this one by hand. Expect a call shortly, ' +
+              'usually within the hour during business hours.');
+          }
+          out.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        });
       })
       .catch(function () {
         waiting(0);
@@ -162,6 +274,7 @@
         if (!r.ok) { failed = true; throw new Error(r.error || 'Something went wrong. Please try again.'); }
         store.set(r.token);
         started = Date.now();
+        try { sessionStorage.setItem(KEY + '-at', String(started)); } catch (e2) { /* private mode */ }
         waiting(0);
         poll(r.token);
       })
@@ -176,6 +289,7 @@
   var saved = store.get();
   if (saved) {
     started = Date.now();
+    try { started = Number(sessionStorage.getItem(KEY + '-at')) || started; } catch (e) { /* private mode */ }
     waiting(0);
     poll(saved);
   }
