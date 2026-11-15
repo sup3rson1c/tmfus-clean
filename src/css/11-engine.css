@@ -1364,3 +1364,163 @@ select.input option {
 .heloc-terms th:last-child {
   text-align: right;
 }
+
+/* Waiting screen for the instant HELOC offer (16 Nov 2026): a ring that
+   fills, a house whose window glows, a dot circling, steps and tips. */
+.hw {
+  display: grid;
+  gap: var(--s-4);
+  justify-items: center;
+  width: 100%;
+  padding: var(--s-4) 0 var(--s-2);
+  text-align: center;
+}
+.hw-visual {
+  position: relative;
+  width: 168px;
+  height: 168px;
+}
+.hw-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.hw-track,
+.hw-fill {
+  fill: none;
+  stroke-width: 5;
+}
+.hw-track {
+  stroke: var(--hair-2);
+}
+.hw-fill {
+  stroke: var(--greenback);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease-out;
+  filter: drop-shadow(0 0 6px rgba(134, 183, 154, 0.55));
+}
+.hw-house {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  transform: translateX(-50%);
+  animation: hw-float 3.2s ease-in-out infinite;
+}
+.hw-roof,
+.hw-walls {
+  fill: none;
+  stroke: var(--banknote);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hw-glow {
+  fill: #d9a86a;
+  animation: hw-glow 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgba(217, 168, 106, 0.9));
+}
+.hw-pct {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  color: var(--silver);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+.hw-orbit {
+  position: absolute;
+  inset: 0;
+  animation: hw-spin 3.6s linear infinite;
+}
+.hw-orbit i {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: var(--banknote);
+  box-shadow: 0 0 10px 2px rgba(241, 242, 236, 0.6);
+}
+.hw-title {
+  margin: 0;
+}
+.hw-sub {
+  max-width: 34ch;
+  margin: 0;
+}
+.hw .heloc-steps {
+  width: 100%;
+  max-width: 340px;
+  text-align: left;
+}
+.hw-tip {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  padding: 14px 18px;
+  border-radius: var(--r-md);
+  background: rgba(134, 183, 154, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(134, 183, 154, 0.22);
+}
+.hw-tip__label {
+  color: var(--greenback);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hw-tip p {
+  min-height: 3em;
+  margin: 0;
+  color: var(--banknote);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.hw-tip p.is-out {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.hw-clock {
+  margin: 0;
+}
+.hw-clock b {
+  color: var(--banknote);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.heloc-instant__nostate {
+  white-space: normal;
+  text-align: center;
+}
+@keyframes hw-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hw-float {
+  50% {
+    transform: translate(-50%, -4px);
+  }
+}
+@keyframes hw-glow {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-house,
+  .hw-glow,
+  .hw-orbit {
+    animation: none;
+  }
+}
