@@ -130,14 +130,14 @@
      changes every few seconds, the tab title counts the minutes, and the
      browser asks before the page is closed. */
   var STEPS = [[0, 'We received your details'], [6, 'Checking your state'],
-    [16, 'Valuing your home'], [38, 'Sending your request to the lender'],
+    [16, 'AI is valuing your property'], [38, 'AI is checking the numbers'],
     [62, 'Waiting for the lender' + Q + 's answer']];
   var TIPS = [
     'This is a soft credit check. It does not affect your credit score.',
-    'Your home is valued automatically. No appraisal appointment, nobody visits.',
+    'AI values your property. No appraisal appointment, nobody visits.',
     'Lines run from $25K up to $750K, with 10 to 30 year terms.',
     'Nothing is final until you choose an offer and say yes.',
-    'Home equity usually prices below unsecured business credit.',
+    'Property equity usually prices below unsecured business credit.',
     'A TMF specialist calls you to walk through every option.'
   ];
   var RING = 2 * Math.PI * 52;
@@ -270,7 +270,7 @@
       '<p class="muted">A TMF specialist will call you shortly to go over these offers and the next step. ' +
       'Nothing is final until you choose an offer.</p>' +
       '<p class="small muted">This is a pre-qualification, not a commitment to lend. Final terms depend on the ' +
-      'lender' + Q + 's review and verification. Borrowing against your home puts your home at risk.</p>');
+      'lender' + Q + 's review and verification. Borrowing against your property puts it at risk.</p>');
   }
 
   function done(title, text) {
