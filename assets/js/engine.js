@@ -722,16 +722,6 @@
       speed: '2 – 4 weeks',
       href: '/heloc-calculator',
       match: (p) => p.credit >= 660
-    },
-    {
-      id: 'sba',
-      name: 'SBA Loan (7a / 504)',
-      range: 'Up to $5.5M',
-      blurb: 'Government-backed, the lowest rates available — if the timeline allows for it.',
-      term: '10 – 25 years',
-      speed: '30 – 90 days',
-      href: '/sba-loans',
-      match: (p) => p.revenue >= 25000 && p.credit >= 650 && p.positions === 0 && p.tib >= 2
     }
   ];
 
