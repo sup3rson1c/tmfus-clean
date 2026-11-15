@@ -17,13 +17,23 @@
   var btn = form.querySelector('[data-submit]');
   var URL_ = form.getAttribute('data-endpoint');
   var KEY = 'tmf-heloc-token';
-  var STATES = ('AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN ' +
-    'MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY').split(' ');
+  /* Only the states our lender lets us send (Figure's exempt list, read
+     15 Nov 2026; tmf-os clicker/figure_states.py is the master copy, keep
+     the two the same). New York included. */
+  var STATES = [['AL', 'Alabama'], ['AK', 'Alaska'], ['AR', 'Arkansas'], ['CO', 'Colorado'],
+    ['CT', 'Connecticut'], ['DE', 'Delaware'], ['DC', 'District of Columbia'], ['FL', 'Florida'],
+    ['GA', 'Georgia'], ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'], ['KY', 'Kentucky'],
+    ['LA', 'Louisiana'], ['ME', 'Maine'], ['MD', 'Maryland'], ['MA', 'Massachusetts'],
+    ['MS', 'Mississippi'], ['MO', 'Missouri'], ['MT', 'Montana'], ['NE', 'Nebraska'],
+    ['NH', 'New Hampshire'], ['NM', 'New Mexico'], ['NY', 'New York'], ['NC', 'North Carolina'],
+    ['OH', 'Ohio'], ['OK', 'Oklahoma'], ['PA', 'Pennsylvania'], ['RI', 'Rhode Island'],
+    ['SC', 'South Carolina'], ['TN', 'Tennessee'], ['TX', 'Texas'], ['WA', 'Washington'],
+    ['WI', 'Wisconsin'], ['WY', 'Wyoming']];
   var sel = form.querySelector('[name="state"]');
   STATES.forEach(function (s) {
     var o = document.createElement('option');
-    o.value = s;
-    o.textContent = s;
+    o.value = s[0];
+    o.textContent = s[1];
     sel.appendChild(o);
   });
 
