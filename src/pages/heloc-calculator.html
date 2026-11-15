@@ -34,83 +34,119 @@
     <div class="card heloc-handoff__go heloc-instant">
       <p class="tag tag--sample"><span class="heloc-handoff__pulse" aria-hidden="true"></span>Live · soft credit check only</p>
       <h2 class="h3" id="offer-title">See your HELOC offer in a few minutes.</h2>
-      <p class="muted">Fill this in and we check it with our home-equity lender right now. You stay on this page and the answer appears here. It is a soft check, so it does not affect your credit score.</p>
+      <p class="muted">Three short steps. We check them with our lending partner while you wait, and your answer appears right here.</p>
 
-      <form class="form-stack heloc-instant__form" data-heloc-offer data-endpoint="https://tmfverification.com/public/heloc" novalidate>
-        <div class="field-row">
-          <div class="field">
-            <label class="label field-label" for="ho-first">First name *</label>
-            <input class="input" id="ho-first" name="first_name" autocomplete="given-name" required>
-          </div>
-          <div class="field">
-            <label class="label field-label" for="ho-last">Last name *</label>
-            <input class="input" id="ho-last" name="last_name" autocomplete="family-name" required>
-          </div>
+      <form class="heloc-instant__form hx" data-heloc-offer data-endpoint="https://tmfverification.com/public/heloc" novalidate>
+        <div class="hx-progress" aria-hidden="true">
+          <div class="hx-progress__bar"><i data-hx-bar></i></div>
+          <ol class="hx-dots" role="list">
+            <li class="is-now" data-hx-dot="1"><span>1</span>Your home</li>
+            <li data-hx-dot="2"><span>2</span>About you</li>
+            <li data-hx-dot="3"><span>3</span>Your business</li>
+          </ol>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label class="label field-label" for="ho-email">Email *</label>
-            <input class="input" id="ho-email" name="email" type="email" autocomplete="email" required>
+
+        <fieldset class="hx-step" data-hx-step="1">
+          <legend class="hx-step__title"><span class="hx-step__kicker">Step 1 of 3</span>Where is the home?</legend>
+          <p class="hx-step__lede">The home you live in and own. It is what the line is secured against.</p>
+          <div class="hx-field hx-field--icon">
+            <label class="label field-label" for="ho-street">Home address *</label>
+            <span class="hx-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg></span>
+            <input class="input" id="ho-street" name="street" autocomplete="address-line1" placeholder="140 Palm Ave" required>
           </div>
-          <div class="field">
-            <label class="label field-label" for="ho-phone">Mobile phone *</label>
-            <input class="input mono-input" id="ho-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(305) 555-0142" required>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label class="label field-label" for="ho-dob">Date of birth *</label>
-            <input class="input mono-input" id="ho-dob" name="dob" type="date" autocomplete="bday" required>
-          </div>
-          <div class="field">
-            <label class="label field-label" for="ho-biz">Business legal name *</label>
-            <input class="input" id="ho-biz" name="business" autocomplete="organization" placeholder="Acme Logistics LLC" required>
-          </div>
-        </div>
-        <div class="field">
-          <label class="label field-label" for="ho-street">Home address (the property you own) *</label>
-          <input class="input" id="ho-street" name="street" autocomplete="address-line1" placeholder="140 Palm Ave" required>
-          <span class="field-hint">The home you live in and own. It is what the line is secured against.</span>
-        </div>
-        <div class="field-row heloc-instant__city">
-          <div class="field">
-            <label class="label field-label" for="ho-city">City *</label>
-            <input class="input" id="ho-city" name="city" autocomplete="address-level2" required>
-          </div>
-          <div class="field-row">
-            <div class="field">
+          <div class="hx-row hx-row--city">
+            <div class="hx-field">
+              <label class="label field-label" for="ho-city">City *</label>
+              <input class="input" id="ho-city" name="city" autocomplete="address-level2" placeholder="Miami" required>
+            </div>
+            <div class="hx-field">
               <label class="label field-label" for="ho-state">State *</label>
               <select class="input" id="ho-state" name="state" autocomplete="address-level1" required>
                 <option value="">Choose</option>
               </select>
             </div>
-            <div class="field">
+            <div class="hx-field">
               <label class="label field-label" for="ho-zip">ZIP *</label>
-              <input class="input mono-input" id="ho-zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" required>
+              <input class="input mono-input" id="ho-zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="33101" required>
             </div>
           </div>
-        </div>
-        <a class="btn btn--ghost btn--block heloc-instant__nostate" href="/contact?product=heloc">Your state not listed? Talk to us and we&rsquo;ll get something else done <span class="icon" aria-hidden="true">&rarr;</span></a>
-        <div class="field-row">
-          <div class="field">
-            <label class="label field-label" for="ho-rev">Business monthly revenue *</label>
-            <input class="input mono-input" id="ho-rev" name="monthly_revenue" inputmode="numeric" placeholder="$60,000" required>
+          <a class="hx-nostate" href="/contact?product=heloc"><span>Your state not listed?</span> Talk to us and we&rsquo;ll get something else done <span aria-hidden="true">&rarr;</span></a>
+          <div class="hx-field hx-field--icon">
+            <label class="label field-label" for="ho-hv">What is the home worth? <em>(optional)</em></label>
+            <span class="hx-ico hx-ico--text" aria-hidden="true">$</span>
+            <input class="input mono-input" id="ho-hv" name="home_value" inputmode="numeric" placeholder="450,000">
+            <span class="field-hint">We value it ourselves. Add yours in case we can&rsquo;t find it.</span>
+          </div>
+          <button class="btn btn--primary btn--lg btn--block hx-next" type="button" data-hx-next>Continue <span aria-hidden="true">&rarr;</span></button>
+        </fieldset>
+
+        <fieldset class="hx-step" data-hx-step="2" hidden>
+          <legend class="hx-step__title"><span class="hx-step__kicker">Step 2 of 3</span>Who owns it?</legend>
+          <p class="hx-step__lede">Your name as it appears on your ID.</p>
+          <div class="hx-row">
+            <div class="hx-field">
+              <label class="label field-label" for="ho-first">First name *</label>
+              <input class="input" id="ho-first" name="first_name" autocomplete="given-name" required>
+            </div>
+            <div class="hx-field">
+              <label class="label field-label" for="ho-last">Last name *</label>
+              <input class="input" id="ho-last" name="last_name" autocomplete="family-name" required>
+            </div>
+          </div>
+          <div class="hx-field hx-field--icon">
+            <label class="label field-label" for="ho-email">Email *</label>
+            <span class="hx-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m4 7 8 6 8-6"/></svg></span>
+            <input class="input" id="ho-email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+          </div>
+          <div class="hx-row">
+            <div class="hx-field hx-field--icon">
+              <label class="label field-label" for="ho-phone">Mobile phone *</label>
+              <span class="hx-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17.5h2"/></svg></span>
+              <input class="input mono-input" id="ho-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(305) 555-0142" required>
+            </div>
+            <div class="hx-field">
+              <label class="label field-label" for="ho-dob">Date of birth *</label>
+              <input class="input mono-input" id="ho-dob" name="dob" type="date" autocomplete="bday" required>
+            </div>
+          </div>
+          <div class="hx-nav">
+            <button class="btn btn--ghost btn--lg hx-back" type="button" data-hx-back><span aria-hidden="true">&larr;</span> Back</button>
+            <button class="btn btn--primary btn--lg hx-next" type="button" data-hx-next>Continue <span aria-hidden="true">&rarr;</span></button>
+          </div>
+        </fieldset>
+
+        <fieldset class="hx-step" data-hx-step="3" hidden>
+          <legend class="hx-step__title"><span class="hx-step__kicker">Step 3 of 3</span>And the business?</legend>
+          <p class="hx-step__lede">Last step. Then we check your offer while you wait.</p>
+          <div class="hx-field hx-field--icon">
+            <label class="label field-label" for="ho-biz">Business legal name *</label>
+            <span class="hx-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2"/></svg></span>
+            <input class="input" id="ho-biz" name="business" autocomplete="organization" placeholder="Acme Logistics LLC" required>
+          </div>
+          <div class="hx-field hx-field--icon">
+            <label class="label field-label" for="ho-rev">Monthly revenue *</label>
+            <span class="hx-ico hx-ico--text" aria-hidden="true">$</span>
+            <input class="input mono-input" id="ho-rev" name="monthly_revenue" inputmode="numeric" placeholder="60,000" required>
             <span class="field-hint">Average deposits a month, before expenses.</span>
           </div>
-          <div class="field">
-            <label class="label field-label" for="ho-hv">Home value (optional)</label>
-            <input class="input mono-input" id="ho-hv" name="home_value" inputmode="numeric" placeholder="$450,000">
-            <span class="field-hint">We value the home ourselves. Add yours in case we can't find it.</span>
+          <label class="check hx-consent">
+            <input type="checkbox" name="consent" required>
+            <span class="check__text" data-consent-text>I authorize TMF Team to share these details with its lending partner to check and evaluate my request, and I authorize that partner to check my credit with a soft inquiry, which does not affect my credit score. TMF Team and its partners may contact me about this request by phone, email and text. <span class="req" aria-hidden="true">*</span></span>
+          </label>
+          <div class="hp-field" aria-hidden="true"><label>Company website <input name="company_website" tabindex="-1" autocomplete="off"></label></div>
+          <p class="err" data-err role="alert"></p>
+          <div class="hx-nav">
+            <button class="btn btn--ghost btn--lg hx-back" type="button" data-hx-back><span aria-hidden="true">&larr;</span> Back</button>
+            <button class="btn btn--primary btn--lg hx-go" type="submit" data-submit>See my offer <span aria-hidden="true">&rarr;</span></button>
           </div>
-        </div>
-        <label class="check">
-          <input type="checkbox" name="consent" required>
-          <span class="check__text" data-consent-text>I authorize TMF Team to send these details to its home-equity lending partner, Figure, and I authorize Figure to check my credit with a soft inquiry, which does not affect my credit score, to see if I pre-qualify. TMF Team and its partners may contact me about this request by phone, email and text. <span class="req" aria-hidden="true">*</span></span>
-        </label>
-        <div class="hp-field" aria-hidden="true"><label>Company website <input name="company_website" tabindex="-1" autocomplete="off"></label></div>
-        <p class="err" data-err role="alert"></p>
-        <button class="btn btn--primary btn--lg btn--block" type="submit" data-submit>Check my offer</button>
-        <p class="small muted">Pre-qualification is not a commitment to lend. Any offer is subject to the lender's review and verification. Borrowing against your home puts your home at risk. See our <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
+          <p class="small muted hx-fine">Pre-qualification is not a commitment to lend. Any offer is subject to the lender&rsquo;s review and verification. Borrowing against your home puts your home at risk. See our <a href="/terms">terms</a> and <a href="/privacy">privacy policy</a>.</p>
+        </fieldset>
+
+        <ul class="hx-trust" role="list">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/></svg>Soft check, no score impact</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>About 2 minutes</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M10 13l2 2 3-4"/></svg>No documents needed</li>
+        </ul>
       </form>
 
       <div class="heloc-result" data-result hidden aria-live="polite"></div>
@@ -227,8 +263,8 @@
         <div class="accordion__panel" id="hq-4" role="region" aria-labelledby="hq-4-btn" hidden><p>You'll hear that just as fast. A specialist can talk you through other routes, such as a cash injection or an SBA loan.</p></div>
       </div>
       <div class="accordion__item">
-        <h3><button class="accordion__trigger" type="button" id="hq-5-btn" aria-expanded="false" aria-controls="hq-5">Where did the calculator go?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
-        <div class="accordion__panel" id="hq-5" role="region" aria-labelledby="hq-5-btn" hidden><p>It is being rebuilt. The old one asked you for six figures and handed back arithmetic done on your own guesses, which is not the same thing as knowing what a lender would do. Rather than dress that up, we took it down. Starting the application gets you a real answer faster than the calculator ever did.</p></div>
+        <h3><button class="accordion__trigger" type="button" id="hq-5-btn" aria-expanded="false" aria-controls="hq-5">Can I see my offer online?<span class="accordion__icon" aria-hidden="true"></span></button></h3>
+        <div class="accordion__panel" id="hq-5" role="region" aria-labelledby="hq-5-btn" hidden><p>It is back, and it is no longer a guess. Fill in the three short steps above and we check your details with our lending partner while you wait. In a few minutes the amount you pre-qualify for, the rates and the terms appear on the page. It is a soft credit check, so your score is not affected.</p></div>
       </div>
       <div class="accordion__item">
         <h3><button class="accordion__trigger" type="button" id="hq-6-btn" aria-expanded="false" aria-controls="hq-6">Is an offer inside the hour real?<span class="accordion__icon" aria-hidden="true"></span></button></h3>

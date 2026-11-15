@@ -17,9 +17,9 @@
   var btn = form.querySelector('[data-submit]');
   var URL_ = form.getAttribute('data-endpoint');
   var KEY = 'tmf-heloc-token';
-  /* Only the states our lender lets us send (Figure's exempt list, read
-     15 Nov 2026; tmf-os clicker/figure_states.py is the master copy, keep
-     the two the same). New York included. */
+  /* Only the states our lending partner takes (read 15 Nov 2026; the TMF OS
+     state list is the master copy, keep the two the same).
+     New York included. */
   var STATES = [['AL', 'Alabama'], ['AK', 'Alaska'], ['AR', 'Arkansas'], ['CO', 'Colorado'],
     ['CT', 'Connecticut'], ['DE', 'Delaware'], ['DC', 'District of Columbia'], ['FL', 'Florida'],
     ['GA', 'Georgia'], ['IL', 'Illinois'], ['IN', 'Indiana'], ['IA', 'Iowa'], ['KY', 'Kentucky'],
@@ -36,6 +36,82 @@
     o.textContent = s[1];
     sel.appendChild(o);
   });
+
+  /* Three short steps (16 Nov 2026, John: the one long form "looks
+     boring"). Continue checks only the boxes on its own step; the bar and
+     the dots show how far along the visitor is. */
+  var STEP_ERR = {
+    email: 'Please enter a valid email address.',
+    phone: 'Please enter a 10-digit mobile number.',
+    zip: 'Please enter a 5-digit ZIP code.'
+  };
+  var stepAt = 1;
+  var steps = form.querySelectorAll('[data-hx-step]');
+  Array.prototype.forEach.call(steps, function (st) {
+    if (!st.querySelector('[data-err]')) {
+      var e = document.createElement('p');
+      e.className = 'err';
+      e.setAttribute('role', 'alert');
+      e.setAttribute('data-hx-err', '');
+      st.insertBefore(e, st.querySelector('.hx-nav, .hx-next'));
+    }
+  });
+  function stepErr(st) { return st.querySelector('[data-err], [data-hx-err]'); }
+  function checkStep(st) {
+    var bad = null, msg = '';
+    Array.prototype.forEach.call(st.querySelectorAll('[required]'), function (el) {
+      var val = el.value.trim();
+      var ok = el.type === 'checkbox' ? el.checked : val !== '';
+      if (ok && el.name === 'email') ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val);
+      if (ok && el.name === 'phone') ok = val.replace(/\D/g, '').length >= 10;
+      if (ok && el.name === 'zip') ok = /^\d{5}$/.test(val);
+      el.classList.toggle('invalid', !ok);
+      el.setAttribute('aria-invalid', ok ? 'false' : 'true');
+      if (!ok && !bad) {
+        bad = el;
+        msg = el.type === 'checkbox' ? 'Please tick the box so we can check your offer.'
+          : (val && STEP_ERR[el.name]) || 'Please fill in every box marked *.';
+      }
+    });
+    stepErr(st).textContent = msg;
+    if (bad) bad.focus();
+    return !bad;
+  }
+  function goStep(n) {
+    stepAt = n;
+    Array.prototype.forEach.call(steps, function (st) {
+      var k = Number(st.getAttribute('data-hx-step'));
+      st.hidden = k !== n;
+      if (k === n) {
+        st.classList.remove('is-in');
+        void st.offsetWidth;
+        st.classList.add('is-in');
+      }
+    });
+    Array.prototype.forEach.call(form.querySelectorAll('[data-hx-dot]'), function (d) {
+      var k = Number(d.getAttribute('data-hx-dot'));
+      d.className = k < n ? 'is-done' : k === n ? 'is-now' : '';
+    });
+    var bar = form.querySelector('[data-hx-bar]');
+    if (bar) bar.style.width = (n / steps.length * 100) + '%';
+    var top = form.getBoundingClientRect().top;
+    if (top < 0) form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    var first = steps[n - 1] && steps[n - 1].querySelector('input, select');
+    if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 60);
+  }
+  form.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-hx-next], [data-hx-back]');
+    if (!t) return;
+    if (t.hasAttribute('data-hx-back')) { goStep(Math.max(1, stepAt - 1)); return; }
+    if (checkStep(steps[stepAt - 1])) goStep(Math.min(steps.length, stepAt + 1));
+  });
+  form.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && stepAt < steps.length && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      if (checkStep(steps[stepAt - 1])) goStep(stepAt + 1);
+    }
+  });
+  if (steps.length) goStep(1);
 
   var Q = '’';
   var usd = function (n) { return '$' + Math.round(Number(n)).toLocaleString('en-US'); };
@@ -235,19 +311,12 @@
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
-    var bad = null;
-    Array.prototype.forEach.call(form.querySelectorAll('[required]'), function (el) {
-      var ok = el.type === 'checkbox' ? el.checked : el.value.trim() !== '';
-      el.classList.toggle('invalid', !ok);
-      el.setAttribute('aria-invalid', ok ? 'false' : 'true');
-      if (!ok && !bad) bad = el;
-    });
-    if (bad) {
-      errEl.textContent = bad.type === 'checkbox'
-        ? 'Please tick the box so we can check your offer.'
-        : 'Please fill in every box marked *.';
-      bad.focus();
-      return;
+    // Every step again, in order; jump back to the first one with a gap.
+    for (var k = 0; k < steps.length; k++) {
+      if (!checkStep(steps[k])) {
+        if (k + 1 !== stepAt) { goStep(k + 1); checkStep(steps[k]); }
+        return;
+      }
     }
     errEl.textContent = '';
     var v = function (n) {
