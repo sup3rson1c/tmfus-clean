@@ -253,25 +253,139 @@
     setTimeout(function () { document.title = baseTitle; }, 15000);
   }
 
-  function offers(r) {
-    var list = r.offers || [];
-    var rows = list.map(function (o) {
-      var amt = o.max ? usd(o.min) + ' &ndash; ' + usd(o.max) : usd(o.monthly) + '/mo';
-      return '<tr><td>' + esc(o.years) + '-year ' + esc(o.type || 'fixed') + '</td><td>' +
-        Number(o.rate).toFixed(2) + '%</td><td>' + amt + '</td></tr>';
-    }).join('');
-    var head = (list[0] && list[0].max) ? 'Amount' : 'Payment';
-    show('<p class="eyebrow">You pre-qualify</p>' +
-      '<p class="heloc-amount">Up to ' + usd(r.cash_max) + '</p>' +
-      '<p class="lede">Rates from <strong>' + Number(r.best_rate).toFixed(2) + '%</strong> (' +
-      esc(r.best_years) + '-year fixed).</p>' +
-      (rows ? '<table class="heloc-terms"><thead><tr><th>Term</th><th>Rate</th><th>' + head +
-        '</th></tr></thead><tbody>' + rows + '</tbody></table>' : '') +
-      '<p class="muted">A TMF specialist will call you shortly to go over these offers and the next step. ' +
-      'Nothing is final until you choose an offer.</p>' +
-      '<p class="small muted">This is a pre-qualification, not a commitment to lend. Final terms depend on the ' +
-      'lender' + Q + 's review and verification. Borrowing against your property puts it at risk.</p>');
+  /* The answer (16 Nov 2026, John: the plain table "looks bland and
+     boring", make it alive and add the lender's amount slider). The amount
+     counts up, a slider picks how much to draw, and each term card shows
+     the monthly payment for that amount. Payments scale from the lender's
+     own monthly figure for the full line (it already includes their fees);
+     a term with no monthly figure is worked out from its rate. */
+  function payFor(o, amt, max) {
+    if (o.monthly && max) return o.monthly * amt / max;
+    var r = Number(o.rate) / 100 / 12, n = Number(o.years) * 12;
+    if (!r || !n) return 0;
+    return amt * r / (1 - Math.pow(1 + r, -n));
   }
+
+  function countUp(el, to) {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !window.requestAnimationFrame) { el.textContent = usd(to); el.classList.add('is-landed'); return; }
+    var t0 = null, dur = 1400;
+    function step(t) {
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / dur);
+      el.textContent = usd(to * (1 - Math.pow(1 - k, 4)));
+      if (k < 1) requestAnimationFrame(step);
+      else el.classList.add('is-landed');
+    }
+    requestAnimationFrame(step);
+  }
+
+  function offers(r) {
+    var max = Math.round(Number(r.cash_max) || 0);
+    var list = (r.offers || []).filter(function (o) { return o && o.rate; })
+      .sort(function (a, b) { return b.years - a.years; });
+    var floor = Math.ceil(Math.max(15000, Number(r.cash_min) || 0) / 1000) * 1000;
+    if (floor >= max) floor = max;
+    var bestRate = Math.min.apply(null, list.map(function (o) { return Number(o.rate); }));
+    var pick = 0;
+    list.forEach(function (o, i) { if (o.years === r.best_years) pick = i; });
+    var check = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3.2 3.2L15 7"/></svg>';
+
+    show('<div class="ho">' +
+      '<div class="ho-hero">' +
+        '<span class="ho-badge">' + check + 'You pre-qualify</span>' +
+        '<p class="ho-kicker">Your line can go up to</p>' +
+        '<p class="heloc-amount ho-max" data-ho-count>$0</p>' +
+        (list.length ? '<p class="ho-sub">Rates from <b>' + bestRate.toFixed(2) + '%</b> fixed &middot; ' +
+          list.length + ' terms to choose from &middot; soft check only</p>' : '') +
+      '</div>' +
+      (floor < max ?
+      '<div class="ho-pick">' +
+        '<div class="ho-pick__top"><label for="ho-amt">How much do you want?</label>' +
+          '<output class="ho-amt" for="ho-amt" data-ho-amt>' + usd(max) + '</output></div>' +
+        '<input type="range" id="ho-amt" class="ho-range" min="' + floor + '" max="' + max +
+          '" step="1" value="' + max + '" data-ho-range>' +
+        '<div class="ho-range__ends"><span>' + usd(floor) + '</span><span>' + usd(max) + '</span></div>' +
+      '</div>' : '') +
+      (list.length ?
+      '<p class="ho-label">Pick your term</p>' +
+      '<div class="ho-terms" role="radiogroup" aria-label="Term">' +
+        list.map(function (o, i) {
+          var best = i === pick; // one tag only: several terms can share the lowest rate
+          return '<button type="button" class="ho-term' + (best ? ' is-best' : '') +
+            '" role="radio" data-ho-term="' + i + '">' +
+            (best ? '<span class="ho-term__tag">Best rate</span>' : '') +
+            '<span class="ho-term__yrs">' + esc(o.years) + ' years</span>' +
+            '<span class="ho-term__pay"><b data-ho-pay></b><small>/mo</small></span>' +
+            '<span class="ho-term__rate">' + Number(o.rate).toFixed(2) + '% ' + esc(o.type || 'fixed') + '</span>' +
+          '</button>';
+        }).join('') +
+      '</div>' +
+      '<p class="ho-sum" data-ho-sum aria-live="polite"></p>' : '') +
+      '<a class="btn btn--primary btn--lg btn--block ho-cta" href="/contact">Talk to a specialist about this offer</a>' +
+      '<p class="muted ho-next">A TMF specialist will call you shortly to go over these offers and the next step. ' +
+        'Nothing is final until you choose an offer.</p>' +
+      '<p class="small muted">This is a pre-qualification, not a commitment to lend. Payments are estimates for the ' +
+        'amount you pick. Final terms depend on the lender' + Q + 's review and verification. Borrowing against your ' +
+        'property puts it at risk.</p>' +
+    '</div>');
+
+    countUp(out.querySelector('[data-ho-count]'), max);
+    var range = out.querySelector('[data-ho-range]');
+    var cards = out.querySelectorAll('[data-ho-term]');
+    var amt = max;
+
+    function paint() {
+      if (range) {
+        var p = (amt - floor) / Math.max(1, max - floor) * 100;
+        range.style.setProperty('--p', p.toFixed(2) + '%');
+        out.querySelector('[data-ho-amt]').textContent = usd(amt);
+      }
+      Array.prototype.forEach.call(cards, function (c, i) {
+        var on = i === pick;
+        c.classList.toggle('is-on', on);
+        c.setAttribute('aria-checked', on ? 'true' : 'false');
+        c.tabIndex = on ? 0 : -1;
+        c.querySelector('[data-ho-pay]').textContent = usd(payFor(list[i], amt, max));
+      });
+      var o = list[pick], sum = out.querySelector('[data-ho-sum]');
+      if (o && sum) {
+        sum.innerHTML = '<b>' + usd(amt) + '</b> over <b>' + esc(o.years) + ' years</b> at ' +
+          Number(o.rate).toFixed(2) + '% ' + esc(o.type || 'fixed') + ' is about <b class="ho-sum__pay">' +
+          usd(payFor(o, amt, max)) + ' a month</b>.';
+      }
+    }
+    if (range) {
+      range.addEventListener('input', function () {
+        var v = Number(range.value);
+        amt = v >= max - 250 ? max : Math.round(v / 500) * 500;
+        if (amt < floor) amt = floor;
+        paint();
+      });
+    }
+    out.addEventListener('click', function (e) {
+      var c = e.target.closest('[data-ho-term]');
+      if (!c) return;
+      pick = Number(c.getAttribute('data-ho-term'));
+      paint();
+      c.classList.remove('is-pop');
+      void c.offsetWidth;
+      c.classList.add('is-pop');
+    });
+    out.addEventListener('keydown', function (e) {
+      if (!e.target.closest('[data-ho-term]') || !cards.length) return;
+      var d = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1
+        : (e.key === 'ArrowLeft' || e.key === 'ArrowUp') ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      pick = (pick + d + cards.length) % cards.length;
+      paint();
+      cards[pick].focus();
+    });
+    paint();
+  }
+  // Local preview only: lets a test page draw an answer without a live run.
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__helocOffers = offers;
 
   function done(title, text) {
     show('<h3 class="h3">' + title + '</h3><p class="muted">' + text + '</p>' +
