@@ -214,7 +214,7 @@
       ahead ? 'You' + Q + 're next in line' : STEPS[at][1] + '\u2026';
     out.querySelector('[data-hw-sub]').textContent = ahead
       ? 'You are number ' + (ahead + 1) + ' in line. It starts in a minute or two.'
-      : 'This usually takes 2 to 5 minutes. Your offer appears right here.';
+      : 'This usually takes about 3 minutes. Your offer appears right here.';
     out.querySelector('[data-hw-clock]').textContent = clock();
     var t = Math.floor((Date.now() - started) / 7000) % TIPS.length;
     if (t !== tipAt) {
